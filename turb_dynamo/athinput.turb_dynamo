@@ -1,0 +1,121 @@
+<comment>
+problem   = Turbulence with power-law PS
+reference =
+configure = --prob=turb -fft
+
+<job>
+problem_id = Turb    # problem ID: basename of output filenames
+output_timing = true
+
+<output1>
+file_type  = hst        # History data dump
+dt         = 0.001      # time increment between outputs
+
+<output2>
+file_type  = hdf5        # Binary data dump
+variable   = prim        # variables to be output
+dt         = 1.0         # time increment between outputs
+
+<output3>
+file_type  = hdf5        # Binary data dump
+variable   = prim        # variables to be output
+dt         = 0.1         # time increment between outputs
+x3_sum      = true
+
+<output4>
+file_type  = rst        # Binary data dump
+dt         = 10         # time increment between outputs
+
+<time>
+cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = -1         # cycle limit
+tlim       = 0.5        # time limit
+integrator  = rk2       # time integration algorithm
+xorder      = 2         # order of spatial reconstruction
+ncycle_out  = 1         # interval for stdout summary info
+ops_task         = false
+
+
+<mesh>
+nx1        = 32         # Number of zones in X1-direction
+x1min      = -0.5       # minimum value of X1
+x1max      = 0.5        # maximum value of X1
+ix1_bc     = periodic   # inner-X1 boundary flag
+ox1_bc     = periodic   # outer-X1 boundary flag
+
+nx2        = 32         # Number of zones in X2-direction
+x2min      = -0.5       # minimum value of X2
+x2max      = 0.5        # maximum value of X2
+ix2_bc     = periodic   # inner-X2 boundary flag
+ox2_bc     = periodic   # outer-X2 boundary flag
+
+nx3        = 32         # Number of zones in X3-direction
+x3min      = -0.5       # minimum value of X3
+x3max      = 0.5        # maximum value of X3
+ix3_bc     = periodic   # inner-X3 boundary flag
+ox3_bc     = periodic   # outer-X3 boundary flag
+
+refinement = none
+
+<meshblock>
+nx1        = 32
+nx2        = 32
+nx3        = 32
+
+<refinement1>
+x1min      = -0.5
+x1max      = 0.5
+x2min      = -0.5
+x2max      = 0.5
+x3min      = -0.5
+x3max      = 0.5
+level      = 1
+
+<hydro>
+gamma             = 1.666666666667 # gamma = C_p/C_v
+iso_sound_speed   = 1.00           # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
+neighbor_flooring = false
+fofc              = true
+ct_method         = ctc
+vel_decomp        = true
+power_spectrum    = true
+dfloor            = 1.e-7
+
+<perturbation>
+nlow       = 4    # cut-off wavenumber at low-k
+nhigh      = 6    # cut-off wavenumber at high-k
+expo       = 2.0  # power-law exponent
+f_shear    = 1.0  # the ratio of the shear component
+rseed      = -1   # if non-negative, seed will be set by hand (slow PS generation)
+
+<perturbation_B>
+nlow          = 1
+nhigh         = 32
+expo          = 2
+rseed         = 128
+
+<problem>
+turb_flag  = 3    # 1 for decaying, 2 (impulsive) or 3 (continuous) for driven turbulence
+tcorr      = 0.1  # correlation time for OU process (both impulsive and continuous)
+dtdrive    = 0.1  # time interval between perturbation (impulsive)
+dedt       = 1.0  # Energy injection rate (for driven) or Total energy (for decaying)
+theta_B    = 0.7853981634  # angle of mean magnetic field from the z-axis
+phi_B      = 0.7853981634  # azimuthal angle of magnetic field in x-y plane
+beta       = 0.0  # plasma beta of simulation
+beta_r     = 0.0  # plasma beta of random magnetic fields
+
+<cooling>
+cooling       = none            # [none, enroll, op_split]
+solver        = forward_euler    # [forward_euler]
+coolftn       = tigress	         # tigress or plf
+coolftn_file  = tigress_coolftn.txt
+
+cfl_cool      = 0.5       # min dt_hydro/dt_cool
+cfl_cool_sub  = 0.1       # dt_sub/dt_cool (must be less than 1)
+T_floor       = 10        # temperature floor
+T_max         = 1e9       # temperature ceiling
+
+T_PE          = 15000     # temperature below which PE heating is applied, if plf
+Gamma         = 2e-26     # heating rate in ergs / sec, if plf
+
+heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
