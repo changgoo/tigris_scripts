@@ -28,7 +28,7 @@ PID=TIGRESS
 SRCDIR=/home/$USER/tigris
 SCRIPTDIR=/home/$USER/tigris_scripts/$prob
 SCRIPT=$prob-tiger3.slurm
-EXE=$prob_${CC}.exe
+EXE=${prob}_${CC}$debug_option.exe
 INPUT=${SCRIPTDIR}/athinput.$prob
 RUNDIR=/scratch/gpfs/EOST/$USER/$prob/run-$CC
 
