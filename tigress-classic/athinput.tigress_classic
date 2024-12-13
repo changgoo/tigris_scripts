@@ -1,0 +1,154 @@
+<comment>
+problem   = TIGRESS classic
+reference =
+configure = --prob=tigress_classic -fft --grav=blockfft -mpi -hdf5 --nghost=4
+
+<job>
+problem_id = TIGRESS # problem ID: basename of output filenames
+output_timing = true
+
+<output1>
+file_type = hst   # History data dump
+dt        = 0.01  # time increment between outputs
+dcycle    = 0
+
+<output2>
+file_type   = hdf5  # Binary data dump
+variable    = prim  # variables to be output
+dt          = 1     # time increment between outputs
+dcycle      = 0
+ghost_zones = false
+
+<output3>
+file_type   = hdf5  # Binary data dump
+variable    = uov   # variables to be output
+dt          = 1     # time increment between outputs
+dcycle      = 0
+ghost_zones = false
+
+<output4>
+file_type   = parbin  # Binary data dump
+dt          = 1       # time increment between outputs
+dcycle      = 0
+
+<output5>
+file_type = rst # Restart data dump
+dt        = 50  # time increment between outputs
+dcycle    = 0
+
+
+
+<time>
+cfl_number       = 0.3    # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim             = -1     # cycle limit
+tlim             = 100.0   # time limit
+integrator       = rk2    # time integration algorithm
+xorder           = 2      # order of spatial reconstruction
+ncycle_out       = 10     # interval for stdout summary info
+ops_task         = true
+
+<mesh>
+nx1         = 64            # Number of zones in X1-direction
+x1min       = -512           # minimum value of X1
+x1max       = 512            # maximum value of X1
+ix1_bc      = shear_periodic # inner-X1 boundary flag
+ox1_bc      = shear_periodic # outer-X1 boundary flag
+nx2         = 64            # Number of zones in X2-direction
+x2min       = -512           # minimum value of X2
+x2max       = 512            # maximum value of X2
+ix2_bc      = periodic       # inner-X2 boundary flag
+ox2_bc      = periodic       # outer-X2 boundary flag
+nx3         = 384            # Number of zones in X3-direction
+x3min       = -3072          # minimum value of X3
+x3max       = 3072           # maximum value of X3
+ix3_bc      = user           # inner-X3 boundary flag
+ox3_bc      = user           # outer-X3 boundary flag
+refinement  = none
+
+<meshblock>
+nx1 = 32
+nx2 = 32
+nx3 = 32
+
+<hydro>
+gamma           = 1.666666666667 # gamma = C_p/C_v
+iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
+neighbor_flooring = true
+fofc              = true
+dfloor            = 1.e-10
+pfloor            = 1.e-3
+
+<gravity>
+grav_bc   = disk
+output_gasonly_potential = true
+
+<orbital_advection>
+OAorder    = 0       # 0: w/o OA, 1: w/ OA (1st), 2: w/ OA (2nd)
+qshear     = 1       # shear rate
+Omega0     = 0.028   # angular velocity of the system
+shboxcoord = 1       # 1=xy (default); 2=xz
+
+<cooling>
+cooling       = op_split         # [none, enroll, op_split]
+solver        = forward_euler    # [forward_euler]
+coolftn       = tigress	         # tigress or plf
+coolftn_file  = tigress_coolftn.txt
+
+cfl_cool      = 0.5       # min dt_hydro/dt_cool
+cfl_cool_sub  = 0.1       # dt_sub/dt_cool (must be less than 1)
+T_floor       = 10        # temperature floor
+T_max         = 1e9       # temperature ceiling
+
+T_PE          = 15000     # temperature below which PE heating is applied, if plf
+Gamma         = 2e-26     # heating rate in ergs / sec, if plf
+
+heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
+
+<particle1>
+type    = sink
+gravity = true
+output  = true
+feedback      = true     # turn on feedback from particles
+
+<particle2>
+type    = none
+gravity = true
+output  = true
+
+<feedback>
+ischeme       = Classic     # injection scheme
+pop_synth     = SB99     # population synthesis scheme
+M_inj         = 20.0     # Mass injected in units of Msun for single SN
+E_inj         = 1.0      # Energy injected in units of 10^51 ergs
+iSN           = 1        # turn on supernovae
+iFUV          = 1
+pop_synth_file = Z014_GenevaV00.txt
+rfb_res       = 3.0      # feedback radius in grid cells
+fkin          = 0.28     # kinetic energy fraction
+mratio_thresh = 1.0     # mass ratio threshold for energy inejction mode
+iredist       = false    # redistribute if momentum feedback?
+write_rprof   = false
+vmax          = 5000     # maximum velocity by the feedback injection
+
+<problem>
+Sigma_gas  = 12
+sz1        = 10
+Sigma_star = 42
+z_star     = 245
+rho_dm     = 0.0064
+R0         = 8
+beta0      = 10.0
+beta_r     = 0.0
+
+turb_flag  = 1
+v1d        = 10
+dedt       = 1.0          # a place holder (will be updated based on v1d)
+
+ext_grav   = force
+
+<perturbation>
+nlow       = 1    # cut-off wavenumber at low-k
+nhigh      = 8   # cut-off wavenumber at high-k
+expo       = 2.0  # power-law exponent
+f_shear    = 0.5  # the ratio of the shear component
+rseed      = 1    # if non-negative, seed will be set by hand (slow PS generation)

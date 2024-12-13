@@ -1,0 +1,133 @@
+<comment>
+problem   = Star forming cloud pilot
+reference =
+configure = --prob=sf_cloud -fft --grav=blockfft -mpi -hdf5 --nghost=4
+
+<job>
+problem_id = SF_CLOUD # problem ID: basename of output filenames
+output_timing = true
+
+<output1>
+file_type = hst   # History data dump
+dt        = 0.001 # time increment between outputs
+dcycle    = 0
+
+<output2>
+file_type   = hdf5  # Binary data dump
+variable    = prim  # variables to be output
+dt          = 0.5     # time increment between outputs
+#dcycle      = 500
+ghost_zones = false
+
+<output3>
+file_type   = hdf5  # Binary data dump
+variable    = uov   # variables to be output
+dt          = 0.5     # time increment between outputs
+#dcycle      = 500
+ghost_zones = false
+
+<output4>
+file_type   = parbin  # Binary data dump
+dt          = 0.5     # time increment between outputs
+#dcycle      = 500
+
+<output5>
+file_type = rst # Restart data dump
+dt        = 10  # time increment between outputs
+dcycle    = 0
+
+<time>
+cfl_number       = 0.3    # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim             = -1     # cycle limit
+tlim             = 30.0   # time limit
+integrator       = rk2    # time integration algorithm
+xorder           = 2      # order of spatial reconstruction
+ncycle_out       = 1      # interval for stdout summary info
+ops_task         = true
+
+<mesh>
+nx1         = 128            # Number of zones in X1-direction
+x1min       = -32            # minimum value of X1
+x1max       = 32             # maximum value of X1
+ix1_bc      = outflow        # inner-X1 boundary flag
+ox1_bc      = outflow        # outer-X1 boundary flag
+
+nx2         = 128            # Number of zones in X2-direction
+x2min       = -32            # minimum value of X2
+x2max       = 32             # maximum value of X2
+ix2_bc      = outflow        # inner-X2 boundary flag
+ox2_bc      = outflow        # outer-X2 boundary flag
+
+nx3         = 128            # Number of zones in X3-direction
+x3min       = -32            # minimum value of X3
+x3max       = 32             # maximum value of X3
+ix3_bc      = outflow        # inner-X3 boundary flag
+ox3_bc      = outflow        # outer-X3 boundary flag
+refinement  = none
+
+<meshblock>
+nx1 = 32
+nx2 = 32
+nx3 = 32
+
+<hydro>
+gamma           = 1.666666666667 # gamma = C_p/C_v
+iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
+neighbor_flooring = true
+fofc              = true
+dfloor            = 1.e-6
+pfloor            = 1.e-3
+
+<gravity>
+four_pi_G = 1.0       # graivty constant reset in the problem generator anyway
+grav_bc = open        # ( periodic | disk | open )
+
+<cooling>
+cooling       = op_split         # [none, enroll, op_split]
+solver        = forward_euler    # [forward_euler]
+coolftn       = tigress	         # tigress or plf
+coolftn_file  = /mnt/home/llancaster/tigris/inputs/tables/tigress_coolftn.txt
+
+cfl_cool      = 0.5       # min dt_hydro/dt_cool
+cfl_cool_sub  = 0.1       # dt_sub/dt_cool (must be less than 1)
+T_floor       = 10        # temperature floor
+T_max         = 1e9       # temperature ceiling
+
+T_PE          = 15000     # temperature below which PE heating is applied, if plf
+Gamma         = 2e-26     # heating rate in ergs / sec, if plf
+
+heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
+
+<particle1>
+type    = sink
+gravity = true
+output  = true
+feedback      = false     # turn on feedback from particles
+
+<feedback>
+ischeme       = Classic     # injection scheme
+pop_synth     = SB99     # population synthesis scheme
+M_inj         = 10.0     # Mass injected in units of Msun for single SN
+E_inj         = 1.0      # Energy injected in units of 10^51 ergs
+iSN           = 1        # turn on supernovae
+pop_synth_file = /mnt/home/llancaster/tigris/inputs/tables/Z014_GenevaV00.txt
+rfb_res       = 3.0      # feedback radius in grid cells
+
+<problem>
+rho0       = 100         # cloud density in cm^-3
+Rcl        = 16          # cloud radius in pc
+B0         = 1.0         # B field in uG
+
+turb_flag  = 1
+dtdrive    = 1
+tcorr      = 10
+v3d        = 2          # 3d velocity dispersion in km/s
+dedt       = 1.0
+
+
+<perturbation>
+nlow       = 2    # cut-off wavenumber at low-k
+nhigh      = 8    # cut-off wavenumber at high-k
+expo       = 2.0  # power-law exponent
+f_shear    = 1    # the ratio of the shear component
+rseed      = 1    # if non-negative, seed will be set by hand (slow PS generation)
