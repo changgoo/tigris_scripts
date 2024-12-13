@@ -13,7 +13,7 @@ module load anaconda3/2023.3 intel/2024.2 intel-mpi/oneapi/2021.13 hdf5/intel-20
 
 PID=TIGRESS
 SRCDIR=$HOME/tigris/
-EXE=$SRCDIR/scripts/tigress-classic/tigress_classic_icpx
+EXE=$SRCDIR/scripts/tigress-classic/tigress_classic_icpx.exe
 RSTDIR=/scratch/gpfs/$USER/tigress-classic/R8_8pc_classic
 RSTFILE=TIGRESS.00002.rst
 RUNDIR=/scratch/gpfs/$USER/tigress-classic/R8_8pc_rst2

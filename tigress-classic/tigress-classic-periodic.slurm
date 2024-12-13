@@ -13,7 +13,7 @@ module purge; module load anaconda3/2023.3 intel-oneapi/2024.2 intel-mpi/oneapi/
 
 PID=TIGRESS
 SRCDIR=`pwd`
-EXE=$SRCDIR/tigress_classic_icpx-b
+EXE=$SRCDIR/tigress_classic_icpx-b.exe
 INPUT=${SRCDIR}/athinput.tigress_classic
 RUNDIR=/scratch/gpfs/$USER/tigress-classic/R8_8pc_classic-b-periodic/
 

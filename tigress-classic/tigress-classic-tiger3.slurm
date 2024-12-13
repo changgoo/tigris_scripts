@@ -25,7 +25,7 @@ STARTFLAG=$2
 
 PID=TIGRESS
 SRCDIR=`pwd`
-EXE=tigress_classic_${CC}
+EXE=tigress_classic_${CC}.exe
 INPUT=${SRCDIR}/athinput.tigress_classic
 RUNDIR=/scratch/gpfs/EOST/$USER/tigress-classic/run2-fofc-vmax-fkin0-$CC
 

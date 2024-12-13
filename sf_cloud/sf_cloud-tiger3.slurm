@@ -25,7 +25,7 @@ STARTFLAG=$2
 
 PID=TIGRESS
 SRCDIR=`pwd`
-EXE=sf_cloud_${CC}
+EXE=sf_cloud_${CC}.exe
 INPUT=${SRCDIR}/athinput.sf_cloud
 RUNDIR=/scratch/gpfs/EOST/$USER/sf_cloud/run-$CC
 

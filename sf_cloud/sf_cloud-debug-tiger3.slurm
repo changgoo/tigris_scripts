@@ -6,7 +6,8 @@
 ##SBATCH -N 4                  # node count
 ##SBATCH -n 384                # node count
 #SBATCH --time=01:00:00       # total run time limit (HH:MM:SS)
-#SBATCH --output=sf_cloud-debug
+#SBATCH --output=sf_cloud-debug.out
+#SBATCH --error=sf_cloud-debug.err
 
 CC=$1
 debug_option=""
@@ -22,7 +23,7 @@ fi
 
 PID=SFCLOUD
 SRCDIR=`pwd`
-EXE=sf_cloud_${CC}$debug_option
+EXE=sf_cloud_${CC}$debug_option.exe
 INPUT=${SRCDIR}/athinput.sf_cloud
 RUNDIR=/scratch/gpfs/EOST/$USER/sf_cloud/debug-$CC
 

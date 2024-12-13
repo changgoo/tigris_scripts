@@ -1,9 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=tigress    # create a short name for your job
+#SBATCH --job-name=tigress-debug    # create a short name for your job
 #SBATCH -N 1                 # node count
 #SBATCH -n 48               # node count
 #SBATCH --time=00:30:00          # total run time limit (HH:MM:SS)
-#SBATCH --output=tigress
+#SBATCH --output=tigress-debug.out
+#SBATCH --error=tigress-debug.err
 
 
 CC=g++
@@ -18,7 +19,7 @@ fi
 
 PID=TIGRESS
 SRCDIR=`pwd`
-EXE=tigress_classic_$CC
+EXE=tigress_classic_$CC,exe
 INPUT=${SRCDIR}/athinput.tigress_classic
 RUNDIR=/scratch/gpfs/$USER/tigress-classic/debug-$CC/
 
