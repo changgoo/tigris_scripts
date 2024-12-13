@@ -35,7 +35,7 @@ options="${debug_option} -mpi -hdf5 --cxx=$CC --lib_path=${mpi_hdf5_library_path
 myoptions=$2
 
 current=`pwd`
-cd ../../
+cd /home/changgoo/tigris/
 
 prob=turb
 ./configure.py --prob=$prob -fft -b --eos=isothermal $options $myoptions

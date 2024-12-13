@@ -23,17 +23,20 @@ fi
 
 STARTFLAG=$2
 
+prob=tigress_classic
 PID=TIGRESS
-SRCDIR=`pwd`
-EXE=tigress_classic_${CC}.exe
-INPUT=${SRCDIR}/athinput.tigress_classic
-RUNDIR=/scratch/gpfs/EOST/$USER/tigress-classic/run2-fofc-vmax-fkin0-$CC
+SRCDIR=/home/$USER/tigris
+SCRIPTDIR=/home/$USER/tigris_scripts/$prob
+SCRIPT=$prob-tiger3.slurm
+EXE=$prob_${CC}.exe
+INPUT=${SCRIPTDIR}/athinput.$prob
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/run-$CC
 
-TBLDIR="$SRCDIR/../../inputs/tables"
+TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
-params="job/problem_id=$PID time/tlim=500 mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL feedback/iredist=true feedback/vmax=5000 feedback/fkin=0"
+params="job/problem_id=$PID time/tlim=500 mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL feedback/iredist=false feedback/vmax=5000 feedback/fkin=0.28"
 # feedback/iredist=false feedback/imom=true feedback/fkin=0 hydro/neighbor_flooring=true problem/beta0=0 problem/beta_r=1.e6"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
 echo $RUNDIR
@@ -59,7 +62,8 @@ set -o pipefail
 RSTINPUT=$PID.final.rst
 if [ ! -f $RSTINPUT ]; then
     echo "Starting fresh"
-    cp ${SRCDIR}/$EXE .
+    cp ${SCRIPTDIR}/$SCRIPT .
+    cp ${SCRIPTDIR}/$EXE .
     cp $INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
@@ -76,8 +80,7 @@ set +o pipefail
 
 if [[ $EXITCODE -eq 2 ]]; then
     echo "Resubmitting"
-    cd $SRCDIR
-    sbatch tigress-classic-tiger3.slurm $CC -r
+    sbatch $SCRIPT $CC -r
 fi
 
 # make quick snapshots

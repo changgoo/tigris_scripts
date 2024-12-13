@@ -21,13 +21,16 @@ else
     debug_option="-debug"
 fi
 
+prob=sf_cloud
 PID=SFCLOUD
-SRCDIR=`pwd`
-EXE=sf_cloud_${CC}$debug_option.exe
-INPUT=${SRCDIR}/athinput.sf_cloud
-RUNDIR=/scratch/gpfs/EOST/$USER/sf_cloud/debug-$CC
+SRCDIR=/home/$USER/tigris
+SCRIPTDIR=/home/$USER/tigris_scripts/$prob
+SCRIPT=$prob-tiger3.slurm
+EXE=$prob_${CC}$debug_opntion.exe
+INPUT=${SCRIPTDIR}/athinput.$prob
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/debug-$CC
 
-TBLDIR="$SRCDIR/../../inputs/tables"
+TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
@@ -43,7 +46,7 @@ else
 fi
 
 cd $RUNDIR
-cp $SRCDIR/$EXE .
+cp ${SCRIPTDIR}/$EXE .
 cp $INPUT .
 cp $TBLDIR/$COOL_TBL .
 cp $TBLDIR/$POPSYNTH_TBL .

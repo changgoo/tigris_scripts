@@ -21,13 +21,16 @@ else
     debug_option="-debug"
 fi
 
+prob=tigress_classic
 PID=TIGRESS
-SRCDIR=`pwd`
-EXE=tigress_classic_${CC}$debug_option.exe
-INPUT=${SRCDIR}/athinput.tigress_classic
-RUNDIR=/scratch/gpfs/EOST/$USER/tigress-classic/debug-$CC
+SRCDIR=/home/$USER/tigris
+SCRIPTDIR=/home/$USER/tigris_scripts/$prob
+SCRIPT=$prob-tiger3.slurm
+EXE=$prob_${CC}$debug_option.exe
+INPUT=${SCRIPTDIR}/athinput.$prob
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/debug-$CC
 
-TBLDIR="$SRCDIR/../../inputs/tables"
+TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
@@ -44,7 +47,7 @@ else
 fi
 
 cd $RUNDIR
-cp $SRCDIR/$EXE .
+cp ${SCRIPTDIR}/$EXE .
 cp $INPUT .
 cp $TBLDIR/$COOL_TBL .
 cp $TBLDIR/$POPSYNTH_TBL .

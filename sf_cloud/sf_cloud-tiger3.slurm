@@ -23,13 +23,16 @@ fi
 
 STARTFLAG=$2
 
+prob=sf_cloud
 PID=TIGRESS
-SRCDIR=`pwd`
-EXE=sf_cloud_${CC}.exe
-INPUT=${SRCDIR}/athinput.sf_cloud
-RUNDIR=/scratch/gpfs/EOST/$USER/sf_cloud/run-$CC
+SRCDIR=/home/$USER/tigris
+SCRIPTDIR=/home/$USER/tigris_scripts/$prob
+SCRIPT=$prob-tiger3.slurm
+EXE=$prob_${CC}.exe
+INPUT=${SCRIPTDIR}/athinput.$prob
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/run-$CC
 
-TBLDIR="$SRCDIR/../../inputs/tables"
+TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
@@ -86,6 +89,6 @@ module purge; module load anaconda3/2024.6 openmpi/gcc/4.1.6; conda activate pya
 
 PYTHONDIR=$HOME/pyathena
 export PYTHONPATH="$PYTHONDIR:$PYTHONPATH"
-pythonscript=$PYTHONDIR/pyathena/tigresspp/do_tasks.py
+pythonscript=$PYTHONDIR/pyathena/sf_cloud/do_tasks.py
 srun python -m mpi4py $pythonscript -b `pwd`
 
