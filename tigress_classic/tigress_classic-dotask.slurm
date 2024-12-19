@@ -9,7 +9,7 @@
 #SBATCH --error=tigress-dotask.err
 
 PID=TIGRESS
-RUNDIR=/scratch/gpfs/$USER/tigress-classic/R8_8pc_classic-b
+RUNDIR=/scratch/gpfs/$USER/tigress_classic/$1
 
 cd $RUNDIR
 

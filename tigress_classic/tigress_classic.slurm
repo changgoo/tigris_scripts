@@ -23,42 +23,47 @@ fi
 
 STARTFLAG=$2
 
+# Define problem and paths
 prob=tigress_classic
 PID=TIGRESS
 SRCDIR=/home/$USER/tigris
 SCRIPTDIR=/home/$USER/tigris_scripts/$prob
-SCRIPT=$prob-tiger3.slurm
+SCRIPT=${prob}.slurm
+
+# Define executable and input files
 EXE=${prob}_${CC}$debug_option.exe
 INPUT=${SCRIPTDIR}/athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/run-$CC
+RUNDIR=/scratch/gpfs/$USER/$prob/run3-$CC-rst
 
+# Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
-params="job/problem_id=$PID time/tlim=500 mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL feedback/iredist=false feedback/vmax=5000 feedback/fkin=0.28"
-# feedback/iredist=false feedback/imom=true feedback/fkin=0 hydro/neighbor_flooring=true problem/beta0=0 problem/beta_r=1.e6"
-periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
+# Print the run directory
 echo $RUNDIR
 
-# Create run directory
+# Create run directory if it doesn't exist, or clean it if it does
 if [ -d $RUNDIR ] ; then
     echo "directory exists"
     if [[ $STARTFLAG != "-r" ]]; then
         echo "cleaning up"
-        rm -rd $RUNDIR/*
+        rm -rf $RUNDIR/*
     fi
 else
     mkdir -p $RUNDIR
 fi
 
+# Change to the run directory
 cd $RUNDIR
 
+# Print the parameters
 echo $params
-# cat $INPUT
 
+# Enable pipefail option for better error handling
 set -o pipefail
 
+# Define the restart input file
 RSTINPUT=$PID.final.rst
 if [ ! -f $RSTINPUT ]; then
     echo "Starting fresh"
