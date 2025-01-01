@@ -34,7 +34,7 @@ COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
 # params="job/problem_id=$PID cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL output1/dt=0 output1/dcycle=1 time/tlim=10 problem/beta0=0 problem/beta_r=10 feedback/mratio_thresh=1.0"
-params="job/problem_id=$PID mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL output1/dt=0 output1/dcycle=1 time/tlim=10 time/ncycle_out=1 feedback/write_rprof=false"
+params="job/problem_id=$PID mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL output1/dt=0 output1/dcycle=1 time/tlim=10 time/ncycle_out=1 feedback/write_rprof=false output2/dt=-1 output3/dt=-1 output5/dt=-1"
 echo $RUNDIR
 
 # Create run directory

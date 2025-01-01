@@ -2,11 +2,11 @@
 #SBATCH --job-name=tigress    # create a short name for your job
 #SBATCH -N 1                 # node count
 #SBATCH -n 48                # node count
-#SBATCH --time=00:30:00          # total run time limit (HH:MM:SS)
+#SBATCH --time=06:00:00          # total run time limit (HH:MM:SS)
 #SBATCH --mail-type=all          # send email on job start, end and fail
 #SBATCH --mail-user=changgoo@princeton.edu
-#SBATCH --output=tigress-dotask.out
-#SBATCH --error=tigress-dotask.err
+#SBATCH --output=tigress-dotask-%j.err
+#SBATCH --error=tigress-dotask-%j.out
 
 PID=TIGRESS
 RUNDIR=/scratch/gpfs/$USER/tigress_classic/$1
