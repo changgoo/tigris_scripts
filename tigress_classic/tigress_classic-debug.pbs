@@ -1,0 +1,51 @@
+##PBS -q long
+#PBS -q devel
+#PBS -l select=9:ncpus=40:mpiprocs=40:model=sky_ele+1:ncpus=24:model=sky_ele
+#PBS -l walltime=000:30:00
+#PBS -m abe
+#PBS -M changgookim@gmail.com
+
+NPROCS=384
+
+module purge; module load mpi-hpe/mpt comp-intel hdf5/1.8.18_mpt
+
+prob=tigress_classic
+PID=TIGRESS
+SRCDIR=$HOME/tigris
+SCRIPTDIR=/$HOME/tigris_scripts/$prob
+EXE=${prob}.exe
+INPUT=${SCRIPTDIR}/athinput.$prob
+RUNDIR=/nobackup/$USER/$prob/debug
+
+TBLDIR="$SRCDIR/inputs/tables"
+COOL_TBL="tigress_coolftn.txt"
+POPSYNTH_TBL="Z014_GenevaV00.txt"
+
+params="job/problem_id=$PID mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL output1/dt=0 output1/dcycle=1 time/tlim=10 time/ncycle_out=1 feedback/write_rprof=false"
+echo $RUNDIR
+
+# Create run directory
+if [ -d $RUNDIR ] ; then
+    echo "directory exists"
+    rm -rd $RUNDIR/*
+else
+    mkdir -p $RUNDIR
+fi
+
+cd $RUNDIR
+cp ${SCRIPTDIR}/$EXE .
+cp $INPUT .
+cp $TBLDIR/$COOL_TBL .
+cp $TBLDIR/$POPSYNTH_TBL .
+
+echo Time is `date`
+echo Directory is `pwd`
+echo Number of Processors requested: $NPROCS
+echo Number of CPUs requested: $NCPUS
+echo job_id: $PBS_JOBID
+echo $CPATH
+
+echo $params
+# cat $INPUT
+
+mpiexec -np $NPROCS ./$EXE -i $INPUT -t 00:30:00 $params 1> "out.txt" 2> "err.txt"
