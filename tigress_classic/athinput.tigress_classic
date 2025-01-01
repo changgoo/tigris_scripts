@@ -36,6 +36,11 @@ file_type = rst # Restart data dump
 dt        = 50  # time increment between outputs
 dcycle    = 0
 
+<output6>
+file_type = phase_hst   # History data dump
+dt        = 0.01  # time increment between outputs
+dcycle    = 0
+
 
 
 <time>
@@ -77,6 +82,7 @@ neighbor_flooring = true
 fofc              = true
 dfloor            = 1.e-10
 pfloor            = 1.e-3
+ct_method         = uct_hlld
 
 <gravity>
 grav_bc   = disk
