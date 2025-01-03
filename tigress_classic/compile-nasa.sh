@@ -4,7 +4,7 @@ module load mpi-hpe/mpt comp-intel hdf5/1.8.18_mpt
 #debug_option="-debug"
 debug_option=""
 
-options="${debug_option} -mpi -hdf5 --fftw_path=$HOME/fftw"
+options="${debug_option} -mpi -hdf5 -b --fftw_path=$HOME/fftw"
 
 myoptions=$2
 

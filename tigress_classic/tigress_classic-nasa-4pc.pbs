@@ -1,0 +1,80 @@
+#PBS -q long
+#PBS -l select=80:ncpus=40:mpiprocs=40:model=sky_ele
+#PBS -l walltime=120:00:00
+#PBS -m abe
+#PBS -M changgookim@gmail.com
+
+NPROCS=3200
+
+module purge; module load mpi-hpe/mpt comp-intel hdf5/1.8.18_mpt
+
+STARTFLAG=$2
+
+prob=tigress_classic
+PID=TIGRESS
+SRCDIR=$HOME/tigris
+SCRIPTDIR=/$HOME/tigris_scripts/$prob
+SCRIPT=${prob}-nasa-4pc.pbs
+
+EXE=${prob}.exe
+INPUT=${SCRIPTDIR}/athinput.$prob
+RUNDIR=/nobackup/$USER/$prob/run_4pc
+
+
+TBLDIR="$SRCDIR/inputs/tables"
+COOL_TBL="tigress_coolftn.txt"
+POPSYNTH_TBL="Z014_GenevaV00.txt"
+
+params="job/problem_id=$PID time/tlim=1000 mesh/nx1=256 mesh/nx2=256 mesh/nx3=1600 mesh/x3min=-3200 mesh/x3max=3200 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL feedback/iredist=false feedback/vmax=5000 feedback/fkin=0.28 perturbation/rseed=-1 problem/beta0=5 hydro/ct_method=ctc"
+
+echo $RUNDIR
+
+# Create run directory if it doesn't exist, or clean it if it does
+if [ -d $RUNDIR ] ; then
+    echo "directory exists"
+    if [[ $STARTFLAG != "-r" ]]; then
+        echo "cleaning up"
+        rm -rf $RUNDIR/*
+    fi
+else
+    mkdir -p $RUNDIR
+fi
+
+cd $RUNDIR
+
+echo Time is `date`
+echo Directory is `pwd`
+echo Number of Processors requested: $NPROCS
+echo Number of CPUs requested: $NCPUS
+echo job_id: $PBS_JOBID
+echo $CPATH
+
+echo $params
+#
+# Enable pipefail option for better error handling
+set -o pipefail
+
+# Define the restart input file
+RSTINPUT=$PID.final.rst
+if [ ! -f $RSTINPUT ]; then
+    echo "Starting fresh"
+    cp ${SCRIPTDIR}/$SCRIPT .
+    cp ${SCRIPTDIR}/$EXE .
+    cp $INPUT .
+    cp $TBLDIR/$COOL_TBL .
+    cp $TBLDIR/$POPSYNTH_TBL .
+    mpiexec -np $NPROCS ./$EXE -i $INPUT -t 119:30:00 $params 1> "out.txt" 2> "err.txt"
+else
+    echo "Restarting"
+    mpiexec -np $NPROCS ./$EXE -r $RSTINPUT -t 119:30:00 1> "out.rst.txt" 2> "err.rst.txt"
+fi
+
+EXITCODE=$?
+echo "EXITCODE = $EXITCODE"
+
+set +o pipefail
+
+if [[ $EXITCODE -eq 2 ]]; then
+    echo "Resubmitting"
+    qsub $SCRIPT -r
+fi
