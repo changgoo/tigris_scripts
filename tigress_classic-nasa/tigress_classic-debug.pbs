@@ -12,7 +12,7 @@ module purge; module load mpi-hpe/mpt comp-intel hdf5/1.8.18_mpt
 prob=tigress_classic
 PID=TIGRESS
 SRCDIR=$HOME/tigris
-SCRIPTDIR=/$HOME/tigris_scripts/$prob
+SCRIPTDIR=/$HOME/tigris_scripts/${prob}-nasa
 EXE=${prob}.exe
 INPUT=${SCRIPTDIR}/athinput.$prob
 RUNDIR=/nobackup/$USER/$prob/debug

@@ -15,7 +15,7 @@ prob=tigress_classic
 ./configure.py --prob=$prob --nghost=4 -fft -fb --grav=blockfft $options $2
 
 make clean
-make all -j
+make all -j4
 
 cp bin/athena $current/${prob}.exe
 
