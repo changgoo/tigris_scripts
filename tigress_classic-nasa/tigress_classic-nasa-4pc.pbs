@@ -1,6 +1,6 @@
 #PBS -q long
 #PBS -l select=80:ncpus=40:mpiprocs=40:model=sky_ele
-#PBS -l walltime=120:00:00
+#PBS -l walltime=072:00:00
 #PBS -m abe
 #PBS -M changgookim@gmail.com
 
@@ -23,7 +23,8 @@ TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
-params="job/problem_id=$PID time/tlim=1000 mesh/nx1=256 mesh/nx2=256 mesh/nx3=1600 mesh/x3min=-3200 mesh/x3max=3200 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL feedback/iredist=false feedback/vmax=5000 feedback/fkin=0.28 perturbation/rseed=-1 problem/beta0=10 hydro/ct_method=ctc feedback/M_inj=50"
+resparams="mesh/nx1=256 mesh/nx2=256 mesh/nx3=1600"
+params="job/problem_id=$PID time/tlim=1000 mesh/x3min=-3200 mesh/x3max=3200 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL hydro/ct_method=ctc feedback/M_inj=100 particle1/fgas=0.9 feedback/fgas_inj=0.9 perturbation/rseed=7"
 
 echo $RUNDIR
 
@@ -61,10 +62,10 @@ if [ ! -f $RSTINPUT ]; then
     cp $INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
-    mpiexec -np $NPROCS ./$EXE -i $INPUT -t 119:30:00 $params 1> "out.txt" 2> "err.txt"
+    mpiexec -np $NPROCS ./$EXE -i $INPUT -t 71:30:00 $params $resparams 1> "out.txt" 2> "err.txt"
 else
     echo "Restarting"
-    mpiexec -np $NPROCS ./$EXE -r $RSTINPUT -t 119:30:00 1> "out.rst.txt" 2> "err.rst.txt"
+    mpiexec -np $NPROCS ./$EXE -r $RSTINPUT -t 71:30:00 1> "out.rst.txt" 2> "err.rst.txt"
 fi
 
 EXITCODE=$?

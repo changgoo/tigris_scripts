@@ -1,0 +1,23 @@
+#PBS -q debug
+#PBS -l select=1:ncpus=24:mpiprocs=24:model=has
+#PBS -l walltime=002:00:00
+#PBS -l place=excl
+#PBS -m abe
+#PBS -M changgookim@gmail.com
+
+NPROC=1
+
+source ~/myenv/bin/activate
+
+PID=TIGRESS
+RUNDIR=/nobackup/$USER/tigress_classic/$DIR
+
+cd $RUNDIR
+echo $RUNDIR
+
+export MPI_SHEPHERD=true
+# make quick snapshots
+PYTHONDIR=$HOME/pyathena_tigris
+export PYTHONPATH="$PYTHONDIR:$PYTHONPATH"
+pythonscript=$PYTHONDIR/pyathena/tigresspp/do_tasks.py
+mpiexec -np $NPROC python -m mpi4py $pythonscript -b `pwd`
