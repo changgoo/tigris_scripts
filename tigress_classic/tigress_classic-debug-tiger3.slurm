@@ -5,7 +5,7 @@
 ##SBATCH -n 48                 # node count
 #SBATCH -N 4                  # node count
 #SBATCH -n 384                # node count
-#SBATCH --time=01:00:00       # total run time limit (HH:MM:SS)
+#SBATCH --time=02:00:00       # total run time limit (HH:MM:SS)
 #SBATCH --output=tigress-debug.out
 #SBATCH --error=tigress-debug.err
 
@@ -27,14 +27,16 @@ SRCDIR=/home/$USER/tigris
 SCRIPTDIR=/home/$USER/tigris_scripts/$prob
 EXE=${prob}_${CC}$debug_option.exe
 INPUT=${SCRIPTDIR}/athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/debug-$CC
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/debug-ctc_ceil-rk4-nfofc_sh-$CC
 
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
 # params="job/problem_id=$PID cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL output1/dt=0 output1/dcycle=1 time/tlim=10 problem/beta0=0 problem/beta_r=10 feedback/mratio_thresh=1.0"
-params="job/problem_id=$PID mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL output1/dt=0 output1/dcycle=1 time/nlim=10 time/ncycle_out=1 feedback/write_rprof=true"
+params="job/problem_id=$PID time/tlim=500 mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL output1/dt=0 output1/dcycle=1 time/tlim=3 time/ncycle_out=1 output2/dt=0 output3/dt=0 output4/dt=0 output2/dcycle=100 output3/dcycle=100 output4/dcycle=100"
+periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
+extra_params="perturbation/rseed=1 hydro/ct_method=ctc particle1/fgas=0.9 feedback/fgas_inj=0.9 feedback/M_inj=100 hydro/fofc_shear=false hydro/fofc=true cooling/cfl_cool=2 cooling/solver=rk4 hydro/dfloor=1.e-10 cooling/ceiling=true"
 echo $RUNDIR
 
 # Create run directory
@@ -46,15 +48,15 @@ else
 fi
 
 cd $RUNDIR
-cp ${SCRIPTDIR}/$EXE .
-cp $INPUT .
-cp $TBLDIR/$COOL_TBL .
-cp $TBLDIR/$POPSYNTH_TBL .
+cp -p ${SCRIPTDIR}/$EXE .
+cp -p $INPUT .
+cp -p $TBLDIR/$COOL_TBL .
+cp -p $TBLDIR/$POPSYNTH_TBL .
 
 echo $params
 # cat $INPUT
 
-srun $EXE -i $INPUT -t 00:55:00 $params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
+srun $EXE -i $INPUT -t 00:55:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 
 # make quick snapshots
 # module purge

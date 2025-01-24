@@ -3,7 +3,7 @@
 #SBATCH --account=eost        # account (mandatory for tiger3)
 #SBATCH -N 4                  # node count
 #SBATCH -n 384                # node count
-#SBATCH --time=24:00:00       # total run time limit (HH:MM:SS)
+#SBATCH --time=05:00:00       # total run time limit (HH:MM:SS)
 #SBATCH --mail-type=all       # send email on job start, end and fail
 #SBATCH --mail-user=changgoo@princeton.edu
 #SBATCH --output=tigress-%j.err
@@ -30,15 +30,17 @@ SCRIPTDIR=/home/$USER/tigris_scripts/$prob
 SCRIPT=$prob-tiger3.slurm
 EXE=${prob}_${CC}$debug_option.exe
 INPUT=${SCRIPTDIR}/athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/run-$CC
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/run-sh-ctc-noceil-df8-rk4-$CC
 
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
-params="job/problem_id=$PID time/tlim=500 mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL feedback/iredist=false feedback/vmax=5000 feedback/fkin=0.28"
-# feedback/iredist=false feedback/imom=true feedback/fkin=0 hydro/neighbor_flooring=true problem/beta0=0 problem/beta_r=1.e6"
+params="job/problem_id=$PID time/tlim=200 mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
+extra_params="perturbation/rseed=1 hydro/ct_method=ctc particle1/fgas=0.9 feedback/fgas_inj=0.9 feedback/M_inj=100 hydro/fofc_shear=false hydro/fofc=true cooling/cfl_cool=2 cooling/solver=rk4 cooling/ceiling=false feedback/vmax=5000 hydro/dfloor=1.e-8 output2/dt=10 output3/dt=10 output4/dt=10"
+# feedback/iredist=false feedback/imom=true feedback/fkin=0 hydro/neighbor_flooring=true problem/beta0=0 problem/beta_r=1.e6"
+
 echo $RUNDIR
 
 # Create run directory
@@ -67,10 +69,11 @@ if [ ! -f $RSTINPUT ]; then
     cp $INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
-    srun $EXE -i $INPUT -t 23:30:00 $params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
+    srun $EXE -i $INPUT -t 23:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
     echo "Restarting"
-    srun $EXE -r $RSTINPUT -t 23:30:00 1> "$RUNDIR/out.rst.txt" 2> "$RUNDIR/err.rst.txt"
+    rstnum=`ls out.*.txt | wc -l`
+    srun $EXE -r $RSTINPUT -t 23:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
 fi
 
 EXITCODE=$?

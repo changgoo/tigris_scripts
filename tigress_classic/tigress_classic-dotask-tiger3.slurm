@@ -8,7 +8,7 @@
 #SBATCH --output=tigress-dotask.out
 #SBATCH --error=tigress-dotask.err
 
-RUNDIR=/scratch/gpfs/EOST/$USER/tigress-classic/run-$1
+RUNDIR=/scratch/gpfs/EOST/$USER/tigress_classic/$1
 
 cd $RUNDIR
 

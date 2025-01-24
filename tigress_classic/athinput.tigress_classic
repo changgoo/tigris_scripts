@@ -105,7 +105,8 @@ coolftn_file  = tigress_coolftn.txt
 cfl_cool      = 0.5       # min dt_hydro/dt_cool
 cfl_cool_sub  = 0.1       # dt_sub/dt_cool (must be less than 1)
 T_floor       = 10        # temperature floor
-T_max         = 1e9       # temperature ceiling
+T_max         = 5e9       # temperature ceiling
+ceiling       = false
 
 T_PE          = 15000     # temperature below which PE heating is applied, if plf
 Gamma         = 2e-26     # heating rate in ergs / sec, if plf
