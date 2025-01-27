@@ -95,6 +95,7 @@ OAorder    = 0       # 0: w/o OA, 1: w/ OA (1st), 2: w/ OA (2nd)
 qshear     = 1       # shear rate
 Omega0     = 0.028   # angular velocity of the system
 shboxcoord = 1       # 1=xy (default); 2=xz
+shear_internal_energy = false
 
 <cooling>
 cooling       = op_split         # [none, enroll, op_split]
