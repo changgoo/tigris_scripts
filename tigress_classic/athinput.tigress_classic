@@ -118,8 +118,14 @@ heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
 type    = sink
 gravity = true
 output  = true
+output_pm = false
 feedback      = true     # turn on feedback from particles
 fgas    = 0.0
+r_return = 0.0           # negative for no return; 0 to entire volume
+t_return = 5
+dt_return = 1
+A_return = 2
+return_to_warm = true
 
 <particle2>
 type    = none
@@ -129,9 +135,9 @@ output  = true
 <feedback>
 ischeme       = Classic     # injection scheme
 pop_synth     = SB99     # population synthesis scheme
-M_inj         = 20.0     # Mass injected in units of Msun for single SN
-E_inj         = 1.0      # Energy injected in units of 10^51 ergs
-fgas_inj      = 0.0      # fraction of mass injected from gas reservoir
+M_inj         = 100                # Total injected mass (gas+star) in Msun
+E_inj         = 1.0                # Energy injected in units of 10^51 ergs
+M_ej          = 10                 # Ejecta mass (star) in Msun
 iSN           = 1        # turn on supernovae
 iFUV          = 1
 pop_synth_file = Z014_GenevaV00.txt
