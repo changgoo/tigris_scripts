@@ -38,7 +38,7 @@ current=`pwd`
 cd /home/changgoo/tigris/
 
 prob=tigress_classic
-./configure.py --prob=$prob --nghost=4 -fft -fb --grav=blockfft $options $2
+./configure.py --prob=$prob --nghost=4 -fft -fb -crfb --grav=blockfft $options $2
 
 make clean
 make all -j
