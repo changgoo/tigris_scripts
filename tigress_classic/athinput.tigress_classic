@@ -42,7 +42,7 @@ nlim             = -1     # cycle limit
 tlim             = 100.0   # time limit
 integrator       = rk2    # time integration algorithm
 xorder           = 2      # order of spatial reconstruction
-ncycle_out       = 10     # interval for stdout summary info
+ncycle_out       = 1      # interval for stdout summary info
 ops_task         = true
 
 <mesh>
@@ -141,6 +141,25 @@ mratio_thresh = 1.0     # mass ratio threshold for energy inejction mode
 iredist       = false    # redistribute if momentum feedback?
 write_rprof   = false
 vmax          = 5000     # maximum velocity by the feedback injection
+
+<cr>
+vmax                 = 1.e9
+fofc                 = true
+neighbor_flooring    = true
+vflx                 = false
+taucell              = 1
+vs_flag              = 1
+src_flag             = 1
+losses_flag          = 0
+perp_diff_flag       = 1
+self_consistent_flag = 1
+obs_spectrum_flag    = 1
+postprocess_flag     = 0
+ecfloor              = 1e-20
+sigma                = 1e-28
+max_opacity          = 10000000000
+perp_to_par_diff     = 10
+obs_spectrum_slope   = -4.7
 
 <problem>
 Sigma_gas  = 12

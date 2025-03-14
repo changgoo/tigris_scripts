@@ -29,12 +29,12 @@ prob=tigress_classic
 PID=TIGRESS
 SRCDIR=/home/$USER/tigris
 SCRIPTDIR=/home/$USER/tigris_scripts/$prob
-SCRIPT=${prob}.slurm
+SCRIPT=${prob}_cr.slurm
 
 # Define executable and input files
-EXE=${prob}_${CC}$debug_option.exe
+EXE=${prob}_cr_${CC}$debug_option.exe
 INPUT=${SCRIPTDIR}/athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/run-p-uct-ret_t5_A2_dt1_r0_fgas${fgas}-$CC
+RUNDIR=/scratch/gpfs/$USER/$prob/crrun-r_ret0-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -43,7 +43,7 @@ POPSYNTH_TBL="Z014_GenevaV00.txt"
 
 params="job/problem_id=$PID time/tlim=500 mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 hydro/ct_method=uct_hlld particle1/fgas=$fgas particle1/r_return=0 particle1/t_return=5 particle1/dt_return=1 particle1/A_return=2 particle1/return_to_warm=true feedback/M_ej=10 feedback/M_inj=1000 cooling/cfl_cool=2 cooling/solver=rk2 cooling/ceiling=true feedback/vmax=5000 hydro/dfloor=1.e-8 feedback/fe_CR=0.1  output2/dt=1 output3/dt=1 output4/dt=20 output2/ghost_zones=true $periodic"
+extra_params="perturbation/rseed=1 hydro/ct_method=uct_hlld particle1/fgas=$fgas particle1/r_return=0 particle1/t_return=5 particle1/dt_return=1 particle1/A_return=2 particle1/return_to_warm=true feedback/M_ej=10 feedback/M_inj=1000 cooling/cfl_cool=2 cooling/solver=rk2 cooling/ceiling=true feedback/vmax=5000 hydro/dfloor=1.e-8 feedback/fe_CR=0.1 output2/dt=1 output3/dt=1 output4/dt=20 output2/ghost_zones=true cr/self_consistent_flag=1 $periodic"
 # feedback/iredist=false feedback/imom=true feedback/fkin=0 hydro/neighbor_flooring=true problem/beta0=0 problem/beta_r=1.e6"
 
 # Print the run directory

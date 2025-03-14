@@ -38,12 +38,12 @@ current=`pwd`
 cd /home/changgoo/tigris/
 
 prob=tigress_classic
-./configure.py --prob=$prob --nghost=4 -fft -fb --grav=blockfft $options $2
+./configure.py --prob=$prob --nghost=4 -fft -fb --cr=mg --grav=blockfft $options $2
 
 make clean
 make all -j
 
-cp bin/athena $current/${prob}_$CC$2$debug_option.exe
+cp bin/athena $current/${prob}_cr_$CC$2$debug_option.exe
 
 cd $currnet
 set +e

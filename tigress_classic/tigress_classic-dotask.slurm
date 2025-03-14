@@ -1,8 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=tigress    # create a short name for your job
 #SBATCH -N 1                 # node count
-#SBATCH -n 48                # node count
-#SBATCH --time=06:00:00          # total run time limit (HH:MM:SS)
+#SBATCH -n 24                # node count
+#SBATCH --time=01:00:00
+#SBATCH --mem=2000G
+#SBATCH --partition=bigmem
 #SBATCH --mail-type=all          # send email on job start, end and fail
 #SBATCH --mail-user=changgoo@princeton.edu
 #SBATCH --output=tigress-dotask-%j.err
