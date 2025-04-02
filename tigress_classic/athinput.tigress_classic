@@ -34,7 +34,10 @@ file_type = phase_hst   # History data dump
 dt        = 0.01  # time increment between outputs
 dcycle    = 0
 
-
+<output6>
+file_type = zprof      # zprof data dump
+dt        = 1          # time increment between outputs
+dcycle    = 0
 
 <time>
 cfl_number       = 0.3    # The Courant, Friedrichs, & Lewy (CFL) Number
@@ -74,14 +77,15 @@ iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
 neighbor_flooring = true
 fofc              = true
 fofc_shear        = false
-dfloor            = 1.e-10
-pfloor            = 1.e-10
+dfloor            = 1.e-8
+pfloor            = 1.e-8
 tsqfloor          = 1.e-2
 ct_method         = uct_hlld
 
 <gravity>
 grav_bc   = disk
 output_gasonly_potential = true
+solve_grav_hyperbolic_dt = false
 
 <orbital_advection>
 OAorder    = 0       # 0: w/o OA, 1: w/ OA (1st), 2: w/ OA (2nd)
@@ -99,7 +103,7 @@ cfl_cool      = 0.5       # min dt_hydro/dt_cool
 cfl_cool_sub  = 0.1       # dt_sub/dt_cool (must be less than 1)
 T_floor       = 10        # temperature floor
 T_max         = 5e9       # temperature ceiling
-ceiling       = false
+ceiling       = true
 
 T_PE          = 15000     # temperature below which PE heating is applied, if plf
 Gamma         = 2e-26     # heating rate in ergs / sec, if plf
@@ -143,20 +147,20 @@ write_rprof   = false
 vmax          = 5000     # maximum velocity by the feedback injection
 
 <cr>
-vmax                 = 1.e9
+vmax                 = 2e9
 fofc                 = true
 neighbor_flooring    = true
 vflx                 = false
 taucell              = 1
 vs_flag              = 1
 src_flag             = 1
-losses_flag          = 0
+losses_flag          = 1
 perp_diff_flag       = 1
 self_consistent_flag = 1
 obs_spectrum_flag    = 1
 postprocess_flag     = 0
 ecfloor              = 1e-20
-sigma                = 1e-28
+sigma                = 1e-25
 max_opacity          = 10000000000
 perp_to_par_diff     = 10
 obs_spectrum_slope   = -4.7

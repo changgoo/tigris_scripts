@@ -10,7 +10,7 @@ set -e
 CC=$1
 if [ "$CC" == "icpx" ] ; then
     module_icpx
-    mpi_hdf5='hdf5/oneapi-2024.2/intel-mpi/1.14.4'
+    mpi_hdf5='hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4'
     debug_option=""
 elif [ "$CC" == "g++" ] ; then
     module_gcc
@@ -27,15 +27,16 @@ echo "CC is set to $CC"
 
 # CC=g++
 
-mpi_hdf5_library_path="/usr/local/$mpi_hdf5/lib64"
-mpi_hdf5_include_path="/usr/local/$mpi_hdf5/include"
+mpi_hdf5_library_path="$HDF5DIR/lib64"
+mpi_hdf5_include_path="$HDF5DIR/include"
 
 options="${debug_option} -mpi -hdf5 --cxx=$CC --lib_path=${mpi_hdf5_library_path} --include=${mpi_hdf5_include_path}"
 
 myoptions=$2
 
 current=`pwd`
-cd /home/changgoo/tigris/
+SRCDIR=/home/changgoo/athena_tigris/
+cd $SRCDIR
 
 prob=tigress_classic
 ./configure.py --prob=$prob --nghost=4 -fft -fb --cr=mg --grav=blockfft $options $2

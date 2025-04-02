@@ -1,10 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=tigress-debug    # create a short name for your job
 #SBATCH --account=eost        # account (mandatory for tiger3)
-##SBATCH -N 1                  # node count
-##SBATCH -n 48                 # node count
-#SBATCH -N 4                  # node count
-#SBATCH -n 384                # node count
+#SBATCH -N 1                  # node count
+#SBATCH -n 96                # node count
 #SBATCH --time=00:30:00       # total run time limit (HH:MM:SS)
 #SBATCH --output=tigress-debug.out
 #SBATCH --error=tigress-debug.err
@@ -34,7 +32,7 @@ COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
 # params="job/problem_id=$PID cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL output1/dt=0 output1/dcycle=1 time/tlim=10 problem/beta0=0 problem/beta_r=10 feedback/mratio_thresh=1.0"
-params="job/problem_id=$PID time/tlim=5 mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL output1/dt=0 output1/dcycle=1 time/ncycle_out=1"
+params="job/problem_id=$PID time/tlim=5 mesh/nx1=128 mesh/nx2=128 mesh/nx3=192 mesh/x3min=-768 mesh/x3max=768 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL output1/dt=0 output1/dcycle=1 time/ncycle_out=1"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
 extra_params="perturbation/rseed=1 hydro/ct_method=uct_hlld particle1/fgas=0.9 feedback/fgas_inj=0.9 feedback/M_inj=100 hydro/fofc_shear=false hydro/fofc=true cooling/cfl_cool=2 cooling/solver=rk4 cooling/ceiling=true feedback/vmax=5000 hydro/dfloor=1.e-8 output2/dt=0.1 output3/dt=0.1 output4/dt=0.1 output5/dt=1 output2/ghost_zones=true output3/ghost_zones=true orbital_advection/shear_internal_energy=false hydro/neighbor_flooring=true"
 echo $RUNDIR
