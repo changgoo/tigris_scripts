@@ -24,7 +24,7 @@ COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
 resparams="mesh/nx1=128 mesh/nx2=128 mesh/nx3=800"
-params="job/problem_id=$PID time/tlim=1000 mesh/x3min=-3200 mesh/x3max=3200 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL hydro/ct_method=ctc feedback/M_inj=100 particle1/fgas=0.9 feedback/fgas_inj=0.9 perturbation/rseed=7"
+params="job/problem_id=$PID time/tlim=1000 mesh/x3min=-3200 mesh/x3max=3200 cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL hydro/ct_method=ctc feedback/M_inj=100 particle1/fgas=0.9 feedback/M_ej=10 perturbation/rseed=7"
 
 echo $RUNDIR
 
