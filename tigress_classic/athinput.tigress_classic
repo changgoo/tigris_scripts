@@ -95,11 +95,11 @@ shboxcoord = 1       # 1=xy (default); 2=xz
 
 <cooling>
 cooling       = op_split         # [none, enroll, op_split]
-solver        = forward_euler    # [forward_euler]
+solver        = rk2              # [forward_euler]
 coolftn       = tigress	         # tigress or plf
 coolftn_file  = tigress_coolftn.txt
 
-cfl_cool      = 0.5       # min dt_hydro/dt_cool
+cfl_cool      = 2.0       # min dt_hydro/dt_cool
 cfl_cool_sub  = 0.1       # dt_sub/dt_cool (must be less than 1)
 T_floor       = 10        # temperature floor
 T_max         = 5e9       # temperature ceiling
@@ -115,9 +115,9 @@ type    = sink
 gravity = true
 output  = true
 output_pm = false
-feedback      = true     # turn on feedback from particles
+feedback  = true     # turn on feedback from particles
 fgas    = 0.0
-r_return = 0.0           # negative for no return; 0 to entire volume
+r_return = -1           # negative for no return; 0 to entire volume
 t_return = 5
 dt_return = 1
 A_return = 2
@@ -131,7 +131,7 @@ output  = true
 <feedback>
 ischeme       = Classic     # injection scheme
 pop_synth     = SB99     # population synthesis scheme
-M_inj         = 100                # Total injected mass (gas+star) in Msun
+M_inj         = 1000                # Total injected mass (gas+star) in Msun
 E_inj         = 1.0                # Energy injected in units of 10^51 ergs
 M_ej          = 10                 # Ejecta mass (star) in Msun
 fe_CR         = 0.1               # energy fraction in CR
