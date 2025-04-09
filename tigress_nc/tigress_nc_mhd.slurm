@@ -3,7 +3,7 @@
 #SBATCH --account=eost        # account (mandatory for tiger3)
 #SBATCH -N 4                  # node count
 #SBATCH -n 384                # node count
-#SBATCH --time=00:30:00       # total run time limit (HH:MM:SS)
+#SBATCH --time=24:00:00       # total run time limit (HH:MM:SS)
 ##SBATCH --mail-type=all       # send email on job start, end and fail
 ##SBATCH --mail-user=changgoo@princeton.edu
 #SBATCH --output=ncr-%j.err
@@ -35,7 +35,7 @@ SCRIPT=${prob}_${physics}.slurm
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
 INPUT=${SCRIPTDIR}/athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-16pc-r_ret100-fgas${fgas}-$CC
+RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-16pc-r_ret100-fgas${fgas}-xcut-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
