@@ -46,7 +46,7 @@ lowres_bigbox="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 mesh/x1min=-1024 mesh/x1ma
 lowres_normal="meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16"
 medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768"
 
-params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
+params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
 extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false $periodic"
 
