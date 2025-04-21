@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=tigress    # create a short name for your job
+#SBATCH --job-name=mhd    # create a short name for your job
 #SBATCH --account=eost        # account (mandatory for tiger3)
 #SBATCH -N 4                  # node count
 #SBATCH -n 384                # node count
@@ -25,21 +25,30 @@ STARTFLAG=$2
 fgas=0.7
 
 # Define problem and paths
+physics=mhd
 prob=tigress_classic
 PID=TIGRESS
-SRCDIR=/home/$USER/tigris
-SCRIPTDIR=/home/$USER/tigris_scripts/$prob
-SCRIPT=${prob}_cr_rst.slurm
+SRCDIR=$HOME/tigris
+SCRIPTDIR=$HOME/tigris_scripts/$prob/stellar
+SCRIPT=${prob}_${physics}.slurm
 
 # Define executable and input files
-EXE=${prob}_cr_${CC}$debug_option.exe
+EXE=${prob}_${physics}_${CC}$debug_option.exe
 INPUT=${SCRIPTDIR}/athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/crrun-r_ret0-lngradBC-rk2-df6-$CC
+RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-r_ret100-fgas${fgas}-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
+
+lowres_bigbox="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 mesh/x1min=-1024 mesh/x1max=1024 mesh/x2min=-1024 mesh/x2max=1024 mesh/x3min=-6144 mesh/x3max=6144"
+lowres_normal="meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16"
+medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768"
+
+params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
+periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false $periodic"
 
 # Print the run directory
 echo $RUNDIR
@@ -73,10 +82,7 @@ if [ ! -f $RSTINPUT ]; then
     cp $INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
-    # srun $EXE -i $INPUT -t 23:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
-    # RSTINPUT=../crrun-r_ret0-icpx-b/TIGRESS.00005.rst
-    RSTINPUT=../crrun-r_ret0-gradBC-rk2-df6-icpx-b/TIGRESS.00007.rst
-    srun $EXE -r $RSTINPUT -t 47:30:00 cr/sigma=1.e-25 cr/self_consistent_flag=1 cr/vmax=2.e9 cr/losses_flag=1 output1/file_number=0 output5/file_number=0 output6/dt=1 time/integrator=rk2 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 time/tlim=200 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
+    srun $EXE -i $INPUT -t 47:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
     echo "Restarting"
     rstnum=`ls out.*.txt | wc -l`
