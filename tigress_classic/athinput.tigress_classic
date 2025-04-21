@@ -66,6 +66,8 @@ x3max       = 3072           # maximum value of X3
 ix3_bc      = user           # inner-X3 boundary flag
 ox3_bc      = user           # outer-X3 boundary flag
 refinement  = none
+mhd_outflow_bc = diode
+cr_outflow_bc = lngrad
 
 <meshblock>
 nx1 = 32

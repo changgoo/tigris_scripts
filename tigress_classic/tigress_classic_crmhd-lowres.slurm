@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=lowres-crmhd-big    # create a short name for your job
+#SBATCH --job-name=lowres-crmhd-b1    # create a short name for your job
 #SBATCH --account=eost        # account (mandatory for tiger3)
 #SBATCH -N 4                  # node count
 #SBATCH -n 384                # node count
@@ -22,6 +22,7 @@ else
 fi
 
 STARTFLAG=$2
+
 fgas=0.7
 
 # Define problem and paths
@@ -35,7 +36,7 @@ SCRIPT=${prob}_${physics}-lowres.slurm
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
 INPUT=${SCRIPTDIR}/athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-16pc-bigbox-r_ret100-fgas${fgas}-df6-gravdt-$CC
+RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-16pc-tallbox-r_ret100-fgas${fgas}-df6-gravdt-b1-mhdbc_diode-crbc_lngrad_out-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -47,9 +48,9 @@ lowres_tallbox="mesh/nx3=768 mesh/x3min=-6144 mesh/x3max=6144 meshblock/nx1=16 m
 lowres_normal="meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16"
 medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768"
 
-params="job/problem_id=$PID time/tlim=500 $lowres_bigbox cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
+params="job/problem_id=$PID time/tlim=500 $lowres_tallbox cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=true cr/sigma=1.e-25 cr/self_consistent_flag=1 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 $periodic"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=true cr/sigma=1.e-25 cr/self_consistent_flag=1 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 mesh/mhd_outflow_bc=diode mesh/cr_outflow_bc=lngrad_out problem/beta0=1 output2/dt=5 output3/dt=5 $periodic"
 
 # Print the run directory
 echo $RUNDIR
