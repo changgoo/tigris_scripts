@@ -4,10 +4,10 @@
 #SBATCH -N 1                  # node count
 #SBATCH -n 48                # node count
 #SBATCH --time=00:30:00       # total run time limit (HH:MM:SS)
-#SBATCH --output=ncr-%j.err
-#SBATCH --error=ncr-%j.out
+#SBATCH --output=dotask-%j.err
+#SBATCH --error=dotask-%j.out
 
-BASEDRIR=/scratch/gpfs/$USER/tigress_nc/
+BASEDIR=/scratch/gpfs/$USER/tigress_nc/
 RUNDIR=$BASEDIR$1
 
 # make quick snapshots
