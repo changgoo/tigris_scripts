@@ -1,13 +1,19 @@
 #!/bin/bash
-#SBATCH --job-name=lowres-crmhd-b1    # create a short name for your job
+#SBATCH --job-name=lowres-crmhd    # create a short name for your job
 #SBATCH --account=eost        # account (mandatory for tiger3)
-#SBATCH -N 4                  # node count
-#SBATCH -n 448                # node count
+#SBATCH -N 5                  # node count
+#SBATCH -n 512                # node count
 #SBATCH --time=24:00:00       # total run time limit (HH:MM:SS)
 #SBATCH --mail-type=all       # send email on job start, end and fail
 #SBATCH --mail-user=changgoo@princeton.edu
 #SBATCH --output=tigress-%j.err
 #SBATCH --error=tigress-%j.out
+
+# check if the second argument is provided
+if [ -z "$1" ]; then
+    echo "Usage: $0 <compiler> <start_flag> <crbc>"
+    exit 1
+fi
 
 CC=$1
 debug_option=""
@@ -21,8 +27,50 @@ else
     debug_option="-debug"
 fi
 
+# check if the second argument is provided
+if [ -z "$2" ]; then
+    echo "Usage: $0 <compiler> <start_flag> <crbc>"
+    exit 1
+fi
+
 STARTFLAG=$2
-CRBC=$3
+
+# check if the third argument is provided
+if [ -z "$3" ]; then
+    echo "Usage: $0 <compiler> <start_flag> <crbc>"
+    CRBC=lngrad
+else
+    CRBC=$3
+fi
+
+# check if the third argument is a valid value
+if [[ "$CRBC" != "diode" && "$CRBC" != "lngrad" && "$CRBC" != "lngrad_out" && "$CRBC" != "lingrad" && "$CRBC" != "lingrad_out" ]]; then
+    echo "Invalid value for crbc=$CRBC. Use 'diode' or 'lngrad'."
+    exit 1
+fi
+
+# check if the third argument is provided
+if [ -z "$4" ]; then
+    echo "Usage: $0 <compiler> <start_flag> <crbc>"
+    MHDBC=lngrad
+else
+    MHDBC=$4
+fi
+
+# check if the third argument is a valid value
+if [[ "$MHDBC" != "diode" && "$MHDBC" != "lngrad" && "$MHDBC" != "lngrad_out" && "$MHDBC" != "lingrad" && "$MHDBC" != "lingrad_out" ]]; then
+    echo "Invalid value for MHDBC=$MHDBC. Use 'diode' or 'lngrad'."
+    exit 1
+fi
+
+# check if the third argument is provided
+if [ -z "$5" ]; then
+    echo "Usage: $0 <compiler> <start_flag> <crbc> <mhdcd> <beta>"
+    beta=10
+else
+    beta=$5
+fi
+
 fgas=0.7
 
 # Define problem and paths
@@ -35,22 +83,22 @@ SCRIPT=${prob}_${physics}-lowres.slurm
 
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
-INPUT=${SCRIPTDIR}/athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-16pc-b1-mhdbc_diode-crbc_$CRBC-$CC
+INPUT=athinput.$prob
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
-lowres_bigbox="mesh/nx1=128 mesh/nx2=128 mesh/nx3=784 meshblock/nx3=56 mesh/x1min=-1024 mesh/x1max=1024 mesh/x2min=-1024 mesh/x2max=1024 mesh/x3min=-6272 mesh/x3max=6272"
-lowres_tallbox="mesh/nx3=784 mesh/x3min=-6272 mesh/x3max=6272 meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=28"
-lowres_normal="meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16 mesh/nx3=448 mesh/x3min=-3584 mesh/x3max=3584"
-medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=896 mesh/x3min=-3584 mesh/x3max=3584"
+lowres_bigbox="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 mesh/x1min=-1024 mesh/x1max=1024 mesh/x2min=-1024 mesh/x2max=1024 mesh/x3min=-6144 mesh/x3max=6144"
+lowres_tallbox="mesh/nx3=768 mesh/x3min=-6144 mesh/x3max=6144 meshblock/nx1=16 meshblock/nx2=16"
+lowres_normal="meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16 mesh/nx3=512 mesh/x3min=-4096 mesh/x3max=4096"
+medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3max=4096"
 
 params="job/problem_id=$PID time/tlim=500 $lowres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=true cr/sigma=1.e-25 cr/self_consistent_flag=1 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 mesh/mhd_outflow_bc=diode mesh/cr_outflow_bc=$CRBC problem/beta0=1 output2/dt=5 output3/dt=5 $periodic"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=true cr/sigma=1.e-25 cr/self_consistent_flag=1 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 mesh/mhd_outflow_bc=$MHDBC mesh/cr_outflow_bc=$CRBC problem/beta0=1 output2/dt=5 output3/dt=5 $periodic"
 
 # Print the run directory
 echo $RUNDIR
@@ -70,7 +118,7 @@ fi
 cd $RUNDIR
 
 # Print the parameters
-echo $params
+echo $params $extra_params
 
 # Enable pipefail option for better error handling
 set -o pipefail
@@ -81,7 +129,7 @@ if [ ! -f $RSTINPUT ]; then
     echo "Starting fresh"
     cp ${SCRIPTDIR}/$SCRIPT .
     cp ${SCRIPTDIR}/$EXE .
-    cp $INPUT .
+    cp ${SCRIPTDIR}/../$INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
     srun $EXE -i $INPUT -t 23:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
@@ -98,7 +146,7 @@ set +o pipefail
 
 if [[ $EXITCODE -eq 2 ]]; then
     echo "Resubmitting"
-    sbatch $SCRIPT $CC -r
+    sbatch $SCRIPT $CC -r $CRBC $beta
 fi
 
 # make quick snapshots
