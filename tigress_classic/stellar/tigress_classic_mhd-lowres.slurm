@@ -4,8 +4,8 @@
 #SBATCH -N 4                  # node count
 #SBATCH -n 384                # node count
 #SBATCH --time=24:00:00       # total run time limit (HH:MM:SS)
-#SBATCH --mail-type=all       # send email on job start, end and fail
-#SBATCH --mail-user=changgoo@princeton.edu
+##SBATCH --mail-type=all       # send email on job start, end and fail
+##SBATCH --mail-user=changgoo@princeton.edu
 #SBATCH --output=tigress-%j.err
 #SBATCH --error=tigress-%j.out
 
@@ -22,6 +22,7 @@ else
 fi
 
 STARTFLAG=$2
+
 fgas=0.7
 
 # Define problem and paths
@@ -34,8 +35,8 @@ SCRIPT=${prob}_${physics}-lowres.slurm
 
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
-INPUT=${SCRIPTDIR}/athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-16pc-tallbox-r_ret100-fgas${fgas}-$CC
+INPUT=athinput.$prob
+RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-16pc-Ia-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -49,7 +50,7 @@ medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768"
 
 params="job/problem_id=$PID time/tlim=500 $lowres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false $periodic"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false particle2/type=feedback $periodic"
 
 # Print the run directory
 echo $RUNDIR
@@ -80,7 +81,7 @@ if [ ! -f $RSTINPUT ]; then
     echo "Starting fresh"
     cp ${SCRIPTDIR}/$SCRIPT .
     cp ${SCRIPTDIR}/$EXE .
-    cp $INPUT .
+    cp ${SCRIPTDIR}/../$INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
     srun $EXE -i $INPUT -t 23:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"

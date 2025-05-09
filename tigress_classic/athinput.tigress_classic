@@ -67,7 +67,7 @@ ix3_bc      = user           # inner-X3 boundary flag
 ox3_bc      = user           # outer-X3 boundary flag
 refinement  = none
 mhd_outflow_bc = diode
-cr_outflow_bc = lngrad
+cr_outflow_bc = lngrad_out
 
 <meshblock>
 nx1 = 32
@@ -127,9 +127,12 @@ A_return = 2
 return_to_warm = true
 
 <particle2>
-type    = none
-gravity = true
-output  = true
+type      = none
+gravity   = false
+output    = false
+output_pm = false
+feedback  = true     # turn on feedback from particles
+rseed     = 10
 
 <feedback>
 ischeme       = Classic     # injection scheme
