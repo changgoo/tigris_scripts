@@ -36,26 +36,13 @@ fi
 
 STARTFLAG=$2
 
+
 # check if the third argument is provided
 if [ -z "$3" ]; then
     echo $usage
-    CRBC=lngrad_out
-else
-    CRBC=$3
-fi
-
-# check if the third argument is a valid value
-if [[ "$CRBC" != "diode" && "$CRBC" != "lngrad" && "$CRBC" != "lngrad_out" && "$CRBC" != "lingrad" && "$CRBC" != "lingrad_out" ]]; then
-    echo "Invalid value for crbc=$CRBC"
-    exit 1
-fi
-
-# check if the third argument is provided
-if [ -z "$4" ]; then
-    echo $usage
     MHDBC=diode
 else
-    MHDBC=$4
+    MHDBC=$3
 fi
 
 # check if the third argument is a valid value
@@ -64,7 +51,22 @@ if [[ "$MHDBC" != "diode" && "$MHDBC" != "lngrad" && "$MHDBC" != "lngrad_out" &&
     exit 1
 fi
 
-# check if the third argument is provided
+# check if the fourth argument is provided
+if [ -z "$4" ]; then
+    echo $usage
+    CRBC=lngrad_out
+else
+    CRBC=$4
+fi
+
+# check if the third argument is a valid value
+if [[ "$CRBC" != "diode" && "$CRBC" != "lngrad" && "$CRBC" != "lngrad_out" && "$CRBC" != "lingrad" && "$CRBC" != "lingrad_out" ]]; then
+    echo "Invalid value for crbc=$CRBC"
+    exit 1
+fi
+
+
+# check if the fifth argument is provided
 if [ -z "$5" ]; then
     echo $usage
     beta=10
@@ -87,7 +89,7 @@ SCRIPT=${prob}_${physics}-lowres.slurm
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC-Fcbc-$CC
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -95,7 +97,7 @@ COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
 lowres_bigbox="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 mesh/x1min=-1024 mesh/x1max=1024 mesh/x2min=-1024 mesh/x2max=1024 mesh/x3min=-6144 mesh/x3max=6144"
-lowres_tallbox="mesh/nx3=768 mesh/x3min=-6144 mesh/x3max=6144 meshblock/nx1=16 meshblock/nx2=16"
+lowres_tallbox="mesh/nx3=1024 mesh/x3min=-8192 mesh/x3max=8192 meshblock/nx1=16 meshblock/nx2=16"
 lowres_normal="meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16 mesh/nx3=512 mesh/x3min=-4096 mesh/x3max=4096"
 medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3max=4096"
 
@@ -130,7 +132,7 @@ set -o pipefail
 RSTINPUT=$PID.final.rst
 if [ ! -f $RSTINPUT ]; then
     echo "Starting fresh"
-    cp ${SCRIPTDIR}/$SCRIPT .
+    cp $0 ./$SCRIPT
     cp ${SCRIPTDIR}/$EXE .
     cp ${SCRIPTDIR}/../$INPUT .
     cp $TBLDIR/$COOL_TBL .
