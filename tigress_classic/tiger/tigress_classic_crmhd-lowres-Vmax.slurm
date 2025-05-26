@@ -10,7 +10,7 @@
 #SBATCH --error=tigress-%j.out
 
 # check if the second argument is provided
-usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <CRBC=lngrad_out> <beta=10>"
+usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <CRBC=lngrad_out> <Vmax=2>"
 if [ -z "$1" ]; then
     echo $usage
     exit 1
@@ -69,12 +69,12 @@ fi
 # check if the fifth argument is provided
 if [ -z "$5" ]; then
     echo $usage
-    beta=10
+    Vmax=2
 else
-    beta=$5
+    Vmax=$5
 fi
 
-echo "submitting a job: $0 $1 $2 $MHDBC $CRBC $beta"
+echo "submitting a job: $0 $1 $2 $MHDBC $CRBC $Vmax"
 
 fgas=0.7
 
@@ -84,12 +84,12 @@ prob=tigress_classic
 PID=TIGRESS
 SRCDIR=$HOME/tigris
 SCRIPTDIR=$HOME/tigris_scripts/$prob/tiger
-SCRIPT=${prob}_${physics}-lowres.slurm
+SCRIPT=${prob}_${physics}-lowres-Vmax.slurm
 
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC-$CC
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-b1-mhdbc_$MHDBC-crbc_$CRBC-Vmax$Vmax-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -104,7 +104,7 @@ medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3m
 params="job/problem_id=$PID time/tlim=500 $lowres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
 extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=true cr/sigma=1.e-25 cr/self_consistent_flag=1 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 mesh/mhd_outflow_bc=$MHDBC mesh/cr_outflow_bc=$CRBC output2/dt=5 output3/dt=5 $periodic"
-extra_params2="problem/beta0=$beta"
+extra_params2="cr/vmax=${Vmax}e9 problem/beta0=1"
 
 # Print the run directory
 echo $RUNDIR
@@ -152,7 +152,7 @@ set +o pipefail
 
 if [[ $EXITCODE -eq 2 ]]; then
     echo "Resubmitting"
-    sbatch $SCRIPT $CC -r $MHDBC $CRBC $beta
+    sbatch $SCRIPT $CC -r $MHDBC $CRBC $Vmax
 fi
 
 # make quick snapshots
