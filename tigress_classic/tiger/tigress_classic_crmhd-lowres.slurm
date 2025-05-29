@@ -89,7 +89,7 @@ SCRIPT=${prob}_${physics}-lowres.slurm
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC-$CC
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}_v2-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"

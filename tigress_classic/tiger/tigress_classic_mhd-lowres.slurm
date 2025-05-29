@@ -10,7 +10,7 @@
 #SBATCH --error=tigress-%j.out
 
 # check if the second argument is provided
-usage="Usage: $0 <compiler> <start_flag> <crbc=lngrad_out> <mhdbc=diode> <beta=10>"
+usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <beta=10>"
 if [ -z "$1" ]; then
     echo $usage
     exit 1
@@ -74,7 +74,7 @@ SCRIPT=${prob}_${physics}-lowres.slurm
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-$CC
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}_v2-16pc-b$beta-mhdbc_$MHDBC-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"

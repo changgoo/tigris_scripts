@@ -1,13 +1,20 @@
 #!/bin/bash
-#SBATCH --job-name=mhd    # create a short name for your job
+#SBATCH --job-name=mhd # create a short name for your job
 #SBATCH --account=eost        # account (mandatory for tiger3)
-#SBATCH -N 4                  # node count
-#SBATCH -n 384                # node count
+#SBATCH -N 5                  # node count
+#SBATCH -n 512                # node count
 #SBATCH --time=48:00:00       # total run time limit (HH:MM:SS)
 #SBATCH --mail-type=all       # send email on job start, end and fail
 #SBATCH --mail-user=changgoo@princeton.edu
 #SBATCH --output=tigress-%j.err
 #SBATCH --error=tigress-%j.out
+
+# check if the second argument is provided
+usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <beta=10>"
+if [ -z "$1" ]; then
+    echo $usage
+    exit 1
+fi
 
 CC=$1
 debug_option=""
@@ -21,7 +28,39 @@ else
     debug_option="-debug"
 fi
 
+# check if the second argument is provided
+if [ -z "$2" ]; then
+    echo $usage
+    exit 1
+fi
+
 STARTFLAG=$2
+
+
+# check if the third argument is provided
+if [ -z "$3" ]; then
+    echo $usage
+    MHDBC=diode
+else
+    MHDBC=$3
+fi
+
+# check if the third argument is a valid value
+if [[ "$MHDBC" != "diode" && "$MHDBC" != "lngrad" && "$MHDBC" != "lngrad_out" && "$MHDBC" != "lingrad" && "$MHDBC" != "lingrad_out" ]]; then
+    echo "Invalid value for MHDBC=$MHDBC"
+    exit 1
+fi
+
+# check if the fifth argument is provided
+if [ -z "$4" ]; then
+    echo $usage
+    beta=10
+else
+    beta=$4
+fi
+
+echo "submitting a job: $0 $1 $2 $MHDBC $beta"
+
 fgas=0.7
 
 # Define problem and paths
@@ -34,21 +73,20 @@ SCRIPT=${prob}_${physics}.slurm
 
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
-INPUT=${SCRIPTDIR}/athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-r_ret100-fgas${fgas}-$CC
+INPUT=athinput.$prob
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}_v2-8pc-b$beta-mhdbc_$MHDBC-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
-lowres_bigbox="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768 mesh/x1min=-1024 mesh/x1max=1024 mesh/x2min=-1024 mesh/x2max=1024 mesh/x3min=-6144 mesh/x3max=6144"
-lowres_normal="meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16"
-medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768"
+
+medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3max=4096"
 
 params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false $periodic"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output2/dt=5 output3/dt=5 $periodic"
 
 # Print the run directory
 echo $RUNDIR
@@ -68,7 +106,7 @@ fi
 cd $RUNDIR
 
 # Print the parameters
-echo $params
+echo $params $extra_params $extra_params2
 
 # Enable pipefail option for better error handling
 set -o pipefail
@@ -77,12 +115,12 @@ set -o pipefail
 RSTINPUT=$PID.final.rst
 if [ ! -f $RSTINPUT ]; then
     echo "Starting fresh"
-    cp ${SCRIPTDIR}/$SCRIPT .
+    cp $0 ./$SCRIPT
     cp ${SCRIPTDIR}/$EXE .
-    cp $INPUT .
+    cp ${SCRIPTDIR}/../$INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
-    srun $EXE -i $INPUT -t 47:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
+    srun $EXE -i $INPUT -t 47:30:00 $params $extra_params $extra_params2 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
     echo "Restarting"
     rstnum=`ls out.*.txt | wc -l`
@@ -96,7 +134,7 @@ set +o pipefail
 
 if [[ $EXITCODE -eq 2 ]]; then
     echo "Resubmitting"
-    sbatch $SCRIPT $CC -r
+    sbatch $SCRIPT $CC -r $MHDBC $beta
 fi
 
 # make quick snapshots
