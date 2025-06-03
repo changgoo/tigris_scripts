@@ -59,9 +59,15 @@ else
     beta=$4
 fi
 
-echo "submitting a job: $0 $1 $2 $MHDBC $beta"
+# check if the fifth argument is provided
+if [ -z "$5" ]; then
+    echo $usage
+    fgas=0.7
+else
+    fgas=$5
+fi
 
-fgas=0.7
+echo "submitting a job: $0 $1 $2 $MHDBC $beta $fgas"
 
 # Define problem and paths
 physics=mhd
@@ -74,7 +80,7 @@ SCRIPT=${prob}_${physics}-lowres.slurm
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}_v2-16pc-b$beta-mhdbc_$MHDBC-$CC
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}_v2-16pc-b$beta-mhdbc_$MHDBC-fgas_$fgas-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -136,7 +142,7 @@ set +o pipefail
 
 if [[ $EXITCODE -eq 2 ]]; then
     echo "Resubmitting"
-    sbatch $SCRIPT $CC -r $MHDBC $beta
+    sbatch $SCRIPT $CC -r $MHDBC $beta $fgas
 fi
 
 # make quick snapshots

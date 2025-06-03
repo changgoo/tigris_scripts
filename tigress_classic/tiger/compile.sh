@@ -2,6 +2,9 @@
 # tigress-classic compilation script works for stellar and tiger3
 #   alias for module_icpx an module_gcc should be in .bashrc,
 #   otherwise uncomment the following
+# example alias .bashrc:
+# alias module_icpx='module purge; module load anaconda3/2023.3 intel-oneapi/2024.2 openmpi/oneapi-2024.2/4.1.6 hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4 fftw/oneapi-2024.2/3.3.10'
+# alias module_gcc='module purge; module load anaconda3/2023.3 fftw/gcc/3.3.10 intel-mpi/gcc/2021.13 hdf5/gcc/intel-mpi/1.14.4'
 source ~/.bashrc
 set -e
 
