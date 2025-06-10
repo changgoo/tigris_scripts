@@ -46,6 +46,7 @@ tlim             = 100.0   # time limit
 integrator       = rk2    # time integration algorithm
 xorder           = 2      # order of spatial reconstruction
 ncycle_out       = 10      # interval for stdout summary info
+dt_diagnostics   = -1
 ncycle_out_timing = 100
 ops_task         = true
 
