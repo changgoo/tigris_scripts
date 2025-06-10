@@ -170,6 +170,7 @@ sigma                = 1e-25
 max_opacity          = 10000000000
 perp_to_par_diff     = 10
 obs_spectrum_slope   = -4.7
+cr_ops_task          = false
 
 <problem>
 Sigma_gas  = 12

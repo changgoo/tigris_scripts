@@ -3,7 +3,7 @@
 #SBATCH --account=eost        # account (mandatory for tiger3)
 #SBATCH -N 4                  # node count
 #SBATCH -n 384                # node count
-#SBATCH --time=24:00:00       # total run time limit (HH:MM:SS)
+#SBATCH --time=12:00:00       # total run time limit (HH:MM:SS)
 ##SBATCH --mail-type=all       # send email on job start, end and fail
 ##SBATCH --mail-user=changgoo@princeton.edu
 #SBATCH --output=tigress-%j.err
@@ -36,7 +36,7 @@ SCRIPT=${prob}_${physics}-lowres.slurm
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-16pc-Ia-$CC
+RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-16pc-Ia_exp-Ia_scalar-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -113,7 +113,7 @@ fi
 cd $RUNDIR
 module purge; module load anaconda3/2024.6 openmpi/gcc/4.1.6; conda activate pyathena
 
-PYTHONDIR=$HOME/pyathena
+PYTHONDIR=$HOME/pyathena_master
 export PYTHONPATH="$PYTHONDIR:$PYTHONPATH"
 pythonscript=$PYTHONDIR/pyathena/tigresspp/plot_slices.py
 srun python -m mpi4py $pythonscript `pwd`

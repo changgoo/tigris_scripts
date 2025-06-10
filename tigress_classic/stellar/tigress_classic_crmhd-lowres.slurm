@@ -35,7 +35,7 @@ SCRIPT=${prob}_${physics}-lowres.slurm
 
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
-INPUT=${SCRIPTDIR}/athinput.$prob
+INPUT=athinput.$prob
 RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-16pc-tallbox-r_ret100-fgas${fgas}-df6-gravdt-b1-mhdbc_diode-crbc_lngrad_out-$CC
 
 # Define table directories and files
@@ -81,7 +81,7 @@ if [ ! -f $RSTINPUT ]; then
     echo "Starting fresh"
     cp ${SCRIPTDIR}/$SCRIPT .
     cp ${SCRIPTDIR}/$EXE .
-    cp $INPUT .
+    cp ${SCRIPTDIR}/../$INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
     srun $EXE -i $INPUT -t 47:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
