@@ -1,0 +1,187 @@
+<comment>
+problem   = radiative snr
+reference =
+configure = --prob radiative_snr -hdf5 -mpi
+
+<job>
+problem_id = SNR # problem ID: basename of output filenames
+output_timing = true
+
+<output1>
+file_type  = hst        # History data dump
+dt         = 1.e-8      # time increment between outputs
+dcycle     = 0
+
+<output2>
+file_type  = hdf5       # hdf5 data dump
+variable   = prim,cons,b
+dt         = 1.e-2      # time increment between outputs
+dcycle     = 0
+ghost_zones = true
+
+<time>
+cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = -1         # cycle limit
+tlim       = 0.1        # time limit
+dtlim      = 1.e-10
+integrator  = rk2       # time integration algorithm
+xorder      = 2         # order of spatial reconstruction
+ncycle_out  = 1         # interval for stdout summary info
+dt_diagnostics = 0
+ops_task = true
+
+<mesh>
+nx1        = 128         # Number of zones in X1-direction
+x1min      = -512.0      # minimum value of X1
+x1max      = 512.0       # maximum value of X1
+ix1_bc     = shear_periodic   # inner-X1 boundary flag
+ox1_bc     = shear_periodic   # outer-X1 boundary flag
+
+nx2        = 128         # Number of zones in X2-direction
+x2min      = -512        # minimum value of X2
+x2max      = 512         # maximum value of X2
+ix2_bc     = periodic   # inner-X2 boundary flag
+ox2_bc     = periodic   # outer-X2 boundary flag
+
+nx3        = 128         # Number of zones in X3-direction
+x3min      = -512        # minimum value of X3
+x3max      = 512         # maximum value of X3
+ix3_bc     = periodic   # inner-X3 boundary flag
+ox3_bc     = periodic   # outer-X3 boundary flag
+
+<meshblock>
+nx1        = 32
+nx2        = 32
+nx3        = 32
+
+<hydro>
+gamma             = 1.666666666667 # gamma = C_p/C_v
+iso_sound_speed   = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
+neighbor_flooring = true
+fofc              = true
+ct_method         = uct_hlld
+fofc_shear        = false
+
+<orbital_advection>
+OAorder    = 0       # 0: w/o OA, 1: w/ OA (1st), 2: w/ OA (2nd)
+qshear     = 1       # shear rate
+Omega0     = 0.028   # angular velocity of the system
+shboxcoord = 1       # 1=xy (default); 2=xz
+
+<cooling>
+cooling       = op_split           # [none, enroll, op_split]
+solver        = rk2              # [forward_euler]
+coolftn       = tigress          # tigress or plf
+coolftn_file  = tigress_coolftn.txt
+
+cfl_cool      = 2.0       # min dt_hydro/dt_cool
+cfl_cool_sub  = 0.1       # dt_sub/dt_cool (must be less than 1)
+T_floor       = 10        # temperature floor
+T_max         = 5e9       # temperature ceiling
+ceiling       = true
+
+T_PE          = 15000     # temperature below which PE heating is applied, if plf
+Gamma         = 2e-26     # heating rate in ergs / sec, if plf
+
+heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
+
+<perturbation>
+nlow          = 2
+nhigh         = 8
+expo          = 2
+rseed         = 1
+
+<feedback>
+ischeme       = Classic
+fb_op         = 0
+rfb_res       = 3.0      # feedback radius in grid cells
+N_sc          = 3
+fkin          = 0.28
+M_inj         = 10.0     # Mass injected in units of Msun for single SN
+E_inj         = 1.0      # Energy injected in units of 10^51 ergs
+iSN           = 1        # turn on supernovae (in pop_synth)
+pop_synth     = SB99   # population synthesis model (single or SB99)
+pop_synth_file = Z014_GenevaV00.txt # table for SB99 pop synth
+
+
+<problem>
+nH_0          = 1.       # initial number density in cm^-3
+pgas_0        = 3000     # initial gas pressure meant to be in kB K cm^-3
+B_0           = 10       # initial B_y in uG
+
+t_SN          = 1.0
+dt_SN         = 0.01       # SN interval, negative will give a single SN
+M_ej          = 10.0     # Mass injected in units of Msun (for manual injection)
+E_SN          = 1.0      # Energy injected in units of 10^51 ergs (for manual injection)
+t_SN_end      = 2.
+random        = true
+
+amp_den       = 0.0      # non zero to turn on
+turb_flag     = 0        # 1 to turn on
+v3d           = 5.0      # v3d
+dedt          = 0.       # place holder -- will be set by Mach and p_gas0
+
+# for particle based injection
+m_sp          = 1.e5     # mass of star [Msun] particle put in by hand
+                         # should be very large to have an SN immediately
+x_sp          = -500.0      # x-position of particle
+y_sp          = 0.0      # x-position of particle
+z_sp          = 0.0      # x-position of particle
+vx_sp         = 0.0      # x-velocity of particle
+vy_sp         = 0.0      # x-velocity of particle
+vz_sp         = 0.0      # x-velocity of particle
+age_sp        = 0.0
+npar          = 1
+dist          = 2.0
+
+<photchem>
+photchem = false
+mode = ncr
+bookkeeping = true          # Keep track of heating/cooling rates
+                            # uov can be added
+flag_op_split  = true       # Operator split update
+flag_rad_force = false      # Turn on radiation pressure force
+flag_update_dt_main = false # Update dt_main using dt_user=dt_coolchem
+cfl_photchem = 1.0          # dt_user = cfl_photchem*t_coolchem
+
+<photchem_ncr>
+flag_cool_hyd_cie = 0
+flag_cool_dust = 0
+flag_h2_diss_bg = 1
+nsub_max = 50
+cfl_cool_sub = 0.1
+temp_hot0 = 20000.0
+temp_hot1 = 35000.0
+sigma_dust_pe0 = 1e-21
+sigma_dust_lw0 = 2e-21
+
+z_gas = 1.0
+z_dust = 1.0
+
+chi0 = 1.0
+xi_cr0 = 2e-16          # unattenuated CR ionization rate [1/s]
+shld_n_hyd0 = 1e2
+shld_len0 = 0.0         # zero to turn off
+shld_pow_idx = -0.7
+shld_column_hyd_cr0 = 9.35e20
+
+# Cross sections and photon energies in (LyC,LW,PE) bands
+hnu[0]      = 18.0
+sigma_d[0]     = 1.0e-21 # smaller than theoretical estimate
+sigma_pi_HI[0] = 3.1e-18
+sigma_pi_H2[0] = 4.6e-18
+hnu[1]      = 12.2
+sigma_d[1]     = 2.0e-21
+sigma_pi_HI[1] = 0.0
+sigma_pi_H2[1] = 0.0
+hnu[2]      = 9.0
+sigma_d[2]     = 1e-21
+sigma_pi_HI[2] = 0.0
+sigma_pi_H2[2] = 0.0
+
+coolftn_file   = tigress_coolftn_ncr.txt  # file name for high-T cooling table
+
+<particle1>
+type          = star     # star particle type
+output        = true     # give outputs (check if the particle is made)
+feedback      = true     # turn on feedback from particles
