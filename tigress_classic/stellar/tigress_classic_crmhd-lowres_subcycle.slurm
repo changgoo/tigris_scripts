@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=lowres-crmhd    # create a short name for your job
 #SBATCH --account=eost        # account (mandatory for tiger3)
-#SBATCH -N 5                  # node count
+#SBATCH -N 6                  # node count
 #SBATCH -n 512                # node count
 #SBATCH --time=24:00:00       # total run time limit (HH:MM:SS)
 #SBATCH --mail-type=all       # send email on job start, end and fail
@@ -105,7 +105,7 @@ SCRIPT=${prob}_${physics}-lowres_subcycle.slurm
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-subcycle_$crsubcycle-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC-$CC
+RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-subcycle_$crsubcycle-reorder_rk2_vmax5e4-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC-$CC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -120,7 +120,7 @@ medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3m
 params="job/problem_id=$PID time/tlim=500 $lowres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
 extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=$selfg_dt cr/sigma=1.e-25 cr/self_consistent_flag=1 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 mesh/mhd_outflow_bc=$MHDBC mesh/cr_outflow_bc=$CRBC output2/dt=5 output3/dt=5 $periodic"
-extra_params2="problem/beta0=$beta cr/cr_ops_task=$crsubcycle"
+extra_params2="problem/beta0=$beta cr/cr_ops_task=$crsubcycle time/cr_integrator=rk2 time/dt_diagnostics=1 cr/vmax=5.e9"
 
 # Print the run directory
 echo $RUNDIR

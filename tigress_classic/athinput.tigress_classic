@@ -49,6 +49,7 @@ ncycle_out       = 10      # interval for stdout summary info
 dt_diagnostics   = -1
 ncycle_out_timing = 100
 ops_task         = true
+cr_integrator    = rk1
 
 <mesh>
 nx1         = 64            # Number of zones in X1-direction
