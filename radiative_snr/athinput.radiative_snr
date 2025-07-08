@@ -103,6 +103,26 @@ iSN           = 1        # turn on supernovae (in pop_synth)
 pop_synth     = SB99   # population synthesis model (single or SB99)
 pop_synth_file = Z014_GenevaV00.txt # table for SB99 pop synth
 
+<cr>
+vmax                 = 2e9
+fofc                 = true
+neighbor_flooring    = true
+vflx                 = false
+taucell              = 1
+vs_flag              = 1
+src_flag             = 1
+losses_flag          = 1
+perp_diff_flag       = 1
+self_consistent_flag = 1
+obs_spectrum_flag    = 1
+postprocess_flag     = 0
+ecfloor              = 1e-20
+sigma                = 1e-25
+max_opacity          = 10000000000
+perp_to_par_diff     = 10
+obs_spectrum_slope   = -4.7
+cr_ops_task          = false
+
 
 <problem>
 nH_0          = 1.       # initial number density in cm^-3
