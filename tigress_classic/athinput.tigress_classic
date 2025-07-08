@@ -39,6 +39,14 @@ file_type = zprof      # zprof data dump
 dt        = 1          # time increment between outputs
 dcycle    = 0
 
+<output7>
+file_type   = hdf5      # Binary data dump
+variable    = d,p,Ec    # variables to be output
+dt          = 1         # time increment between outputs
+dcycle      = 0
+ghost_zones = false
+
+
 <time>
 cfl_number       = 0.3    # The Courant, Friedrichs, & Lewy (CFL) Number
 nlim             = -1     # cycle limit
