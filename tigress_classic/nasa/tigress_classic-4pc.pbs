@@ -1,7 +1,7 @@
-##PBS -q long
-#PBS -q devel
+#PBS -q long
+##PBS -q devel
 #PBS -l select=80:ncpus=40:mpiprocs=40:model=sky_ele
-#PBS -l walltime=000:30:00
+#PBS -l walltime=072:00:00
 #PBS -m abe
 #PBS -M changgookim@gmail.com
 
@@ -17,12 +17,12 @@ prob=tigress_classic
 PID=TIGRESS
 SRCDIR=$HOME/tigris
 SCRIPTDIR=$HOME/tigris_scripts/${prob}/nasa
-SCRIPT=${prob}-debug.slurm
+SCRIPT=${prob}-4pc.slurm
 
 # Define executable and input files
 EXE=${prob}_${physics}.exe
 INPUT=athinput.$prob
-RUNDIR=/nobackup/$USER/$prob/debug_4pc
+RUNDIR=/nobackup/$USER/$prob/crmhd_4pc
 
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
@@ -66,11 +66,11 @@ if [ ! -f $RSTINPUT ]; then
     cp ${SCRIPTDIR}/../$INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
-    mpiexec -np $NPROCS ./$EXE -i $INPUT -t 00:30:00 $params $extra_params $extra_params2 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
+    mpiexec -np $NPROCS ./$EXE -i $INPUT -t 71:30:00 $params $extra_params $extra_params2 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
     echo "Restarting"
     rstnum=`ls out.*.txt | wc -l`
-    mpiexec -np $NPROCS ./$EXE -r $RSTINPUT -t 23:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+    mpiexec -np $NPROCS ./$EXE -r $RSTINPUT -t 71:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
 fi
 
 EXITCODE=$?

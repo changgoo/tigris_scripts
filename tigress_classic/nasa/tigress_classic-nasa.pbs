@@ -11,12 +11,12 @@ module purge; module load mpi-hpe/mpt comp-intel hdf5/1.8.18_mpt
 prob=tigress_classic
 PID=TIGRESS
 SRCDIR=$HOME/tigris
-SCRIPTDIR=/$HOME/tigris_scripts/${prob}-nasa
+SCRIPTDIR=/$HOME/tigris_scripts/${prob}/nasa
 SCRIPT=${prob}-nasa.pbs
 
 EXE=${prob}.exe
-INPUT=${SCRIPTDIR}/athinput.$prob
-RUNDIR=/nobackup/$USER/$prob/run_8pc-fgas09
+INPUT=${SCRIPTDIR}/../athinput.$prob
+RUNDIR=/nobackup/$USER/$prob/run_8pc
 
 
 TBLDIR="$SRCDIR/inputs/tables"
