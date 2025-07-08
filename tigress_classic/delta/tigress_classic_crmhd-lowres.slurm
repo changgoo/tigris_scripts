@@ -1,13 +1,14 @@
 #!/bin/bash
 #SBATCH --nodes=4
-#SBATCH --ntasks=512
+#SBATCH --ntasks-per-node=96
+#SBATCH --exclusive
 #SBATCH --partition=cpu          # <- or one of: gpuA100x4 gpuA40x4 gpuA100x8 gpuMI100x8
 #SBATCH --account=bdne-delta-cpu # <- match to a "Project" returned by the "accounts"
 #SBATCH --job-name=crmhd
 #SBATCH --time=24:00:00      # hh:mm:ss for the job
 #SBATCH --constraint="scratch"
-##SBATCH --mail-type=all       # send email on job start, end and fail
-##SBATCH --mail-user=changgookim@gmail.com
+#SBATCH --mail-type=all       # send email on job start, end and fail
+#SBATCH --mail-user=changgookim@gmail.com
 #SBATCH --output=tigress-%j.err
 #SBATCH --error=tigress-%j.out
 
@@ -16,8 +17,9 @@ conda deactivate
 module purge; module reset; module load fftw hdf5
 
 # disable cxi
-unset OMPI_MCA_mtl_ofi_provider_include
-export OMPI_MCA_mtl_ofi_provider_exclude=cxi
+#unset OMPI_MCA_mtl_ofi_provider_include
+#export OMPI_MCA_mtl_ofi_provider_exclude=cxi
+export FI_CXI_RX_MATCH_MODE=software
 
 usage="Usage: $0 <start_flag> <crbc> <mhdcd> <beta>"
 # check if the second argument is provided
@@ -79,7 +81,7 @@ SCRIPT=${prob}_${physics}-lowres.slurm
 # Define executable and input files
 EXE=${prob}_${physics}.exe
 INPUT=athinput.$prob
-RUNDIR=$SCRATCH/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC
+RUNDIR=$SCRATCH/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-crbc_${CRBC}_384
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -88,6 +90,7 @@ POPSYNTH_TBL="Z014_GenevaV00.txt"
 
 lowres_bigbox="mesh/nx1=128 mesh/nx2=128 mesh/nx3=512 mesh/x1min=-1024 mesh/x1max=1024 mesh/x2min=-1024 mesh/x2max=1024 mesh/x3min=-4096 mesh/x3max=4096"
 lowres_normal="mesh/x3min=-4096 mesh/x3max=4096 mesh/nx3=512 meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16"
+lowres_normal="meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16"
 lowres_tallbox="mesh/nx3=1024 mesh/x3min=-8192 mesh/x3max=8192 meshblock/nx1=16 meshblock/nx2=16"
 medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3max=4096"
 
@@ -122,7 +125,7 @@ set -o pipefail
 RSTINPUT=$PID.final.rst
 if [ ! -f $RSTINPUT ]; then
     echo "Starting fresh"
-    cp ${SCRIPTDIR}/$SCRIPT .
+    cp $0 ./$SCRIPT
     cp ${SCRIPTDIR}/$EXE .
     cp ${SCRIPTDIR}/../$INPUT .
     cp $TBLDIR/$COOL_TBL .

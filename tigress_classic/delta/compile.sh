@@ -8,8 +8,7 @@ set -e
 module purge
 module load gcc openmpi
 module load fftw hdf5
-cflag="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -march=native -fprefetch-loop-arrays"
-cflag=""
+cflag="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -march=znver3 -fprefetch-loop-arrays"
 
 # CC=g++
 echo $HDF5_HOME
@@ -17,8 +16,9 @@ mpi_hdf5_library_path="$HDF5_HOME/lib"
 mpi_hdf5_include_path="$HDF5_HOME/include"
 
 # disable cxi
-unset OMPI_MCA_mtl_ofi_provider_include
-export OMPI_MCA_mtl_ofi_provider_exclude=cxi
+#unset OMPI_MCA_mtl_ofi_provider_include
+#export OMPI_MCA_mtl_ofi_provider_exclude=cxi
+export FI_CXI_RX_MATCH_MODE=software
 
 options="${debug_option} -mpi -hdf5 --lib_path=${mpi_hdf5_library_path} --include=${mpi_hdf5_include_path}"
 
