@@ -51,10 +51,10 @@ if [[ "$MHDBC" != "diode" && "$MHDBC" != "lngrad" && "$MHDBC" != "lngrad_out" &&
     exit 1
 fi
 
-# check if the fifth argument is provided
+# check if the fourth argument is provided
 if [ -z "$4" ]; then
     echo $usage
-    beta=10
+    beta=1
 else
     beta=$4
 fi

@@ -69,7 +69,7 @@ fi
 # check if the fifth argument is provided
 if [ -z "$5" ]; then
     echo $usage
-    beta=10
+    beta=1
 else
     beta=$5
 fi
