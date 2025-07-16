@@ -10,7 +10,7 @@
 #SBATCH --error=tigress-%j.out
 
 # check if the second argument is provided
-usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <CRBC=lngrad_out> <beta=10>"
+usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <CRBC=lngrad_out> <beta=1>"
 if [ -z "$1" ]; then
     echo $usage
     exit 1

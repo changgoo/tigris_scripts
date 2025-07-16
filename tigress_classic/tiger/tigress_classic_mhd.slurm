@@ -10,7 +10,7 @@
 #SBATCH --error=tigress-%j.out
 
 # check if the second argument is provided
-usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <beta=10>"
+usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <beta=1> <fgas=0.7>"
 if [ -z "$1" ]; then
     echo $usage
     exit 1
@@ -51,17 +51,23 @@ if [[ "$MHDBC" != "diode" && "$MHDBC" != "lngrad" && "$MHDBC" != "lngrad_out" &&
     exit 1
 fi
 
-# check if the fifth argument is provided
+# check if the fourth argument is provided
 if [ -z "$4" ]; then
     echo $usage
-    beta=10
+    beta=1
 else
     beta=$4
 fi
 
-echo "submitting a job: $0 $1 $2 $MHDBC $beta"
+# check if the fifth argument is provided
+if [ -z "$5" ]; then
+    echo $usage
+    fgas=0.7
+else
+    fgas=$5
+fi
 
-fgas=0.7
+echo "submitting a job: $0 $1 $2 $MHDBC $beta $fgas"
 
 # Define problem and paths
 physics=mhd
@@ -74,8 +80,7 @@ SCRIPT=${prob}_${physics}.slurm
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}_v2-8pc-b$beta-mhdbc_$MHDBC-$CC
-
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-8pc-b$beta-mhdbc_$MHDBC-fgas_$fgas-$CC
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
@@ -106,7 +111,7 @@ fi
 cd $RUNDIR
 
 # Print the parameters
-echo $params $extra_params $extra_params2
+echo $params $extra_params
 
 # Enable pipefail option for better error handling
 set -o pipefail
@@ -120,7 +125,7 @@ if [ ! -f $RSTINPUT ]; then
     cp ${SCRIPTDIR}/../$INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
-    srun $EXE -i $INPUT -t 47:30:00 $params $extra_params $extra_params2 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
+    srun $EXE -i $INPUT -t 47:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
     echo "Restarting"
     rstnum=`ls out.*.txt | wc -l`
@@ -134,7 +139,7 @@ set +o pipefail
 
 if [[ $EXITCODE -eq 2 ]]; then
     echo "Resubmitting"
-    sbatch $SCRIPT $CC -r $MHDBC $beta
+    sbatch $SCRIPT $CC -r $MHDBC $beta $fgas
 fi
 
 # make quick snapshots

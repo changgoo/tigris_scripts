@@ -11,7 +11,7 @@
 #SBATCH --error=tigress-%j.out
 
 # check if the second argument is provided
-usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <CRBC=lngrad_out> <beta=10>"
+usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <CRBC=lngrad_out> <beta=1>"
 if [ -z "$1" ]; then
     echo $usage
     exit 1
@@ -70,7 +70,7 @@ fi
 # check if the fifth argument is provided
 if [ -z "$5" ]; then
     echo $usage
-    beta=10
+    beta=1
 else
     beta=$5
 fi
