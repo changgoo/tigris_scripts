@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=crmhd    # create a short name for your job
 #SBATCH -A phy240043
-#SBATCH -p wide
+#SBATCH -p wholenode
 #SBATCH -N 4
 #SBATCH -n 512
 #SBATCH --exclusive
@@ -56,7 +56,7 @@ TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
-mb_32="meshblock/nx1=32 meshblock/nx2=32 meshblock/nx3=32"
+mb_32="meshblock/nx1=32 meshblock/nx2=32 meshblock/nx3=64"
 mb_64="meshblock/nx1=64 meshblock/nx2=64 meshblock/nx3=64"
 mb_16="meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16"
 mb_128="meshblock/nx1=128 meshblock/nx2=128 meshblock/nx3=128"
@@ -119,7 +119,7 @@ fi
 
 params="job/problem_id=$PID time/tlim=500 $mesh $meshblock cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=true cr/sigma=1.e-25 cr/self_consistent_flag=1 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 mesh/mhd_outflow_bc=$MHDBC mesh/cr_outflow_bc=$CRBC output2/dt=5 output3/dt=5 $periodic"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=true cr/sigma=1.e-25 cr/self_consistent_flag=1 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 mesh/mhd_outflow_bc=$MHDBC mesh/cr_outflow_bc=$CRBC output2/dt=-1 output3/dt=-1 output7/dt=-1 $periodic"
 extra_params2="problem/beta0=$beta time/ncycle_out_timing=1 time/ncycle_out=1"
 
 # Print the run directory
