@@ -68,7 +68,7 @@ prob=tigress_classic
 PID=TIGRESS
 SRCDIR=$HOME/tigris
 SCRIPTDIR=$HOME/tigris_scripts/$prob/anvil
-SCRIPT=${prob}_${physics}-lowres.slurm
+SCRIPT=${prob}_${physics}-medres.slurm
 
 # Define executable and input files
 EXE=${prob}_${physics}.exe
@@ -119,11 +119,11 @@ if [ ! -f $RSTINPUT ]; then
     cp ${SCRIPTDIR}/../$INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
-    srun $EXE -i $INPUT -t 23:30:00 $params $extra_params $extra_params2 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
+    srun $EXE -i $INPUT -t 95:30:00 $params $extra_params $extra_params2 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
     echo "Restarting"
     rstnum=`ls out.*.txt | wc -l`
-    srun $EXE -r $RSTINPUT -t 23:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+    srun $EXE -r $RSTINPUT -t 95:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
 fi
 
 EXITCODE=$?
