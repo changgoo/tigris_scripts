@@ -12,7 +12,15 @@ set -e
 # User-configurable options
 MACHINE=${1:-stellar}
 PHYSICS=${2:-hydro}
+# Default build option: 0 (normal build), 1 (debug build), 2 (no clean)
 BUILD_OPTION=${3:-0}
+
+# USAGE
+if [ "$#" -lt 1 ]; then
+    echo -e "${RED}Usage: $0 <machine> [physics] [build_option]${NC}"
+    echo -e "${YELLOW}Example: $0 stellar hydro 0${NC}"
+    exit 1
+fi
 
 # Source and build directories
 SRCDIR="$HOME/tigris"
