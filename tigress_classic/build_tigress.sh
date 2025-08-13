@@ -14,6 +14,7 @@ MACHINE=${1:-stellar}
 PHYSICS=${2:-hydro}
 # Default build option: 0 (normal build), 1 (debug build), 2 (no clean)
 BUILD_OPTION=${3:-0}
+SRC=${4:-tigris}
 
 # USAGE
 if [ "$#" -lt 1 ]; then
@@ -23,7 +24,7 @@ if [ "$#" -lt 1 ]; then
 fi
 
 # Source and build directories
-SRCDIR="$HOME/tigris"
+SRCDIR="$HOME/$SRC"
 BUILDDIR="$SRCDIR"
 CURDIR="$(pwd)"
 PROB="tigress_classic"
@@ -58,11 +59,19 @@ fi
 
 # Physics options
 if [ "$PHYSICS" == "hydro" ]; then
-    PHY_OPTIONS=""
+    PHY_OPTIONS="--flux=lhllc"
+elif [ "$PHYSICS" == "hydro_duale" ]; then
+    PHY_OPTIONS="--dual=eint --flux=lhllc"
+elif [ "$PHYSICS" == "hydro_duals" ]; then
+    PHY_OPTIONS="--dual=entropy --flux=lhllc"
 elif [ "$PHYSICS" == "mhd" ]; then
-    PHY_OPTIONS="-b"
+    PHY_OPTIONS="-b --flux=lhlld"
+elif [ "$PHYSICS" == "mhd_duale" ]; then
+    PHY_OPTIONS="-b --flux=lhlld --dual=eint"
+elif [ "$PHYSICS" == "mhd_duals" ]; then
+    PHY_OPTIONS="-b --flux=lhlld --dual=entropy"
 elif [ "$PHYSICS" == "crmhd" ]; then
-    PHY_OPTIONS="-b --cr=mg"
+    PHY_OPTIONS="-b --cr=mg --flux=lhlld"
 else
     PHY_OPTIONS=""
 fi
@@ -79,7 +88,7 @@ HDF5_LIB="${HDF5DIR}/lib64"
 HDF5_INC="${HDF5DIR}/include"
 PATH_OPTIONS="--lib_path=${HDF5_LIB} --include=${HDF5_INC}"
 
-EXE="${CURDIR}/${MACHINE}/${PROB}_${PHYSICS}${DEBUG_OPTION}.exe"
+EXE="${CURDIR}/${MACHINE}/${SRC}_${PHYSICS}${DEBUG_OPTION}.exe"
 
 
 cd "$BUILDDIR"
