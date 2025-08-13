@@ -146,16 +146,18 @@ sigma_pi_H2[2] = 0.0
 coolftn_file   = tigress_coolftn_ncr.txt  # file name for high-T cooling table
 
 <particle1>
-type    = sink
+type    = complex
 gravity = true
 output  = true
 output_pm = false
-feedback  = true     # turn on feedback from particles
+feedback  = true        # turn on feedback from particles
+accretion = true
+mass_return = true
 fgas    = 0.0
 r_return = -1           # negative for no return; 0 to entire volume
 t_return = 5
 dt_return = 1
-A_return = 2
+t_duration = 10
 return_to_warm = true
 
 <particle2>
