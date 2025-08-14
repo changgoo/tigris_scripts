@@ -9,65 +9,35 @@
 #SBATCH --output=tigress-%j.err
 #SBATCH --error=tigress-%j.out
 
-# check if the second argument is provided
-usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <beta=1> <fgas=0.7>"
-if [ -z "$1" ]; then
-    echo $usage
-    exit 1
-fi
+# set the usage message
+usage="Usage: $0 <start_flag> <fgas=0.7> <beta=1> <MHDBC=diode>"
 
-CC=$1
-debug_option=""
-if [[ "$CC" == "icpx" || "$CC" == "icpx-b" ]]  ; then
+STARTFLAG=${1:-}
+fgas=${2:-0.7}
+beta=${3:-1}
+MHDBC=${4:-diode}
+CC=icpx
+
+
+# Validate required arguments
+[[ -z "$STARTFLAG" ]] && echo "$usage" && exit 1
+
+# Validate boundary condition arguments
+valid_bc="diode lngrad lngrad_out lingrad lingrad_out"
+[[ ! " $valid_bc " =~ " $MHDBC " ]] && echo "Invalid MHDBC=$MHDBC" && exit 1
+
+# Load modules based on compiler
+if [[ "$CC" == icpx* ]]; then
     module purge; module load anaconda3/2023.3 intel-oneapi/2024.2 openmpi/oneapi-2024.2/4.1.6 hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4 fftw/oneapi-2024.2/3.3.10
-elif [[ "$CC" == "g++" || "$CC" == "g++-b" ]] ; then
+elif [[ "$CC" == g++* ]]; then
     module purge; module load anaconda3/2023.3 fftw/gcc/3.3.10 intel-mpi/gcc/2021.13 hdf5/gcc/intel-mpi/1.14.4
 else
     module purge; module load anaconda3/2023.3 fftw/gcc/3.3.10 intel-mpi/gcc/2021.13 hdf5/gcc/intel-mpi/1.14.4
-    CC=g++
     debug_option="-debug"
 fi
 
-# check if the second argument is provided
-if [ -z "$2" ]; then
-    echo $usage
-    exit 1
-fi
-
-STARTFLAG=$2
-
-
-# check if the third argument is provided
-if [ -z "$3" ]; then
-    echo $usage
-    MHDBC=diode
-else
-    MHDBC=$3
-fi
-
-# check if the third argument is a valid value
-if [[ "$MHDBC" != "diode" && "$MHDBC" != "lngrad" && "$MHDBC" != "lngrad_out" && "$MHDBC" != "lingrad" && "$MHDBC" != "lingrad_out" ]]; then
-    echo "Invalid value for MHDBC=$MHDBC"
-    exit 1
-fi
-
-# check if the fourth argument is provided
-if [ -z "$4" ]; then
-    echo $usage
-    beta=1
-else
-    beta=$4
-fi
-
-# check if the fifth argument is provided
-if [ -z "$5" ]; then
-    echo $usage
-    fgas=0.7
-else
-    fgas=$5
-fi
-
-echo "submitting a job: $0 $1 $2 $MHDBC $beta $fgas"
+# print the job submission details
+echo "Submitting a job: $0 $STARTFLAG $fgas $beta $MHDBC"
 
 # Define problem and paths
 physics=mhd
@@ -78,9 +48,10 @@ SCRIPTDIR=$HOME/tigris_scripts/$prob/tiger
 SCRIPT=${prob}_${physics}.slurm
 
 # Define executable and input files
-EXE=${prob}_${physics}_${CC}$debug_option.exe
+# EXE=${prob}_${physics}.exe
+EXE=tigris_mhd_duale.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-8pc-b$beta-mhdbc_$MHDBC-fgas_$fgas-$CC
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-8pc-b$beta-mhdbc_$MHDBC-fgas_$fgas-duale
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
@@ -89,9 +60,9 @@ POPSYNTH_TBL="Z014_GenevaV00.txt"
 
 medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3max=4096"
 
-params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
+params="job/problem_id=$PID time/tlim=10 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output2/dt=5 output3/dt=5 $periodic"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output2/dt=1 output3/dt=1 hydro/neighbor_flooring=false $periodic"
 
 # Print the run directory
 echo $RUNDIR
