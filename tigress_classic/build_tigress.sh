@@ -51,7 +51,7 @@ elif [ "$MACHINE" == "anvil" ]; then
     module load hdf5
     HDF5DIR="$RCAC_HDF5_ROOT"
     CFLAG="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -march=znver3 -fprefetch-loop-arrays"
-    CFLAG_OPTINOS="--cflag=${CFLAG}"
+    CFLAG_OPTIONS="--cflag=${CFLAG}"
 else
     module purge
     CC="g++"
@@ -95,7 +95,7 @@ cd "$BUILDDIR"
 
 if [ "$BUILD_OPTION" != "2" ]; then
     echo -e  "${GREEN}Configuring Athena++ in $BUILDDIR.. for $PHYSICS${NC}"
-    ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav=blockfft -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS
+    ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav=blockfft -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS
 
     make clean
 fi
