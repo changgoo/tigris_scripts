@@ -3,24 +3,29 @@
 #SBATCH --account=eost        # account (mandatory for tiger3)
 #SBATCH -N 5                  # node count
 #SBATCH -n 512                # node count
-#SBATCH --time=48:00:00       # total run time limit (HH:MM:SS)
+#SBATCH --time=24:00:00       # total run time limit (HH:MM:SS)
 #SBATCH --mail-type=all       # send email on job start, end and fail
 #SBATCH --mail-user=changgoo@princeton.edu
 #SBATCH --output=tigress-%j.err
 #SBATCH --error=tigress-%j.out
 
 # set the usage message
-usage="Usage: $0 <start_flag> <fgas=0.7> <beta=1> <MHDBC=diode>"
+usage="Usage: $0 <start_flag> <physics=mhd> <fgas=0.7> <beta=1> <MHDBC=diode>"
 
 STARTFLAG=${1:-}
-fgas=${2:-0.7}
-beta=${3:-1}
-MHDBC=${4:-diode}
+physics=${2:-mhd}
+fgas=${3:-0.7}
+beta=${4:-1}
+MHDBC=${5:-diode}
 CC=icpx
 
 
 # Validate required arguments
 [[ -z "$STARTFLAG" ]] && echo "$usage" && exit 1
+
+# Validate boundary condition arguments
+valid_phy="mhd mhd_duale mhd_duals"
+[[ ! " $valid_phy " =~ " $physics " ]] && echo "Invalid physics=$physics" && exit 1
 
 # Validate boundary condition arguments
 valid_bc="diode lngrad lngrad_out lingrad lingrad_out"
@@ -37,21 +42,20 @@ else
 fi
 
 # print the job submission details
-echo "Submitting a job: $0 $STARTFLAG $fgas $beta $MHDBC"
+echo "Submitting a job: $0 $STARTFLAG $physics $fgas $beta $MHDBC"
 
 # Define problem and paths
-physics=mhd
 prob=tigress_classic
 PID=TIGRESS
 SRCDIR=$HOME/tigris
 SCRIPTDIR=$HOME/tigris_scripts/$prob/tiger
-SCRIPT=${prob}_${physics}.slurm
+SCRIPT=${prob}_mhd.slurm
 
 # Define executable and input files
 # EXE=${prob}_${physics}.exe
-EXE=tigris_mhd_duale.exe
+EXE=tigris_${physics}.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-8pc-b$beta-mhdbc_$MHDBC-fgas_$fgas-duale
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-8pc-b$beta-mhdbc_$MHDBC-fgas_$fgas
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
@@ -60,7 +64,7 @@ POPSYNTH_TBL="Z014_GenevaV00.txt"
 
 medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3max=4096"
 
-params="job/problem_id=$PID time/tlim=10 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
+params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
 extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output2/dt=1 output3/dt=1 hydro/neighbor_flooring=false $periodic"
 
@@ -96,11 +100,11 @@ if [ ! -f $RSTINPUT ]; then
     cp ${SCRIPTDIR}/../$INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
-    srun $EXE -i $INPUT -t 47:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
+    srun $EXE -i $INPUT -t 23:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
     echo "Restarting"
     rstnum=`ls out.*.txt | wc -l`
-    srun $EXE -r $RSTINPUT -t 47:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+    srun $EXE -r $RSTINPUT -t 23:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
 fi
 
 EXITCODE=$?
@@ -110,7 +114,7 @@ set +o pipefail
 
 if [[ $EXITCODE -eq 2 ]]; then
     echo "Resubmitting"
-    sbatch $SCRIPT $CC -r $MHDBC $beta $fgas
+    sbatch $SCRIPT -r $physics $fgas $beta $MHDBC
 fi
 
 # make quick snapshots

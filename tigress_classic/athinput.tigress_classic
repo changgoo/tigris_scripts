@@ -114,7 +114,7 @@ coolftn_file  = tigress_coolftn.txt
 
 cfl_cool      = 2.0       # min dt_hydro/dt_cool
 cfl_cool_sub  = 0.1       # dt_sub/dt_cool (must be less than 1)
-T_floor       = 10        # temperature floor
+T_floor       = 3         # temperature floor
 T_max         = 5e9       # temperature ceiling
 ceiling       = true
 
