@@ -72,8 +72,13 @@ elif [ "$PHYSICS" == "mhd_duals" ]; then
     PHY_OPTIONS="-b --flux=lhlld --dual=entropy"
 elif [ "$PHYSICS" == "crmhd" ]; then
     PHY_OPTIONS="-b --cr=mg --flux=lhlld"
+elif [ "$PHYSICS" == "crmhd_duale" ]; then
+    PHY_OPTIONS="-b --cr=mg --flux=lhlld --dual=eint"
+elif [ "$PHYSICS" == "crmhd_duals" ]; then
+    PHY_OPTIONS="-b --cr=mg --flux=lhlld --dual=entropy"
 else
-    PHY_OPTIONS=""
+    echo -e "${RED} Physics option: $PHYSICS is unavailable ${NC}"
+    exit 1
 fi
 
 # build option
