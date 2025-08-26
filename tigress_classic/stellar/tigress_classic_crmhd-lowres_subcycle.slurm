@@ -9,98 +9,50 @@
 #SBATCH --output=tigress-%j.err
 #SBATCH --error=tigress-%j.out
 
-# check if the second argument is provided
-usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <CRBC=lngrad_out> <beta=10> <crsubcycle=false>"
-if [ -z "$1" ]; then
-    echo $usage
-    exit 1
-fi
+# Usage and argument defaults
+usage="Usage: $0 <compiler> <start_flag> <MHDBC=diode> <CRBC=lngrad_out> <beta=1> <crsubcycle=false>"
+CC=${1:-icpx}
+STARTFLAG=${2:-}
+MHDBC=${3:-diode}
+CRBC=${4:-lngrad_out}
+beta=${5:-1}
+crsubcycle=${6:-false}
 
-CC=$1
-debug_option=""
-if [[ "$CC" == "icpx" || "$CC" == "icpx-b" ]]  ; then
+# Validate required arguments
+[[ -z "$STARTFLAG" ]] && echo "$usage" && exit 1
+
+# Validate boundary condition arguments
+valid_bc="diode lngrad lngrad_out lingrad lingrad_out"
+[[ ! " $valid_bc " =~ " $MHDBC " ]] && echo "Invalid MHDBC=$MHDBC" && exit 1
+[[ ! " $valid_bc " =~ " $CRBC " ]] && echo "Invalid CRBC=$CRBC" && exit 1
+
+# Load modules based on compiler
+if [[ "$CC" == icpx* ]]; then
     module purge; module load anaconda3/2023.3 intel-oneapi/2024.2 openmpi/oneapi-2024.2/4.1.6 hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4 fftw/oneapi-2024.2/3.3.10
-elif [[ "$CC" == "g++" || "$CC" == "g++-b" ]] ; then
+elif [[ "$CC" == g++* ]]; then
     module purge; module load anaconda3/2023.3 fftw/gcc/3.3.10 intel-mpi/gcc/2021.13 hdf5/gcc/intel-mpi/1.14.4
 else
     module purge; module load anaconda3/2023.3 fftw/gcc/3.3.10 intel-mpi/gcc/2021.13 hdf5/gcc/intel-mpi/1.14.4
-    CC=g++
     debug_option="-debug"
 fi
 
-# check if the second argument is provided
-if [ -z "$2" ]; then
-    echo $usage
-    exit 1
-fi
+# Set gravity solve flag based on CR subcycle
+selfg_dt=$([[ "$crsubcycle" == "true" ]] && echo false || echo true)
 
-STARTFLAG=$2
+echo "submitting a job: $0 $CC $STARTFLAG $MHDBC $CRBC $beta $crsubcycle"
 
-
-# check if the third argument is provided
-if [ -z "$3" ]; then
-    echo $usage
-    MHDBC=diode
-else
-    MHDBC=$3
-fi
-
-# check if the third argument is a valid value
-if [[ "$MHDBC" != "diode" && "$MHDBC" != "lngrad" && "$MHDBC" != "lngrad_out" && "$MHDBC" != "lingrad" && "$MHDBC" != "lingrad_out" ]]; then
-    echo "Invalid value for MHDBC=$MHDBC"
-    exit 1
-fi
-
-# check if the fourth argument is provided
-if [ -z "$4" ]; then
-    echo $usage
-    CRBC=lngrad_out
-else
-    CRBC=$4
-fi
-
-# check if the third argument is a valid value
-if [[ "$CRBC" != "diode" && "$CRBC" != "lngrad" && "$CRBC" != "lngrad_out" && "$CRBC" != "lingrad" && "$CRBC" != "lingrad_out" ]]; then
-    echo "Invalid value for crbc=$CRBC"
-    exit 1
-fi
-
-
-# check if the fifth argument is provided
-if [ -z "$5" ]; then
-    echo $usage
-    beta=1
-else
-    beta=$5
-fi
-
-# check if the sixth argument is provided
-if [ -z "$6" ]; then
-    echo $usage
-    crsubcycle=false
-else
-    crsubcycle=$6
-fi
-
-if [ "$crsubcycle" == "true" ]; then
-    echo "CR subcycling is turned on; gravity solved at every step"
-    selfg_dt=false
-else
-    echo "CR subcycling is turned of; gravity solved at every hydro step"
-    selfg_dt=true
-fi
-
-echo "submitting a job: $0 $1 $2 $MHDBC $CRBC $beta $crsubcycle"
-
+# Problem setup
 fgas=0.7
-
-# Define problem and paths
-physics=crmhd
-prob=tigress_classic
-PID=TIGRESS
+physics=crmhd; prob=tigress_classic; PID=TIGRESS
 SRCDIR=$HOME/tigris
 SCRIPTDIR=$HOME/tigris_scripts/$prob/stellar
 SCRIPT=${prob}_${physics}-lowres_subcycle.slurm
+EXE=${prob}_${physics}_${CC}${debug_option}.exe
+INPUT=athinput.$prob
+RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-subcycle_$crsubcycle-reorder_rk2_vmax5e4-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC-$CC
+TBLDIR="$SRCDIR/inputs/tables"
+COOL_TBL="tigress_coolftn.txt"
+POPSYNTH_TBL="Z014_GenevaV00.txt"
 
 # Define executable and input files
 EXE=${prob}_${physics}_${CC}$debug_option.exe
@@ -166,7 +118,7 @@ echo "EXITCODE = $EXITCODE"
 
 set +o pipefail
 
-if [[ $EXITCODE -eq 2 ]]; then
+if [[ $EXITCODE -eq 3 ]]; then
     echo "Resubmitting"
     sbatch $SCRIPT $CC -r $MHDBC $CRBC $beta $crsubcycle
 fi

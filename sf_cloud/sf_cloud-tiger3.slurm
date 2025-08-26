@@ -77,7 +77,7 @@ echo "EXITCODE = $EXITCODE"
 
 set +o pipefail
 
-if [[ $EXITCODE -eq 2 ]]; then
+if [[ $EXITCODE -eq 3 ]]; then
     echo "Resubmitting"
     cd $SRCDIR
     sbatch sf_cloud-tiger3.slurm $CC -r

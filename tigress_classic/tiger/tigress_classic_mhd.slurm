@@ -55,7 +55,7 @@ SCRIPT=${prob}_mhd.slurm
 # EXE=${prob}_${physics}.exe
 EXE=tigris_${physics}.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-8pc-b$beta-mhdbc_$MHDBC-fgas_$fgas
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-8pc-b$beta-mhdbc_$MHDBC-fgas_$fgas-vmax1.e4-df8
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
@@ -66,7 +66,7 @@ medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3m
 
 params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output2/dt=1 output3/dt=1 hydro/neighbor_flooring=false $periodic"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output2/dt=5 output3/dt=1 hydro/neighbor_flooring=false feedback/vmax=1.e4 hydro/dfloor=1.e-8 hydro/pfloor=1.e-8 $periodic"
 
 # Print the run directory
 echo $RUNDIR
@@ -112,7 +112,7 @@ echo "EXITCODE = $EXITCODE"
 
 set +o pipefail
 
-if [[ $EXITCODE -eq 2 ]]; then
+if [[ $EXITCODE -eq 3 ]]; then
     echo "Resubmitting"
     sbatch $SCRIPT -r $physics $fgas $beta $MHDBC
 fi

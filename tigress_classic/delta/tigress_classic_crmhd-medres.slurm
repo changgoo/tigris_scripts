@@ -144,7 +144,7 @@ echo "EXITCODE = $EXITCODE"
 
 set +o pipefail
 
-if [[ $EXITCODE -eq 2 ]]; then
+if [[ $EXITCODE -eq 3 ]]; then
     echo "Resubmitting"
     sbatch $SCRIPT -r $MHDBC $CRBC $beta
 fi
