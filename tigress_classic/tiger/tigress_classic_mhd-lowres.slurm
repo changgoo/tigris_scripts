@@ -55,18 +55,17 @@ SCRIPT=${prob}_mhd.slurm
 # EXE=${prob}_${physics}.exe
 EXE=tigris_${physics}.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-fgas_$fgas-noceil
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-fgas_$fgas-noceil-decay1
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
+lowres_normal="mesh/nx3=512 mesh/x3min=-4096 mesh/x3max=4096"
 
-lowres_normal="mesh/nx1=64 mesh/nx2=64 mesh/nx3=512 mesh/x3min=-4096 mesh/x3max=4096"
-
-params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
+params="job/problem_id=$PID time/tlim=500 $lowres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output3/dt=1 hydro/neighbor_flooring=false cooling/ceiling=false feedback/vmax=1.e4 hydro/dfloor=1.e-16 hydro/pfloor=1.e-8 $periodic"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output3/dt=1 hydro/neighbor_flooring=false cooling/ceiling=false feedback/vmax=1.e4 hydro/dfloor=1.e-16 hydro/pfloor=1.e-8 feedback/tdec_rt=1 $periodic"
 
 # Print the run directory
 echo $RUNDIR
