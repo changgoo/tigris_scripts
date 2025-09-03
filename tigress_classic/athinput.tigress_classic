@@ -14,7 +14,7 @@ dcycle    = 0
 
 <output2>
 file_type   = hdf5      # Binary data dump
-variable    = prim,uov  # variables to be output
+variable    = prim      # variables to be output
 dt          = 1         # time increment between outputs
 dcycle      = 0
 ghost_zones = false
@@ -41,8 +41,8 @@ dcycle    = 0
 
 <output7>
 file_type   = hdf5      # Binary data dump
-variable    = d,p,Ec    # variables to be output
-dt          = 1         # time increment between outputs
+variable    = uov       # variables to be output
+dt          = 10        # time increment between outputs
 dcycle      = 0
 ghost_zones = false
 
@@ -154,6 +154,7 @@ E_inj         = 1.0                # Energy injected in units of 10^51 ergs
 M_ej          = 10                 # Ejecta mass (star) in Msun
 fe_CR         = 0.1               # energy fraction in CR
 tdec_scr      = 0.04              # decay time of CR scalar in Myr
+tdec_rt       = 10
 iSN           = 1        # turn on supernovae
 iFUV          = 1
 pop_synth_file = Z014_GenevaV00.txt
