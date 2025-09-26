@@ -1,0 +1,220 @@
+<comment>
+problem   = Cooling halo with TIGRESS
+reference =
+configure =
+
+<job>
+problem_id = HALO # problem ID: basename of output filenames
+output_timing = true
+
+<output1>
+file_type = hst   # History data dump
+dt        = 1.e-4  # time increment between outputs
+dcycle    = 0
+
+<output2>
+file_type   = hdf5      # Binary data dump
+variable    = prim      # variables to be output
+dt          = 1.e-2         # time increment between outputs
+dcycle      = 0
+ghost_zones = false
+
+<output3>
+file_type   = parbin  # Binary data dump
+dt          = 1.e-2       # time increment between outputs
+dcycle      = 0
+
+<output4>
+file_type = rst # Restart data dump
+dt        = 0.1  # time increment between outputs
+dcycle    = 0
+
+<output5>
+file_type = phase_hst   # History data dump
+dt        = 1.e-4  # time increment between outputs
+dcycle    = 0
+
+<output7>
+file_type   = hdf5      # Binary data dump
+variable    = uov       # variables to be output
+dt          = 0.1        # time increment between outputs
+dcycle      = 0
+ghost_zones = false
+
+
+<time>
+cfl_number       = 0.3    # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim             = -1     # cycle limit
+tlim             = 1.0   # time limit
+integrator       = rk2    # time integration algorithm
+xorder           = 2      # order of spatial reconstruction
+ncycle_out       = 1      # interval for stdout summary info
+dt_diagnostics   = -1
+ncycle_out_timing = 100
+ops_task         = true
+cr_integrator    = rk1
+
+<mesh>
+nx1         = 128             # Number of zones in X1-direction
+x1min       = -70           # minimum value of X1
+x1max       = 70            # maximum value of X1
+ix1_bc      = periodic # inner-X1 boundary flag
+ox1_bc      = periodic # outer-X1 boundary flag
+nx2         = 128             # Number of zones in X2-direction
+x2min       = -70           # minimum value of X2
+x2max       = 70            # maximum value of X2
+ix2_bc      = periodic       # inner-X2 boundary flag
+ox2_bc      = periodic       # outer-X2 boundary flag
+nx3         = 128             # Number of zones in X3-direction
+x3min       = -70           # minimum value of X3
+x3max       = 70            # maximum value of X3
+ix3_bc      = periodic           # inner-X3 boundary flag
+ox3_bc      = periodic           # outer-X3 boundary flag
+refinement  = static
+
+<refinement1>
+x1min = -5
+x1max =  5
+x2min = -5
+x2max =  5
+x3min = -5
+x3max =  5
+level =  5
+
+<meshblock>
+nx1 = 32
+nx2 = 32
+nx3 = 32
+
+<hydro>
+gamma           = 1.666666666667 # gamma = C_p/C_v
+iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
+neighbor_flooring = false
+fofc              = true
+ct_method         = uct_hlld
+
+<gravity>
+mgmode          = FMG       # set the solver mode: FMG or MGI
+threshold       = 0.0       # set the convergence threshold
+niteration      = 10        # set the number of iterations
+fas             = false     # Full Approximation Scheme
+omega           = 1.15      # Acceleration parameter in GS smoother
+npresmooth      = 1         # Number of pre-smoothing (0,1,2)
+npostsmooth     = 1         # Number of post-smoothing (0,1,2)
+output_defect   = true      # output the defect
+show_defect     = false     # show the defect at every timestep
+fill_ghost      = true      # fill all ghost cells
+ix1_bc          = periodic  # Inner X1 boundary condition
+ox1_bc          = periodic  # Outer X1 boundary condition
+ix2_bc          = periodic  # Inner X2 boundary condition
+ox2_bc          = periodic  # Outer X2 boundary condition
+ix3_bc          = periodic  # Inner X3 boundary condition
+ox3_bc          = periodic  # Outer X3 boundary condition
+mporder         = 4         # order of multipole expansion, 2 or 4
+auto_mporigin   = true      # automatically set the origin of multipole expansion
+mporigin_x1     = 0.0       # X1 position of the origin of multipole expansion
+mporigin_x2     = 0.0       # X2 position of the origin of multipole expansion
+mporigin_x3     = 0.0       # X3 position of the origin of multipole expansion
+nodipole        = false     # set true to set dipole to zero
+output_gasonly_potential = true
+solve_grav_hyperbolic_dt = false
+
+<orbital_advection>
+OAorder    = 0       # 0: w/o OA, 1: w/ OA (1st), 2: w/ OA (2nd)
+qshear     = 1       # shear rate
+Omega0     = 0.028   # angular velocity of the system
+shboxcoord = 1       # 1=xy (default); 2=xz
+
+<cooling>
+cooling       = op_split         # [none, enroll, op_split]
+solver        = rk2              # [forward_euler]
+coolftn       = tigress	         # tigress or plf
+coolftn_file  = tigress_coolftn.txt
+
+cfl_cool      = 2.0       # min dt_hydro/dt_cool
+cfl_cool_sub  = 0.1       # dt_sub/dt_cool (must be less than 1)
+T_floor       = 3         # temperature floor
+T_max         = 5e9       # temperature ceiling
+ceiling       = true
+
+T_PE          = 15000     # temperature below which PE heating is applied, if plf
+Gamma         = 2e-26     # heating rate in ergs / sec, if plf
+
+heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
+
+<particle1>
+type    = complex
+gravity = true
+output  = true
+output_pm = false
+feedback  = true        # turn on feedback from particles
+accretion = 1
+mass_return = false
+fgas    = 0.0
+r_return = -1           # negative for no return; 0 to entire volume
+t_return = 5
+dt_return = 1
+t_duration = 10
+
+<feedback>
+ischeme       = Classic     # injection scheme
+pop_synth     = SB99     # population synthesis scheme
+M_inj         = 20                 # Total injected mass (gas+star) in Msun
+E_inj         = 1.0                # Energy injected in units of 10^51 ergs
+M_ej          = 10                 # Ejecta mass (star) in Msun
+fe_CR         = 0.1               # energy fraction in CR
+tdec_scr      = 0.04              # decay time of CR scalar in Myr
+tdec_rt       = 10
+iSN           = 1        # turn on supernovae
+iFUV          = 1
+pop_synth_file = Z014_GenevaV00.txt
+rfb_res       = 3.0      # feedback radius in grid cells
+fkin          = 0.28     # kinetic energy fraction
+mratio_thresh = 0.1      # mass ratio threshold for energy inejction mode
+iredist       = false    # redistribute if momentum feedback?
+write_rprof   = false
+vmax          = 5000     # maximum velocity by the feedback injection
+
+<cr>
+vmax                 = 2e9
+fofc                 = true
+neighbor_flooring    = true
+vflx                 = false
+taucell              = 1
+vs_flag              = 1
+src_flag             = 1
+losses_flag          = 1
+perp_diff_flag       = 1
+self_consistent_flag = 1
+valfven_flag         = 1
+obs_spectrum_flag    = 1
+postprocess_flag     = 0
+coll_ion_flag        = 1
+
+ecfloor              = 1e-20
+sigma                = 1e-25
+max_opacity          = 10000000000
+perp_to_par_diff     = 10
+obs_spectrum_slope   = -4.7
+cr_ops_task          = false
+
+<problem>
+halo_nmin       = 1.e-6
+halo_tmin       = 1.e6
+halo_v200       = 35
+halo_c          = 10
+halo_lambda     = 0.04
+halo_fb         = 0.15
+halo_eps        = 10
+beta_r     = 1.e6
+Z_gas      = 1.0
+
+<perturbation>
+nlow       = 1     # cut-off wavenumber at low-k
+nhigh      = 8     # cut-off wavenumber at high-k
+expo       = 2.0   # power-law exponent
+f_shear    = 0.5   # the ratio of the shear component
+rseed      = -1    # if non-negative, seed will be set by hand (slow PS generation)
+
+<units>
+unit_system = galaxy
