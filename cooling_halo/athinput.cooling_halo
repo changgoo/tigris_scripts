@@ -15,7 +15,7 @@ dcycle    = 0
 <output2>
 file_type   = hdf5      # Binary data dump
 variable    = prim      # variables to be output
-dt          = 1.e-2         # time increment between outputs
+dt          = 1.e-3         # time increment between outputs
 dcycle      = 0
 ghost_zones = false
 
@@ -55,17 +55,17 @@ ops_task         = true
 cr_integrator    = rk1
 
 <mesh>
-nx1         = 128             # Number of zones in X1-direction
+nx1         = 64              # Number of zones in X1-direction
 x1min       = -70           # minimum value of X1
 x1max       = 70            # maximum value of X1
 ix1_bc      = periodic # inner-X1 boundary flag
 ox1_bc      = periodic # outer-X1 boundary flag
-nx2         = 128             # Number of zones in X2-direction
+nx2         = 64             # Number of zones in X2-direction
 x2min       = -70           # minimum value of X2
 x2max       = 70            # maximum value of X2
 ix2_bc      = periodic       # inner-X2 boundary flag
 ox2_bc      = periodic       # outer-X2 boundary flag
-nx3         = 128             # Number of zones in X3-direction
+nx3         = 64             # Number of zones in X3-direction
 x3min       = -70           # minimum value of X3
 x3max       = 70            # maximum value of X3
 ix3_bc      = periodic           # inner-X3 boundary flag
@@ -79,12 +79,12 @@ x2min = -5
 x2max =  5
 x3min = -5
 x3max =  5
-level =  5
+level =  6
 
 <meshblock>
-nx1 = 32
-nx2 = 32
-nx3 = 32
+nx1 = 64
+nx2 = 64
+nx3 = 64
 
 <hydro>
 gamma           = 1.666666666667 # gamma = C_p/C_v
@@ -94,30 +94,16 @@ fofc              = true
 ct_method         = uct_hlld
 
 <gravity>
-mgmode          = FMG       # set the solver mode: FMG or MGI
-threshold       = 0.0       # set the convergence threshold
-niteration      = 10        # set the number of iterations
-fas             = false     # Full Approximation Scheme
-omega           = 1.15      # Acceleration parameter in GS smoother
-npresmooth      = 1         # Number of pre-smoothing (0,1,2)
-npostsmooth     = 1         # Number of post-smoothing (0,1,2)
-output_defect   = true      # output the defect
-show_defect     = false     # show the defect at every timestep
-fill_ghost      = true      # fill all ghost cells
-ix1_bc          = periodic  # Inner X1 boundary condition
-ox1_bc          = periodic  # Outer X1 boundary condition
-ix2_bc          = periodic  # Inner X2 boundary condition
-ox2_bc          = periodic  # Outer X2 boundary condition
-ix3_bc          = periodic  # Inner X3 boundary condition
-ox3_bc          = periodic  # Outer X3 boundary condition
-mporder         = 4         # order of multipole expansion, 2 or 4
-auto_mporigin   = true      # automatically set the origin of multipole expansion
-mporigin_x1     = 0.0       # X1 position of the origin of multipole expansion
-mporigin_x2     = 0.0       # X2 position of the origin of multipole expansion
-mporigin_x3     = 0.0       # X3 position of the origin of multipole expansion
-nodipole        = false     # set true to set dipole to zero
-output_gasonly_potential = true
-solve_grav_hyperbolic_dt = false
+mgmode          = FMG
+niteration      = 10
+output_defect   = true
+ix1_bc          = multipole
+ox1_bc          = multipole
+ix2_bc          = multipole
+ox2_bc          = multipole
+ix3_bc          = multipole
+ox3_bc          = multipole
+mporder         = 4
 
 <orbital_advection>
 OAorder    = 0       # 0: w/o OA, 1: w/ OA (1st), 2: w/ OA (2nd)

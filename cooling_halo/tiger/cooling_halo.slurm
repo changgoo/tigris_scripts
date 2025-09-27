@@ -43,13 +43,13 @@ SCRIPT=${prob}.slurm
 # EXE=${prob}_${physics}.exe
 EXE=tigris_devel_hydro.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/hydro_lev5
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/hydro_lev5_sg
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
-params="job/problem_id=$PID cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0 refinement1/level=5 cooling/cooling=none particle1/type=none"
+params="job/problem_id=$PID cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0 refinement1/level=6 problem/halo_lambda=0.0 cooling/cooling=none particle1/type=none output3/dt=-1 output4/dt=-1 output5/dt=-1 output7/dt=-1 output2/dt=0 output2/dcycle=100"
 
 # Print the run directory
 echo $RUNDIR

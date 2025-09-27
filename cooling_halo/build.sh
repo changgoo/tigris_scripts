@@ -100,7 +100,7 @@ cd "$BUILDDIR"
 
 if [ "$BUILD_OPTION" != "2" ]; then
     echo -e  "${GREEN}Configuring Athena++ in $BUILDDIR.. for $PHYSICS${NC}"
-    ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav=mg -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS
+    ./configure.py --prob="$PROB" $DEBUG_OPTION --grav=mg -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS
 
     make clean
 fi
