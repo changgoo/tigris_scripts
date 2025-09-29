@@ -137,6 +137,7 @@ t_return = 5
 dt_return = 1
 t_duration = 10
 return_to_warm = true
+type_ia_sn = false
 
 <particle2>
 type      = none
@@ -179,6 +180,7 @@ self_consistent_flag = 1
 valfven_flag         = 1
 obs_spectrum_flag    = 1
 postprocess_flag     = 0
+coll_ion_flag        = 1
 
 ecfloor              = 1e-20
 sigma                = 1e-25
