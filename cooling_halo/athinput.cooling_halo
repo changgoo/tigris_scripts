@@ -58,18 +58,18 @@ cr_integrator    = rk1
 nx1         = 64              # Number of zones in X1-direction
 x1min       = -70           # minimum value of X1
 x1max       = 70            # maximum value of X1
-ix1_bc      = periodic # inner-X1 boundary flag
-ox1_bc      = periodic # outer-X1 boundary flag
+ix1_bc      = outflow # inner-X1 boundary flag
+ox1_bc      = outflow # outer-X1 boundary flag
 nx2         = 64             # Number of zones in X2-direction
 x2min       = -70           # minimum value of X2
 x2max       = 70            # maximum value of X2
-ix2_bc      = periodic       # inner-X2 boundary flag
-ox2_bc      = periodic       # outer-X2 boundary flag
+ix2_bc      = outflow       # inner-X2 boundary flag
+ox2_bc      = outflow       # outer-X2 boundary flag
 nx3         = 64             # Number of zones in X3-direction
 x3min       = -70           # minimum value of X3
 x3max       = 70            # maximum value of X3
-ix3_bc      = periodic           # inner-X3 boundary flag
-ox3_bc      = periodic           # outer-X3 boundary flag
+ix3_bc      = outflow           # inner-X3 boundary flag
+ox3_bc      = outflow           # outer-X3 boundary flag
 refinement  = static
 
 <refinement1>
@@ -192,8 +192,10 @@ halo_c          = 10
 halo_lambda     = 0.04
 halo_fb         = 0.15
 halo_eps        = 10
-beta_r     = 1.e6
-Z_gas      = 1.0
+beta_r          = 1.e6
+Z_gas           = 1.0
+turb_flag       = 0
+dedt            = 1.0
 
 <perturbation>
 nlow       = 1     # cut-off wavenumber at low-k
