@@ -15,6 +15,7 @@ PHYSICS=${2:-hydro}
 # Default build option: 0 (normal build), 1 (debug build), 2 (no clean)
 BUILD_OPTION=${3:-0}
 SRC=${4:-tigris}
+FLUX=${5:-hll}
 
 # USAGE
 if [ "$#" -lt 1 ]; then
@@ -59,23 +60,23 @@ fi
 
 # Physics options
 if [ "$PHYSICS" == "hydro" ]; then
-    PHY_OPTIONS="--flux=hllc"
+    PHY_OPTIONS="--flux=${FLUX}c"
 elif [ "$PHYSICS" == "hydro_duale" ]; then
-    PHY_OPTIONS="--dual=eint --flux=hllc"
+    PHY_OPTIONS="--dual=eint --flux=${FLUX}c"
 elif [ "$PHYSICS" == "hydro_duals" ]; then
-    PHY_OPTIONS="--dual=entropy --flux=hllc"
+    PHY_OPTIONS="--dual=entropy --flux=${FLUX}c"
 elif [ "$PHYSICS" == "mhd" ]; then
-    PHY_OPTIONS="-b --flux=hlld"
+    PHY_OPTIONS="-b --flux=${FLUX}d"
 elif [ "$PHYSICS" == "mhd_duale" ]; then
-    PHY_OPTIONS="-b --flux=hlld --dual=eint"
+    PHY_OPTIONS="-b --flux=${FLUX}d --dual=eint"
 elif [ "$PHYSICS" == "mhd_duals" ]; then
-    PHY_OPTIONS="-b --flux=hlld --dual=entropy"
+    PHY_OPTIONS="-b --flux=${FLUX}d --dual=entropy"
 elif [ "$PHYSICS" == "crmhd" ]; then
-    PHY_OPTIONS="-b --cr=mg --flux=hlld"
+    PHY_OPTIONS="-b --cr=mg --flux=${FLUX}d"
 elif [ "$PHYSICS" == "crmhd_duale" ]; then
-    PHY_OPTIONS="-b --cr=mg --flux=hlld --dual=eint"
+    PHY_OPTIONS="-b --cr=mg --flux=${FLUX}d --dual=eint"
 elif [ "$PHYSICS" == "crmhd_duals" ]; then
-    PHY_OPTIONS="-b --cr=mg --flux=hlld --dual=entropy"
+    PHY_OPTIONS="-b --cr=mg --flux=${FLUX}d --dual=entropy"
 else
     echo -e "${RED} Physics option: $PHYSICS is unavailable ${NC}"
     exit 1
@@ -92,6 +93,10 @@ fi
 HDF5_LIB="${HDF5DIR}/lib64"
 HDF5_INC="${HDF5DIR}/include"
 PATH_OPTIONS="--lib_path=${HDF5_LIB} --include=${HDF5_INC}"
+
+if [ "$FLUX" == "lhll" ]; then
+    PHYSICS="${PHYSICS}_lhll"
+fi
 
 EXE="${CURDIR}/${MACHINE}/${SRC}_${PHYSICS}${DEBUG_OPTION}.exe"
 
