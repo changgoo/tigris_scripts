@@ -14,9 +14,13 @@ usage="Usage: $0 <start_flag> <physics=mhd> <fgas=0.7> <beta=1> <MHDBC=diode>"
 
 STARTFLAG=${1:-}
 physics=${2:-mhd}
-fgas=${3:-0.7}
-beta=${4:-1}
-MHDBC=${5:-diode}
+integrator=${3:-rk2}
+xorder=${4:-2}
+type_ia_sn=${5:-false}
+fbinary=${6:-0.0}
+fgas=${7:-0.7}
+beta=${8:-1}
+MHDBC=${9:-diode}
 CC=icpx
 
 
@@ -24,7 +28,7 @@ CC=icpx
 [[ -z "$STARTFLAG" ]] && echo "$usage" && exit 1
 
 # Validate boundary condition arguments
-valid_phy="mhd mhd_duale mhd_duals"
+valid_phy="hydro hydro_duale hydro_duals mhd mhd_duale mhd_duals"
 [[ ! " $valid_phy " =~ " $physics " ]] && echo "Invalid physics=$physics" && exit 1
 
 # Validate boundary condition arguments
@@ -49,13 +53,13 @@ prob=tigress_classic
 PID=TIGRESS
 SRCDIR=$HOME/tigris
 SCRIPTDIR=$HOME/tigris_scripts/$prob/tiger
-SCRIPT=${prob}_mhd.slurm
+SCRIPT=${prob}_mhd-lowres.slurm
 
 # Define executable and input files
 # EXE=${prob}_${physics}.exe
 EXE=tigris_${physics}.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-fgas_$fgas-noceil-decay1
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-${integrator}_${xorder}-ia${type_ia_sn}-fbinary${fbinary}_dt
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
@@ -65,7 +69,7 @@ lowres_normal="mesh/nx3=512 mesh/x3min=-4096 mesh/x3max=4096"
 
 params="job/problem_id=$PID time/tlim=500 $lowres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output3/dt=1 hydro/neighbor_flooring=false cooling/ceiling=false feedback/vmax=1.e4 hydro/dfloor=1.e-16 hydro/pfloor=1.e-8 feedback/tdec_rt=1 $periodic"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output2/dt=5 output3/dt=5 hydro/neighbor_flooring=false cooling/ceiling=true feedback/vmax=1.e4 hydro/dfloor=1.e-8 hydro/pfloor=1.e-8 feedback/tdec_rt=1 particle1/type_ia_sn=$type_ia_sn feedback/fbinary=$fbinary time/integrator=$integrator time/xorder=$xorder $periodic"
 
 # Print the run directory
 echo $RUNDIR

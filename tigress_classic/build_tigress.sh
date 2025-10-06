@@ -59,23 +59,23 @@ fi
 
 # Physics options
 if [ "$PHYSICS" == "hydro" ]; then
-    PHY_OPTIONS="--flux=lhllc"
+    PHY_OPTIONS="--flux=hllc"
 elif [ "$PHYSICS" == "hydro_duale" ]; then
-    PHY_OPTIONS="--dual=eint --flux=lhllc"
+    PHY_OPTIONS="--dual=eint --flux=hllc"
 elif [ "$PHYSICS" == "hydro_duals" ]; then
-    PHY_OPTIONS="--dual=entropy --flux=lhllc"
+    PHY_OPTIONS="--dual=entropy --flux=hllc"
 elif [ "$PHYSICS" == "mhd" ]; then
-    PHY_OPTIONS="-b --flux=lhlld"
+    PHY_OPTIONS="-b --flux=hlld"
 elif [ "$PHYSICS" == "mhd_duale" ]; then
-    PHY_OPTIONS="-b --flux=lhlld --dual=eint"
+    PHY_OPTIONS="-b --flux=hlld --dual=eint"
 elif [ "$PHYSICS" == "mhd_duals" ]; then
-    PHY_OPTIONS="-b --flux=lhlld --dual=entropy"
+    PHY_OPTIONS="-b --flux=hlld --dual=entropy"
 elif [ "$PHYSICS" == "crmhd" ]; then
-    PHY_OPTIONS="-b --cr=mg --flux=lhlld"
+    PHY_OPTIONS="-b --cr=mg --flux=hlld"
 elif [ "$PHYSICS" == "crmhd_duale" ]; then
-    PHY_OPTIONS="-b --cr=mg --flux=lhlld --dual=eint"
+    PHY_OPTIONS="-b --cr=mg --flux=hlld --dual=eint"
 elif [ "$PHYSICS" == "crmhd_duals" ]; then
-    PHY_OPTIONS="-b --cr=mg --flux=lhlld --dual=entropy"
+    PHY_OPTIONS="-b --cr=mg --flux=hlld --dual=entropy"
 else
     echo -e "${RED} Physics option: $PHYSICS is unavailable ${NC}"
     exit 1

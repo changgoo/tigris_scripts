@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=lowres-crmhd    # create a short name for your job
+#SBATCH --job-name=crmhd-8pc    # create a short name for your job
 #SBATCH --account=eost        # account (mandatory for tiger3)
 #SBATCH -N 5                  # node count
 #SBATCH -n 512                # node count
-#SBATCH --time=24:00:00       # total run time limit (HH:MM:SS)
+#SBATCH --time=48:00:00       # total run time limit (HH:MM:SS)
 #SBATCH --mail-type=all       # send email on job start, end and fail
 #SBATCH --mail-user=changgoo@princeton.edu
 #SBATCH --output=tigress-%j.err
@@ -13,14 +13,25 @@
 usage="Usage: $0 <start_flag> <physics> <MHDBC=diode> <CRBC=lngrad_out> <beta>"
 
 STARTFLAG=${1:-}
-physics=${2:-crmhd_duale}
-MHDBC=${3:-diode}
-CRBC=${4:-lngrad_out}
-beta=${5:-1}
+physics=${2:-mhd}
+integrator=${3:-rk2}
+xorder=${4:-2}
+type_ia_sn=${5:-false}
+fbinary=${6:-0.0}
+fgas=${7:-0.7}
+beta=${8:-1}
+MHDBC=${9:-diode}
+CRBC=${10:-lngrad_out}
 CC=icpx
+
+job_options="$physics $integrator $xorder $type_ia_sn $fbinary $fgas $beta $MHDBC $CRBC"
 
 # Validate required arguments
 [[ -z "$STARTFLAG" ]] && echo "$usage" && exit 1
+
+# Validate boundary condition arguments
+valid_phy="crmhd crmhd_duale crmhd_duals"
+[[ ! " $valid_phy " =~ " $physics " ]] && echo "Invalid physics=$physics" && exit 1
 
 # Validate boundary condition arguments
 valid_bc="diode lngrad lngrad_out lingrad lingrad_out"
@@ -37,24 +48,20 @@ else
     debug_option="-debug"
 fi
 
-# Set gravity solve flag based on CR subcycle
-selfg_dt=$([[ "$crsubcycle" == "true" ]] && echo false || echo true)
-
-echo "submitting a job: $0 $STARTFLAG $physics $MHDBC $CRBC $beta"
-
-fgas=0.7
+# print the job submission details
+echo "Submitting a job: $0 $job_options"
 
 # Define problem and paths
 prob=tigress_classic
 PID=TIGRESS
 SRCDIR=$HOME/tigris
 SCRIPTDIR=$HOME/tigris_scripts/$prob/tiger
-SCRIPT=tigress_classic_crmhd-lowres.slurm
+SCRIPT=${prob}_crmhd-8pc.slurm
 
 # Define executable and input files
 EXE=tigris_${physics}.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC-collion-nbfalse
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-8pc-${integrator}_${xorder}-ia${type_ia_sn}-fbinary${fbinary}-b$beta-mhdbc_$MHDBC-crbc_$CRBC
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -62,10 +69,11 @@ COOL_TBL="tigress_coolftn.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
 lowres_normal="meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16 mesh/nx3=512 mesh/x3min=-4096 mesh/x3max=4096"
+medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3max=4096"
 
-params="job/problem_id=$PID time/tlim=500 $lowres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
+params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=true hydro/neighbor_flooring=false cr/sigma=1.e-25 cr/self_consistent_flag=1 cr/coll_ion_flag=1 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 mesh/mhd_outflow_bc=$MHDBC mesh/cr_outflow_bc=$CRBC $periodic  problem/beta0=$beta"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=true cr/sigma=1.e-25 cr/self_consistent_flag=1 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 mesh/mhd_outflow_bc=$MHDBC mesh/cr_outflow_bc=$CRBC problem/beta0=$beta output2/dt=1 output3/dt=1 hydro/neighbor_flooring=false cooling/ceiling=true feedback/vmax=1.e4 feedback/tdec_rt=1 particle1/type_ia_sn=$type_ia_sn feedback/fbinary=$fbinary time/integrator=$integrator time/xorder=$xorder $periodic"
 
 # Print the run directory
 echo $RUNDIR
@@ -99,11 +107,11 @@ if [ ! -f $RSTINPUT ]; then
     cp ${SCRIPTDIR}/../$INPUT .
     cp $TBLDIR/$COOL_TBL .
     cp $TBLDIR/$POPSYNTH_TBL .
-    srun $EXE -i $INPUT -t 23:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
+    srun $EXE -i $INPUT -t 47:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
     echo "Restarting"
     rstnum=`ls out.*.txt | wc -l`
-    srun $EXE -r $RSTINPUT -t 23:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+    srun $EXE -r $RSTINPUT -t 47:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
 fi
 
 EXITCODE=$?
@@ -113,7 +121,7 @@ set +o pipefail
 
 if [[ $EXITCODE -eq 3 ]]; then
     echo "Resubmitting"
-    sbatch $SCRIPT -r $physics $MHDBC $CRBC $beta
+    sbatch $SCRIPT -r $job_options
 fi
 
 # make quick snapshots

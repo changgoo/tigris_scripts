@@ -138,6 +138,8 @@ dt_return = 1
 t_duration = 10
 return_to_warm = true
 type_ia_sn = false
+A_Ia = 4.4e-2
+B_Ia = 2.6
 
 <particle2>
 type      = none
@@ -165,6 +167,7 @@ mratio_thresh = 0.1      # mass ratio threshold for energy inejction mode
 iredist       = false    # redistribute if momentum feedback?
 write_rprof   = false
 vmax          = 5000     # maximum velocity by the feedback injection
+fbinary       = 0.0
 
 <cr>
 vmax                 = 2e9
