@@ -139,7 +139,7 @@ t_duration = 10
 return_to_warm = true
 type_ia_sn = false
 A_Ia = 4.4e-2
-B_Ia = 2.6
+B_Ia = 0.0
 
 <particle2>
 type      = none

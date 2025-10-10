@@ -9,27 +9,69 @@
 #SBATCH --output=tigress-%j.err
 #SBATCH --error=tigress-%j.out
 
-# set the usage message
-usage="Usage: $0 <start_flag> <physics=mhd> <fgas=0.7> <beta=1> <MHDBC=diode>"
-
-STARTFLAG=${1:-}
-physics=${2:-mhd}
-integrator=${3:-rk2}
-xorder=${4:-2}
-type_ia_sn=${5:-false}
-fbinary=${6:-0.0}
-fgas=${7:-0.7}
-beta=${8:-1}
-MHDBC=${9:-diode}
+# default parameters (short names)
+STARTFLAG=
+physics=mhd
+int=rk2
+xo=2
+ia=false
+fbin=0.0
+fgas=0.7
+beta=1
+MHDBC=diode
+shear=false
 CC=icpx
 
-job_options="$physics $integrator $xorder $type_ia_sn $fbinary $fgas $beta $MHDBC"
+# parse args: accept KEY=VALUE pairs (short or long names) and one positional STARTFLAG
+for arg in "$@"; do
+    if [[ "$arg" == *=* ]]; then
+        key=${arg%%=*}
+        val=${arg#*=}
+        case "$key" in
+            STARTFLAG|startflag) STARTFLAG=$val ;;
+            physics)            physics=$val ;;
+            integrator|int)     int=$val ;;
+            xorder|xo)          xo=$val ;;
+            type_ia_sn|ia)      ia=$val ;;
+            fbinary|fbin)       fbin=$val ;;
+            fgas)               fgas=$val ;;
+            beta)               beta=$val ;;
+            MHDBC|mhdbc)        MHDBC=$val ;;
+            shear)              shear=$val ;;
+            CC|cc)              CC=$val ;;
+            *) echo "Unknown parameter: $key" >&2; exit 1 ;;
+        esac
+    else
+        # treat first non-key arg as STARTFLAG (e.g. "-r")
+        if [[ -z "$STARTFLAG" ]]; then
+            STARTFLAG=$arg
+        else
+            echo "Unexpected positional arg: $arg" >&2
+            exit 1
+        fi
+    fi
+done
+
+usage="Usage: $0 <STARTFLAG> physics=<mhd> int=<rk2> xo=<2> ia=<false> fbin=<0.0> fgas=<0.7> beta=<1> MHDBC=<diode> shear=<false> CC=<icpx>"
+
+# build job options from ordered short keys and construct base name like key_value-key2_value
+keys=(physics int xo ia fbin fgas beta MHDBC shear)
+job_opts=()
+name_parts=()
+for k in "${keys[@]}"; do
+    job_opts+=("$k=${!k}")        # e.g. "fgas=0.7"
+    name_parts+=("${k}_${!k}")    # e.g. "fgas_0.7"
+done
+job_options="${job_opts[*]}"
+base_name=$(IFS=-; echo "${name_parts[*]}")
+echo "restart options: $0 -r $job_options"
+echo "base name: $base_name"
 
 # Validate required arguments
 [[ -z "$STARTFLAG" ]] && echo "$usage" && exit 1
 
 # Validate boundary condition arguments
-valid_phy="hydro hydro_duale hydro_duals mhd mhd_duale mhd_duals"
+valid_phy="hydro hydro_duale hydro_duals mhd mhd_duale mhd_duals mhd_lhll mhd_duale_lhll"
 [[ ! " $valid_phy " =~ " $physics " ]] && echo "Invalid physics=$physics" && exit 1
 
 # Validate boundary condition arguments
@@ -60,7 +102,7 @@ SCRIPT=${prob}_mhd-8pc.slurm
 # EXE=${prob}_${physics}.exe
 EXE=tigris_${physics}.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${physics}-8pc-${integrator}_${xorder}-ia${type_ia_sn}-fbinary${fbinary}-b$beta-mhdbc_$MHDBC
+RUNDIR=/scratch/gpfs/EOST/$USER/$prob/${base_name}-8pc
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -70,9 +112,16 @@ POPSYNTH_TBL="Z014_GenevaV00.txt"
 lowres_normal="mesh/nx3=512 mesh/x3min=-4096 mesh/x3max=4096"
 medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3max=4096"
 
-params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
-periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false hydro/dfloor=1.e-8 hydro/pfloor=1.e-8 mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output2/dt=1 output3/dt=1 hydro/neighbor_flooring=false cooling/ceiling=true feedback/vmax=1.e4 feedback/tdec_rt=1 particle1/type_ia_sn=$type_ia_sn feedback/fbinary=$fbinary time/integrator=$integrator time/xorder=$xorder $periodic"
+params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
+periodic="orbital_advection/Omega0=0.0 mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
+shear_periodic="mesh/ix1_bc=shear_periodic mesh/ox1_bc=shear_periodic hydro/fofc_shear=true"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false hydro/dfloor=1.e-8 hydro/pfloor=1.e-8 mesh/mhd_outflow_bc=$MHDBC problem/beta0=$beta output2/dt=1 output3/dt=1 hydro/neighbor_flooring=false cooling/ceiling=true feedback/vmax=1.e4 feedback/tdec_rt=1 particle1/type_ia_sn=$ia feedback/fbinary=$fbin time/integrator=$int time/xorder=$xo"
+
+if [[ $shear == true ]]; then
+    extra_params="$extra_params $shear_periodic"
+else
+    extra_params="$extra_params $periodic"
+fi
 
 # Print the run directory
 echo $RUNDIR
