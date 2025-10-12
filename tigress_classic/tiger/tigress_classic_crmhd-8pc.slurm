@@ -19,7 +19,7 @@ fbin=0.0
 fgas=0.7
 beta=1
 MHDBC=diode
-CRBD=lngrad_out
+CRBC=lngrad_out
 shear=false
 CC=icpx
 
