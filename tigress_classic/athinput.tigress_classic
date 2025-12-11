@@ -131,6 +131,7 @@ output_pm = false
 feedback  = true        # turn on feedback from particles
 accretion = 1
 mass_return = true
+lp_coefficient = 2.0
 fgas    = 0.0
 r_return = -1           # negative for no return; 0 to entire volume
 t_return = 5
