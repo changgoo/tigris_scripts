@@ -2,9 +2,9 @@
 
 CC=${1:-aocc}
 physics=${2:-hydro}
-for res in 1 2 4 8 16 32 64
+for mbres in mb256
 do
-  for mbres in mb16 mb32 mb64 mb128
+  for res in 1 2 4 8 16 32 64
   do
     echo "Running blast_hydro-scaling.sh with res=$res and mbres=$mbres"
     NTASKS=$res

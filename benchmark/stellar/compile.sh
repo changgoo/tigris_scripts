@@ -9,11 +9,6 @@ CC=$1
 if [ "$CC" == "icpx" ] ; then
     module purge; module load anaconda3/2023.3 intel-oneapi/2024.2 openmpi/oneapi-2024.2/4.1.6
     debug_option=""
-elif [ "$CC" == "icpc" ] ; then
-    module purge; module load anaconda3/2023.3
-    module load intel-classic/2023.2.3
-	module load openmpi/intel-classic-2023.2.3/4.1.6
-    debug_option=""
 elif [ "$CC" == "g++" ] ; then
     module purge; module load anaconda3/2025.6 gcc-toolset/14 openmpi/gcc/4.1.6
     debug_option=""
