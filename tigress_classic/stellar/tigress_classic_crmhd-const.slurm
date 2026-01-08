@@ -10,16 +10,16 @@
 #SBATCH --error=tigress-%j.out
 
 # check if the second argument is provided
-usage="Usage: $0 <start_flag> <sigma=28> <valfven_flag=1> <MHDBC=diode> <CRBC=lngrad_out> <compiler>"
+usage="Usage: $0 <start_flag> <sigma=28> <valfven_flag=1> <RSTNUM=final> <MHDBC=diode> <CRBC=lngrad_out> <compiler>"
 
 
 STARTFLAG=${1:-}
 sigma=${2:-28}
 valfven_flag=${3:-1}
-
-MHDBC=${4:-diode}
-CRBC=${5:-lngrad_out}
-CC=${6:-icpx}
+RSTNUM=${4:-final}
+MHDBC=${5:-diode}
+CRBC=${6:-lngrad_out}
+CC=${7:-icpx}
 
 # Validate required arguments
 [[ -z "$STARTFLAG" ]] && echo "$usage" && exit 1
@@ -42,7 +42,7 @@ fi
 # Set gravity solve flag based on CR subcycle
 selfg_dt=$([[ "$crsubcycle" == "true" ]] && echo false || echo true)
 
-echo "submitting a job: $0 $CC $STARTFLAG $sigma $valfven_flag $MHDBC $CRBC"
+echo "submitting a job: $0 $STARTFLAG $sigma $valfven_flag $RSTNUM $MHDBC $CRBC $CC"
 
 if [ "$valfven_flag" -eq -1 ]; then
     vs_flag=0
@@ -102,7 +102,7 @@ echo $params $extra_params $extra_params2
 set -o pipefail
 
 # Define the restart input file
-RSTINPUT=$PID.final.rst
+RSTINPUT=$PID.$RSTNUM.rst
 if [ ! -f $RSTINPUT ]; then
     echo "Starting fresh"
     cp $0 ./$SCRIPT
@@ -112,7 +112,7 @@ if [ ! -f $RSTINPUT ]; then
     cp $TBLDIR/$POPSYNTH_TBL .
     srun $EXE -i $INPUT -t 23:30:00 $params $extra_params $extra_params2 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
-    echo "Restarting"
+    echo "Restarting from $RSTINPUT"
     rstnum=`ls out.*.txt | wc -l`
     srun $EXE -r $RSTINPUT -t 23:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
 fi
@@ -124,7 +124,7 @@ set +o pipefail
 
 if [[ $EXITCODE -eq 3 ]]; then
     echo "Resubmitting"
-    sbatch $SCRIPT -r $sigma $valfven_flag $MHDBC $CRBC $CC
+    sbatch $SCRIPT -r $sigma $valfven_flag final $MHDBC $CRBC $CC
 fi
 
 # make quick snapshots
