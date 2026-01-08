@@ -63,7 +63,7 @@ SCRIPT=${prob}_${physics}-const.slurm
 # Define executable and input files
 EXE=tigris_${physics}.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/${physics}_test-8pc-b1-mhdbc_$MHDBC-crbc_$CRBC-sigma${sigma}_va${valfven_flag}
+RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-8pc-b1-mhdbc_$MHDBC-crbc_$CRBC-sigma${sigma}_va${valfven_flag}
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
