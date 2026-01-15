@@ -10,7 +10,7 @@
 #SBATCH --error=tigress-%j.out
 
 # check if the second argument is provided
-usage="Usage: $0 <start_flag> <sigma=28> <valfven_flag=1> <RSTNUM=final> <MHDBC=diode> <CRBC=lngrad_out> <compiler>"
+usage="Usage: $0 <start_flag=-r or -i> <sigma=28> <valfven_flag=1> <RSTNUM=final> <MHDBC=diode> <CRBC=lngrad_out> <compiler>"
 
 
 STARTFLAG=${1:-}
@@ -22,7 +22,8 @@ CRBC=${6:-lngrad_out}
 CC=${7:-icpx}
 
 # Validate required arguments
-[[ -z "$STARTFLAG" ]] && echo "$usage" && exit 1
+valid_flag="-i -r"
+[[ -z "$STARTFLAG" || ! $valid_flag =~ $STARTFLAG ]] && echo "$usage" && exit 1
 
 # Validate boundary condition arguments
 valid_bc="diode lngrad lngrad_out lingrad lingrad_out"
@@ -101,15 +102,20 @@ echo $params $extra_params $extra_params2
 # Enable pipefail option for better error handling
 set -o pipefail
 
+if [ ! -f "$COOL_TBL" ]; then
+    cp -p "$TBLDIR/$COOL_TBL" .
+fi
+if [ ! -f "$POPSYNTH_TBL" ]; then
+    cp -p "$TBLDIR/$POPSYNTH_TBL" .
+fi
+
 # Define the restart input file
 RSTINPUT=$PID.$RSTNUM.rst
-if [ ! -f $RSTINPUT ]; then
+if [[ ! -f "$RSTINPUT" && "$STARTFLAG" == "-i" ]]; then
     echo "Starting fresh"
-    cp $0 ./$SCRIPT
-    cp ${SCRIPTDIR}/$EXE .
-    cp ${SCRIPTDIR}/../$INPUT .
-    cp $TBLDIR/$COOL_TBL .
-    cp $TBLDIR/$POPSYNTH_TBL .
+    cp -p $0 ./$SCRIPT
+    cp -p ${SCRIPTDIR}/$EXE .
+    cp -p ${SCRIPTDIR}/../$INPUT .
     srun $EXE -i $INPUT -t 23:30:00 $params $extra_params $extra_params2 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
     echo "Restarting from $RSTINPUT"

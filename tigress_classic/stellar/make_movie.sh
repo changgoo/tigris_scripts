@@ -12,7 +12,7 @@ for path in $BASEDIR/$dir_pattern; do
     mkdir -p "$path/movies"
     echo "Processing directory: $DIR"
 
-    for KIND in cr_snapshot_prj cr_slices cr_snapshot snapshot; do
+    for KIND in cr_snapshot_prj cr_slices cr_snapshot mhd_snapshot_prj mhd_slices snapshot; do
         pattern="$path/$KIND/*.png"
         outfile="$path/movies/${DIR}_${KIND}.mp4"
 

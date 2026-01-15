@@ -187,7 +187,7 @@ obs_spectrum_flag    = 1
 postprocess_flag     = 0
 coll_ion_flag        = 1
 
-ecfloor              = 1e-20
+ecfloor              = 1e-18
 sigma                = 1e-25
 max_opacity          = 10000000000
 perp_to_par_diff     = 10
