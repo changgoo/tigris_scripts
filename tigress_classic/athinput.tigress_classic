@@ -90,6 +90,7 @@ iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
 neighbor_flooring = true
 fofc              = true
 fofc_shear        = false
+fofc_full         = false
 dfloor            = 1.e-8
 pfloor            = 1.e-8
 tsqfloor          = 1.e-2
@@ -174,6 +175,8 @@ fbinary       = 0.0
 <cr>
 vmax                 = 2e9
 fofc                 = true
+fofc_shear           = false
+fofc_full            = false
 neighbor_flooring    = true
 vflx                 = false
 taucell              = 1
