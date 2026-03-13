@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -N mhd
-#PBS -l select=1:ncpus=$NTASKS:sales_op=6960P_32GB
+#PBS -v comment=freq=max
 #PBS -l place=scatter:excl
 #PBS -j oe
 #PBS -l walltime=2:00:00
@@ -28,7 +28,7 @@ SCRIPTDIR=$HOME/tigris_scripts/benchmark/hpe
 # Define executable and input files
 EXE=${prob}_${PHYSICS}_${CC}.exe
 INPUT=athinput.$prob
-RUNDIR=$HOME/benchmark/${prob}-scaling-$CC/${PHYSICS}-${MBRES}_n$NTASKS
+RUNDIR=$HOME/$MACHINE/${prob}-scaling-$CC/${PHYSICS}-${MBRES}_n$NTASKS
 
 if [[ $MBRES == "mb32" ]] ; then
     mb_nx=32
