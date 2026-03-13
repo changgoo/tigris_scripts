@@ -1,6 +1,6 @@
 #!/bin/bash
-#PBS -N blast_mhd
-#PBS -l select=1:ncpus=144:sales_op=6960P_32GB
+#PBS -N mhd
+#PBS -l select=1:ncpus=$NTASKS:sales_op=6960P_32GB
 #PBS -l place=scatter:excl
 #PBS -j oe
 #PBS -l walltime=2:00:00

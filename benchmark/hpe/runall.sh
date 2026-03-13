@@ -8,7 +8,7 @@ do
   #for mbres in mb64
   #do
     echo "Running blast_hydro-scaling.sh with res=$res and mbres=$mbres"
-    echo "NTASKS set to $NTASKS"
+    echo "NTASKS set to $res"
     qsub -v NTASKS=$res,CC=icpx,PHYSICS=mhd,MBRES=mb64 blast-scaling_pbs.sh
   #done
 done
