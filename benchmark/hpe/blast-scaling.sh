@@ -128,6 +128,16 @@ elif [[ $res == "96" ]] ; then
     mesh_x3max=$(( mesh_L*6 ))
 elif [[ $res == "128" ]] ; then
     mesh_nx1=$((mb_nx*4))
+    mesh_nx2=$((mb_nx*4))
+    mesh_nx3=$((mb_nx*8))
+    mesh_x1min=$(( -mesh_L*4 ))
+    mesh_x1max=$(( mesh_L*4 ))
+    mesh_x2min=$(( -mesh_L*4 ))
+    mesh_x2max=$(( mesh_L*4 ))
+    mesh_x3min=$(( -mesh_L*8 ))
+    mesh_x3max=$(( mesh_L*8 ))
+elif [[ $res == "144" ]] ; then
+    mesh_nx1=$((mb_nx*4))
     mesh_nx2=$((mb_nx*6))
     mesh_nx3=$((mb_nx*6))
     mesh_x1min=$(( -mesh_L*4 ))

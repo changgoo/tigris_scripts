@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 
 def get_zcs(mb="mb64",physics="mhd",CC="icpx",machine="hpe"):
-    n = np.array([1, 2, 4, 8, 16, 32, 64, 96, 128])
+    n = np.array([1, 2, 4, 8, 16, 32, 64, 96, 128, 144])
     scratch_dir = f"/home/users/e89961/{machine}/blast-scaling-{CC}"
     zcs = []
     ntask = []
