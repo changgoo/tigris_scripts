@@ -53,6 +53,14 @@ elif [ "$MACHINE" == "anvil" ]; then
     HDF5DIR="$RCAC_HDF5_ROOT"
     CC="g++-simd"
     CFLAG_OPTIONS="--cxx=$CC"
+    HDF5_LIB="${HDF5DIR}/lib64"
+    HDF5_INC="${HDF5DIR}/include"
+    PATH_OPTIONS="--lib_path=${HDF5_LIB} --include=${HDF5_INC}"
+elif [ "$MACHINE" == "nasa_athena" ]; then
+    module purge
+    module load PrgEnv-cray cray-pals cray-libpals craype-x86-turing perftools-base cray-hdf5-parallel cray-fftw
+    CFLAG_OPTIONS="--cflag=\"-flto -fopenmp-simd\""
+    PATH_OPTIONS="--hdf5_path=${HDF5_ROOT} --fftw_path=${FFTW_ROOT}"
 else
     module purge
     CC="g++"
@@ -89,10 +97,6 @@ if [ "$BUILD_OPTION" == "1" ]; then
 else
     DEBUG_OPTION=""
 fi
-
-HDF5_LIB="${HDF5DIR}/lib64"
-HDF5_INC="${HDF5DIR}/include"
-PATH_OPTIONS="--lib_path=${HDF5_LIB} --include=${HDF5_INC}"
 
 if [ "$FLUX" == "lhll" ]; then
     PHYSICS="${PHYSICS}_lhll"
