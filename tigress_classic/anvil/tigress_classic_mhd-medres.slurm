@@ -4,7 +4,7 @@
 #SBATCH -p wholenode
 #SBATCH -N 4
 #SBATCH -n 512
-#SBATCH --time=96:00:00       # total run time limit (HH:MM:SS)
+#SBATCH --time=48:00:00       # total run time limit (HH:MM:SS)
 #SBATCH --mail-type=all       # send email on job start, end and fail
 #SBATCH --mail-user=changgookim@gmail.com
 #SBATCH --output=tigress-%j.err
@@ -12,38 +12,23 @@
 
 module purge; module load gcc; module load openmpi; module load fftw hdf5
 
-usage="Usage: $0 <start_flag> <MHDBC=diode> <beta=1>"
 # check if the second argument is provided
-if [ -z "$1" ]; then
-    echo $usage
-    exit 1
-fi
-STARTFLAG=$1
+usage="Usage: $0 <start_flag=-r or -i> <b0=1> <RSTNUM=final> <MHDBC=diode>"
 
+STARTFLAG=${1:-}
+b0=${2:-1}
+RSTNUM=${3:-final}
+MHDBC=${4:-diode}
 
-# check if the third argument is provided
-if [ -z "$2" ]; then
-    echo $usage
-    MHDBC=diode
-else
-    MHDBC=$2
-fi
+# Validate required arguments
+valid_flag="-i -r"
+[[ -z "$STARTFLAG" || ! $valid_flag =~ $STARTFLAG ]] && echo "$usage" && exit 1
 
-# check if the third argument is a valid value
-if [[ "$MHDBC" != "diode" && "$MHDBC" != "lngrad" && "$MHDBC" != "lngrad_out" && "$MHDBC" != "lingrad" && "$MHDBC" != "lingrad_out" ]]; then
-    echo "Invalid value for MHDBC=$MHDBC"
-    exit 1
-fi
+# Validate boundary condition arguments
+valid_bc="diode lngrad lngrad_out lingrad lingrad_out"
+[[ ! " $valid_bc " =~ " $MHDBC " ]] && echo "Invalid MHDBC=$MHDBC" && exit 1
 
-# check if the fifth argument is provided
-if [ -z "$3" ]; then
-    echo $usage
-    beta=1
-else
-    beta=$4
-fi
-
-echo "submitting a job: $0 $1 $2 $MHDBC $beta"
+echo "submitting a job: $0 $STARTFLAG $b0 $MHDBC"
 
 fgas=0.9
 CRIR=3.e-17
@@ -57,9 +42,9 @@ SCRIPTDIR=$HOME/tigris_scripts/$prob/anvil
 SCRIPT=${prob}_${physics}-medres.slurm
 
 # Define executable and input files
-EXE=${prob}_${physics}.exe
+EXE=tigris_${physics}.exe
 INPUT=athinput.$prob
-RUNDIR=$SCRATCH/$prob/${physics}-8pc-b$beta-mhdbc_$MHDBC-shear
+RUNDIR=$SCRATCH/$prob/${physics}-8pc-b$b0-mhdbc_$MHDBC-shear
 #-CRIR$CRIR
 
 # Define table directories and files
@@ -71,8 +56,8 @@ medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3m
 
 params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL "
 periodic="orbital_advection/Omega0=0.0 mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 mesh/mhd_outflow_bc=$MHDBC"
-extra_params2="problem/beta0=$beta"
+extra_params="perturbation/rseed=1 particle1/fgas=$fgas mesh/mhd_outflow_bc=$MHDBC problem/beta0=$b0"
+rst_params="output1/file_number=0 output5/file_number=0"
 
 # Print the run directory
 echo $RUNDIR
@@ -92,25 +77,36 @@ fi
 cd $RUNDIR
 
 # Print the parameters
-echo $params $extra_params $extra_params2
+echo $params $extra_params
 
 # Enable pipefail option for better error handling
 set -o pipefail
 
+if [ ! -f "$EXE" ]; then
+    cp -p ${SCRIPTDIR}/$EXE .
+fi
+if [ ! -f "$COOL_TBL" ]; then
+    cp -p "$TBLDIR/$COOL_TBL" .
+fi
+if [ ! -f "$POPSYNTH_TBL" ]; then
+    cp -p "$TBLDIR/$POPSYNTH_TBL" .
+fi
+
 # Define the restart input file
-RSTINPUT=$PID.final.rst
-if [ ! -f $RSTINPUT ]; then
+RSTINPUT=$PID.$RSTNUM.rst
+if [[ ! -f "$RSTINPUT" && "$STARTFLAG" == "-i" ]]; then
     echo "Starting fresh"
-    cp $0 ./$SCRIPT
-    cp ${SCRIPTDIR}/$EXE .
-    cp ${SCRIPTDIR}/../$INPUT .
-    cp $TBLDIR/$COOL_TBL .
-    cp $TBLDIR/$POPSYNTH_TBL .
-    srun $EXE -i $INPUT -t 95:30:00 $params $extra_params $extra_params2 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
+    cp -p $0 ./$SCRIPT
+    cp -p ${SCRIPTDIR}/../$INPUT .
+    srun $EXE -i $INPUT -t 47:30:00 $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
-    echo "Restarting"
+    echo "Restarting from $RSTINPUT"
     rstnum=`ls out.*.txt | wc -l`
-    srun $EXE -r $RSTINPUT -t 95:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+    if [[ $RSTNUM == "final" ]]; then
+        srun $EXE -r $RSTINPUT -t 47:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+    else
+        srun $EXE -r $RSTINPUT -t 47:30:00 $rst_params 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+    fi
 fi
 
 EXITCODE=$?
@@ -118,24 +114,16 @@ echo "EXITCODE = $EXITCODE"
 
 set +o pipefail
 
-if [[ $EXITCODE -eq 2 ]]; then
+if [[ $EXITCODE -eq 3 ]]; then
     echo "Resubmitting"
     sbatch $SCRIPT -r $MHDBC $CRBC $beta
 fi
 
 # make quick snapshots
-# cd $RUNDIR
-# module purge; module load anaconda3/2024.6 openmpi/gcc/4.1.6; conda activate pyathena-lem
+cd $RUNDIR
+module purge; module load anaconda openmpi; conda activate pyathena
 
-# PYTHONDIR=$HOME/pyathena_master
-# export PYTHONPATH="$PYTHONDIR:$PYTHONPATH"
-# pythonscript=$PYTHONDIR/pyathena/tigresspp/do_tasks.py
-# srun python -m mpi4py $pythonscript -b `pwd`
-
-# cd $RUNDIR
-# module purge; module load anaconda3/2024.6 openmpi/gcc/4.1.6; conda activate pyathena
-
-# PYTHONDIR=$HOME/pyathena
-# export PYTHONPATH="$PYTHONDIR:$PYTHONPATH"
-# pythonscript=$PYTHONDIR/pyathena/tigresspp/plot_slices.py
-# srun python -m mpi4py $pythonscript `pwd`
+PYTHONDIR=$HOME/pyathena
+export PYTHONPATH="$PYTHONDIR:$PYTHONPATH"
+pythonscript=$HOME/TIGRESS-CR/python/plot_slices.py
+srun python -m mpi4py $pythonscript `pwd`
