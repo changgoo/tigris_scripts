@@ -58,8 +58,8 @@ elif [ "$MACHINE" == "anvil" ]; then
     PATH_OPTIONS="--lib_path=${HDF5_LIB} --include=${HDF5_INC}"
 elif [ "$MACHINE" == "nasa_athena" ]; then
     module purge
-    module load PrgEnv-cray cray-pals cray-libpals craype-x86-turing perftools-base cray-hdf5-parallel cray-fftw
-    CFLAG_OPTIONS="--cflag=\"-flto -fopenmp-simd\""
+    module load PrgEnv-cray cray-pals cray-libpals craype-x86-turin perftools-base cray-hdf5-parallel cray-fftw
+    CFLAGS="-flto -fopenmp-simd"
     PATH_OPTIONS="--hdf5_path=${HDF5_ROOT} --fftw_path=${FFTW_ROOT}"
 else
     module purge
@@ -110,7 +110,7 @@ cd "$BUILDDIR"
 if [ "$BUILD_OPTION" != "2" ]; then
     echo -e  "${GREEN}Configuring Athena++ in $BUILDDIR.. for $PHYSICS${NC}"
     echo -e  "${GREEN}./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav=blockfft -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS${NC}"
-    ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav=blockfft -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS
+    ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav=blockfft -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS --cflag="$CFLAGS"
 
     make clean
 fi
