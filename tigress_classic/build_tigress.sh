@@ -59,7 +59,16 @@ elif [ "$MACHINE" == "anvil" ]; then
 elif [ "$MACHINE" == "nasa_athena" ]; then
     module purge
     module load PrgEnv-cray cray-pals cray-libpals craype-x86-turin perftools-base cray-hdf5-parallel cray-fftw
-    CFLAGS="-flto -fopenmp-simd"
+    CFLAGS="-flto -fopenmp-simd -march=znver5 -Wno-pass-failed"
+    #module switch PrgEnv-cray PrgEnv-intel
+    #module switch intel/latest intel/2025.3
+    #CFLAGS="-march=znver5"
+    #CC="icpx"
+    module switch PrgEnv-cray PrgEnv-gnu
+    #CFLAGS=""
+    #CC="g++-simd"
+    #CFLAG_OPTIONS="--cxx=$CC"
+    #module switch PrgEnv-cray PrgEnv-aocc
     PATH_OPTIONS="--hdf5_path=${HDF5_ROOT} --fftw_path=${FFTW_ROOT}"
 else
     module purge
