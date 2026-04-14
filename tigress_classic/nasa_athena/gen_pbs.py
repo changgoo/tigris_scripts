@@ -62,6 +62,8 @@ def compute_tlim(walltime: str, margin_min: int = 30) -> str:
 
 
 def build_extra_params(args) -> str:
+    physics_is_cr = args.physics.startswith("cr")
+    selfg_dt = physics_is_cr  # true for crmhd, false for mhd
     parts = [
         "perturbation/rseed=1",
         f"particle1/fgas={args.fgas}",
@@ -70,7 +72,7 @@ def build_extra_params(args) -> str:
         "particle1/r_return=100",
         "hydro/dfloor=1.e-6",
         "hydro/pfloor=1.e-6",
-        "gravity/solve_grav_hyperbolic_dt=false",
+        f"gravity/solve_grav_hyperbolic_dt={str(selfg_dt).lower()}",
     ]
     if args.physics == "crmhd":
         parts += [

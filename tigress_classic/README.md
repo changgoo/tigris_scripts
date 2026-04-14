@@ -46,24 +46,45 @@ To disable this feature, you can simply set the time limit set by `-t` option lo
 
 At the end, it will automatically call a script for quick snapshot image creation, assuming you have proper `pyathena` installed. Just comment out if you are not sure about this part.
 
-## NASA Athena (nasa_athena)
+## Unified job script generator (`gen_job.py`)
 
-Use `gen_pbs.py` to generate PBS scripts instead of editing them by hand.
+`gen_job.py` in the `tigress_classic/` directory generates job scripts for all machines.
+Use `--machine` to select the target system; Slurm (stellar/tiger/anvil) and PBS (nasa_athena) are both supported.
+
+### Mesh geometry
+
+Specify mesh with `--preset` or explicit `--mesh`, `--mblock`, `--dx` flags:
+
+| Preset   | mesh             | meshblock | dx   | domain (x1/x2 × x3)       |
+|----------|------------------|-----------|------|----------------------------|
+| lowres   | 64×64×512        | 16        | 16pc | ±512 pc × ±4096 pc         |
+| medres   | 128×128×1024     | 32        | 8pc  | ±512 pc × ±4096 pc         |
+| highres  | 256×256×2048     | 64        | 4pc  | ±512 pc × ±4096 pc         |
+| bigbox   | 256×256×1024     | 32        | 8pc  | ±1024 pc × ±4096 pc        |
+
+Node count is derived automatically: `nprocs = (nx1/mb1)×(nx2/mb2)×(nx3/mb3)`, then `nodes = ceil(nprocs / cores_per_node)`. Override with `--nodes` if needed.
+
+### Examples
 
 ```sh
-# crmhd test run (devel queue, 2-hour walltime)
-python3 gen_pbs.py --physics crmhd --queue devel --nodes 2 --walltime 02:00:00 --resolution highres --nlim 100
+# Stellar: crmhd highres (4pc) long run
+python3 gen_job.py --machine stellar --preset highres --physics crmhd --walltime 48:00:00
 
-# mhd 4pc long run
-python3 gen_pbs.py --physics mhd --queue long --nodes 2 --walltime 48:00:00 --resolution highres -o tigress_classic-mhd-4pc.pbs
+# Tiger: mhd lowres test run, write to file
+python3 gen_job.py --machine tiger --preset lowres --physics mhd --walltime 02:00:00 --nlim 100 -o test.slurm
 
-# mhd 8pc big box (8 nodes)
-python3 gen_pbs.py --physics mhd --queue long --nodes 8 --walltime 48:00:00 --resolution bigbox --rundir-suffix big
+# Anvil: crmhd bigbox with beta=10
+python3 gen_job.py --machine anvil --preset bigbox --physics crmhd --walltime 12:00:00 --beta 10 --rundir-suffix b10
 
-# crmhd long run with custom beta
-python3 gen_pbs.py --physics crmhd --queue long --nodes 4 --walltime 72:00:00 --resolution highres --beta 10 --rundir-suffix b10
+# NASA Athena: mhd 4pc long run
+python3 gen_job.py --machine nasa_athena --preset highres --physics mhd --walltime 48:00:00 --queue long
+
+# NASA Athena: crmhd devel queue test
+python3 gen_job.py --machine nasa_athena --preset highres --physics crmhd --walltime 02:00:00 --queue devel --nlim 100
+
+# Custom mesh (not a preset): 512×512×2048, meshblock 64, dx=2pc on stellar
+python3 gen_job.py --machine stellar --mesh 512 512 2048 --mblock 64 --dx 2 --physics crmhd --walltime 48:00:00
 ```
 
-Resolution presets: `lowres` (16pc), `medres` (8pc), `highres` (4pc), `bigbox` (8pc wide box).
-Run `python3 gen_pbs.py --help` for all options.
+Run `python3 gen_job.py --help` for all options.
 
