@@ -12,7 +12,7 @@ valid_flag="-i -r"
 [[ -z "$STARTFLAG" || ! $valid_flag =~ $STARTFLAG ]] && echo "$usage" && exit 1
 
 # Set default RSTNUM
-[[ -z "$RSTNUM" ]] RSTNUM=final
+[[ -z "$RSTNUM" ]] && RSTNUM=final
 
 echo "submitting a job: with STARFLAG=$STARTFLAG RSTNUM=$RSTNUM"
 

@@ -12,7 +12,7 @@ valid_flag="-i -r"
 [[ -z "$STARTFLAG" || ! $valid_flag =~ $STARTFLAG ]] && echo "$usage" && exit 1
 
 # Set default RSTNUM
-[[ -z "$RSTNUM" ]] RSTNUM=final
+[[ -z "$RSTNUM" ]] && RSTNUM=final
 
 echo "submitting a job: with STARFLAG=$STARTFLAG RSTNUM=$RSTNUM"
 
@@ -45,9 +45,9 @@ POPSYNTH_TBL="Z014_GenevaV00.txt"
 lowres_normal="meshblock/nx1=16 meshblock/nx2=16 meshblock/nx3=16 mesh/nx3=512 mesh/x3min=-4096 mesh/x3max=4096"
 medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3max=4096"
 highres_normal="mesh/nx1=256 mesh/nx2=256 mesh/nx3=2048 meshblock/nx1=64 meshblock/nx2=64 meshblock/nx3=64 mesh/x3min=-4096 mesh/x3max=4096"
-8pc_big="mesh/nx1=256 mesh/nx2=256 mesh/nx3=1024 meshblock/nx1=32 meshblock/nx2=32 meshblock/nx3=32 mesh/x1min=-1024 mesh/x1max=1024 mesh/x2min=-1024 mesh/x2min=1024 mesh/x3min=-4096 mesh/x3max=4096"
+eightpc_big="mesh/nx1=256 mesh/nx2=256 mesh/nx3=1024 meshblock/nx1=32 meshblock/nx2=32 meshblock/nx3=32 mesh/x1min=-1024 mesh/x1max=1024 mesh/x2min=-1024 mesh/x2max=1024 mesh/x3min=-4096 mesh/x3max=4096"
 
-params="job/problem_id=$PID time/tlim=500 $8pc_big cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
+params="job/problem_id=$PID time/tlim=500 $eightpc_big cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
 extra_params="perturbation/rseed=1 particle1/fgas=$fgas mesh/mhd_outflow_bc=diode problem/beta0=1 particle1/r_return=100"
 rst_params="output1/file_number=0 output5/file_number=0"
 
