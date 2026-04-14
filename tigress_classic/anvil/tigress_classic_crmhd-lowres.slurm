@@ -71,7 +71,7 @@ SCRIPTDIR=$HOME/tigris_scripts/$prob/anvil
 SCRIPT=${prob}_${physics}-lowres.slurm
 
 # Define executable and input files
-EXE=${prob}_${physics}.exe
+EXE=tigris_${physics}.exe
 INPUT=athinput.$prob
 RUNDIR=$SCRATCH/$prob/${physics}-16pc-b$beta-mhdbc_$MHDBC-crbc_$CRBC
 

@@ -116,7 +116,7 @@ set +o pipefail
 
 if [[ $EXITCODE -eq 3 ]]; then
     echo "Resubmitting"
-    sbatch $SCRIPT -r $MHDBC $CRBC $beta
+    sbatch $SCRIPT -r $b0 final $MHDBC
 fi
 
 # make quick snapshots
