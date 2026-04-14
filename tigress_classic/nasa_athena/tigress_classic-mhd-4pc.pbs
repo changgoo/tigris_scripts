@@ -1,6 +1,6 @@
-#PBS -q devel
+#PBS -q long
 #PBS -l select=2:ncpus=256:mpiprocs=256:model=tur_ath
-#PBS -l walltime=002:00:00
+#PBS -l walltime=048:00:00
 #PBS -m abe
 #PBS -M changgookim@gmail.com
 
@@ -14,13 +14,14 @@ valid_flag="-i -r"
 # Set default RSTNUM
 [[ -z "$RSTNUM" ]] RSTNUM=final
 
-echo "submitting a job: with STARFLAG=$STARTFLAG RSTNUM=$RSTNUM" 
+echo "submitting a job: with STARFLAG=$STARTFLAG RSTNUM=$RSTNUM"
 
 NPROCS=512
-tlim=71:30:00
+tlim=47:30:00
 
 module purge
 module load PrgEnv-cray cray-pals cray-libpals craype-x86-turin perftools-base cray-hdf5-parallel cray-fftw
+module switch PrgEnv-cray PrgEnv-gnu
 
 fgas=0.9
 
@@ -88,8 +89,6 @@ RSTINPUT=$PID.$RSTNUM.rst
 # Enable pipefail option for better error handling
 set -o pipefail
 
-# Define the restart input file
-RSTINPUT=$PID.final.rst
 if [[ ! -f "$RSTINPUT" && "$STARTFLAG" == "-i" ]]; then
     echo "Starting fresh"
     cp $0 ./$SCRIPT
@@ -115,3 +114,10 @@ if [[ $EXITCODE -eq 3 ]]; then
     qsub -v STARTFLAG=-r,RSTNUM=final $SCRIPT
 fi
 
+# make quick snapshots
+cd $RUNDIR
+
+PYTHONDIR=$HOME/pyathena_tigris
+export PYTHONPATH="$PYTHONDIR:$PYTHONPATH"
+pythonscript=$HOME/TIGRESS-CR/python/plot_slices.py
+mpiexec --ppn 16 -n 32 python -m mpi4py $pythonscript `pwd`
