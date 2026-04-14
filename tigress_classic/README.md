@@ -46,4 +46,24 @@ To disable this feature, you can simply set the time limit set by `-t` option lo
 
 At the end, it will automatically call a script for quick snapshot image creation, assuming you have proper `pyathena` installed. Just comment out if you are not sure about this part.
 
+## NASA Athena (nasa_athena)
+
+Use `gen_pbs.py` to generate PBS scripts instead of editing them by hand.
+
+```sh
+# crmhd test run (devel queue, 2-hour walltime)
+python3 gen_pbs.py --physics crmhd --queue devel --nodes 2 --walltime 02:00:00 --resolution highres --nlim 100
+
+# mhd 4pc long run
+python3 gen_pbs.py --physics mhd --queue long --nodes 2 --walltime 48:00:00 --resolution highres -o tigress_classic-mhd-4pc.pbs
+
+# mhd 8pc big box (8 nodes)
+python3 gen_pbs.py --physics mhd --queue long --nodes 8 --walltime 48:00:00 --resolution bigbox --rundir-suffix big
+
+# crmhd long run with custom beta
+python3 gen_pbs.py --physics crmhd --queue long --nodes 4 --walltime 72:00:00 --resolution highres --beta 10 --rundir-suffix b10
+```
+
+Resolution presets: `lowres` (16pc), `medres` (8pc), `highres` (4pc), `bigbox` (8pc wide box).
+Run `python3 gen_pbs.py --help` for all options.
 
