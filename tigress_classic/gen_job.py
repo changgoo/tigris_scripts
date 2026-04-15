@@ -24,6 +24,7 @@ Preset shortcuts (--preset NAME) provide default mesh/mblock/dx:
 import argparse
 import math
 import sys
+import os
 
 # ---------------------------------------------------------------------------
 # Machine configurations
@@ -92,7 +93,7 @@ MACHINES = {
             "module switch PrgEnv-cray PrgEnv-gnu"
         ),
         "mod_snap": None,   # snapshot uses pyathena_tigris, handled separately
-        "snap_ppn": 16,
+        "snap_ppn": 32,
     },
 }
 
@@ -181,8 +182,6 @@ def build_extra_params(args):
         f"particle1/fgas={args.fgas}",
         "particle1/r_return=100",
         f"gravity/solve_grav_hyperbolic_dt={str(physics_is_cr).lower()}",
-        "hydro/dfloor=1.e-6",
-        "hydro/pfloor=1.e-6",
         f"mesh/mhd_outflow_bc={args.mhd_bc}",
         f"problem/beta0={args.beta}",
     ]
@@ -194,6 +193,7 @@ def build_extra_params(args):
         ]
     if args.shear:
         parts.append("mesh/ix1_bc=shear_periodic mesh/ox1_bc=shear_periodic hydro/fofc_shear=true")
+        parts.append(f"orbital_advection/Omega0={args.omega*1.e-3}")
     else:
         parts.append("mesh/ix1_bc=periodic mesh/ox1_bc=periodic")
     return " ".join(parts)
@@ -204,6 +204,8 @@ def build_params(args):
     if args.nlim is not None:
         parts.append(f"time/nlim={args.nlim}")
     parts += ["$mesh_params", "cooling/coolftn_file=$COOL_TBL", "feedback/pop_synth_file=$POPSYNTH_TBL"]
+    parts += ["hydro/dfloor=1.e-6", "hydro/pfloor=1.e-6"]  # increased floor
+    parts += [f"feedback/fbinary={args.fbinary}"]  # runaway
     if not args.shear:
         parts.append("orbital_advection/Omega0=0.0")
     return " ".join(parts)
@@ -474,7 +476,7 @@ def generate_pbs(args, nx, mb, dx, nprocs, nodes, tlim_run,
         "PYTHONDIR=$HOME/pyathena_tigris",
         "export PYTHONPATH=$PYTHONDIR:$PYTHONPATH",
         "pythonscript=$HOME/TIGRESS-CR/python/plot_slices.py",
-        f"mpiexec --ppn {mcfg['snap_ppn']} -n {snap_ranks} python -m mpi4py $pythonscript `pwd`",
+        f"$HOME/myenv/bin/mpiexec --ppn {mcfg['snap_ppn']} -n {snap_ranks} python -m mpi4py $pythonscript `pwd`",
     ]
 
     return "\n".join(lines) + "\n"
@@ -540,6 +542,8 @@ def generate(args):
         dir_parts.append(f"crbc_{args.cr_bc}")
     if args.shear:
         dir_parts.append("shear")
+    if args.fbinary > 0:
+        dir_parts.append(f"fbin_{args.fbinary}")
     if args.rundir_suffix:
         dir_parts.append(args.rundir_suffix)
     rundir = f"{mcfg['scratch']}/tigress_classic/{'-'.join(dir_parts)}"
@@ -548,11 +552,12 @@ def generate(args):
               script_name=script_name, rundir=rundir,
               mesh_str=mesh_str, params_str=params_str, extra_str=extra_str)
 
-    if scheduler == "slurm":
-        return generate_slurm(args, **kw)
-    else:
-        return generate_pbs(args, **kw)
+    print(f"Script is generated with rundir={rundir}")
 
+    if scheduler == "slurm":
+        return generate_slurm(args, **kw), os.path.join(args.machine,script_name)
+    else:
+        return generate_pbs(args, **kw), os.path.join(args.machine,script_name)
 
 def main():
     p = argparse.ArgumentParser(
@@ -593,7 +598,9 @@ def main():
     phy.add_argument("--physics", default="crmhd",
                      help="Physics module: mhd, crmhd, crmhd_duale, ...")
     phy.add_argument("--beta", type=float, default=1.0, help="problem/beta0")
-    phy.add_argument("--fgas", type=float, default=0.7, help="particle1/fgas")
+    phy.add_argument("--fgas", type=float, default=0.9, help="particle1/fgas")
+    phy.add_argument("--omega", type=float, default=28, help="orbital_advection/Omega0")
+    phy.add_argument("--fbinary", type=float, default=0.7, help="feedback/fbinary")
     phy.add_argument("--mhd-bc", default="diode", help="mesh/mhd_outflow_bc")
     phy.add_argument("--cr-bc", default="lngrad_out",
                      help="mesh/cr_outflow_bc (crmhd only)")
@@ -612,7 +619,7 @@ def main():
                    help="Write to file (default: stdout)")
 
     args = p.parse_args()
-    script = generate(args)
+    script, script_name = generate(args)
 
     if args.output:
         with open(args.output, "w") as f:
@@ -620,6 +627,10 @@ def main():
         print(f"Written to {args.output}", file=sys.stderr)
     else:
         sys.stdout.write(script)
+        default_output = script_name
+        with open(default_output, "w") as f:
+            f.write(script)
+        print(f"Written to {default_output}", file=sys.stderr)
 
 
 if __name__ == "__main__":
