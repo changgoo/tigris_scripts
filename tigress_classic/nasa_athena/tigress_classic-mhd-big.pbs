@@ -17,13 +17,11 @@ valid_flag="-i -r"
 echo "submitting a job: with STARFLAG=$STARTFLAG RSTNUM=$RSTNUM"
 
 NPROCS=2048
-tlim=47:30:00
+wtlim=47:30:00
 
 module purge
 module load PrgEnv-cray cray-pals cray-libpals craype-x86-turin perftools-base cray-hdf5-parallel cray-fftw
 module switch PrgEnv-cray PrgEnv-gnu
-
-fgas=0.9
 
 # Define problem and paths
 physics=mhd
@@ -31,12 +29,12 @@ prob=tigress_classic
 PID=TIGRESS
 SRCDIR=$HOME/tigris
 SCRIPTDIR=$HOME/tigris_scripts/${prob}/nasa_athena
-SCRIPT=${prob}-${physics}-4pc.pbs
+SCRIPT=${prob}-${physics}-big.pbs
 
 # Define executable and input files
 EXE=tigris_${physics}.exe
 INPUT=athinput.$prob
-RUNDIR=/nobackup/$USER/$prob/${physics}_8pc_shear_big
+RUNDIR=/nobackup/$USER/$prob/${physics}_8pc_big_shear_runaway
 
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn.txt"
@@ -48,7 +46,7 @@ highres_normal="mesh/nx1=256 mesh/nx2=256 mesh/nx3=2048 meshblock/nx1=64 meshblo
 eightpc_big="mesh/nx1=256 mesh/nx2=256 mesh/nx3=1024 meshblock/nx1=32 meshblock/nx2=32 meshblock/nx3=32 mesh/x1min=-1024 mesh/x1max=1024 mesh/x2min=-1024 mesh/x2max=1024 mesh/x3min=-4096 mesh/x3max=4096"
 
 params="job/problem_id=$PID time/tlim=500 $eightpc_big cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
-extra_params="perturbation/rseed=1 particle1/fgas=$fgas mesh/mhd_outflow_bc=diode problem/beta0=1 particle1/r_return=100"
+extra_params="perturbation/rseed=1 particle1/fgas=0.9 mesh/mhd_outflow_bc=diode problem/beta0=1 particle1/r_return=100 feedback/fbinary=0.7 hydro/dfloor=1.e-6 hydro/pfloor=1.e-6"
 rst_params="output1/file_number=0 output5/file_number=0"
 
 # Print the run directory
@@ -94,14 +92,14 @@ if [[ ! -f "$RSTINPUT" && "$STARTFLAG" == "-i" ]]; then
     echo "Starting fresh"
     cp $0 ./$SCRIPT
     cp ${SCRIPTDIR}/../$INPUT .
-    mpiexec -np $NPROCS ./$EXE -i $INPUT -t $tlim $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
+    mpiexec -np $NPROCS ./$EXE -i $INPUT -t $wtlim $params $extra_params 1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 else
     echo "Restarting"
     rstnum=`ls out.*.txt | wc -l`
     if [[ $RSTNUM == "final" ]]; then
-        mpiexec -np $NPROCS ./$EXE -r $RSTINPUT -t $tlim 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+        mpiexec -np $NPROCS ./$EXE -r $RSTINPUT -t $wtlim 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
     else
-        mpiexec -np $NPROCS ./$EXE -r $RSTINPUT -t $tlim $rst_params 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+        mpiexec -np $NPROCS ./$EXE -r $RSTINPUT -t $wtlim $rst_params 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
     fi
 fi
 
@@ -115,10 +113,6 @@ if [[ $EXITCODE -eq 3 ]]; then
     qsub -v STARTFLAG=-r,RSTNUM=final $SCRIPT
 fi
 
-# make quick snapshots
-cd $RUNDIR
-
-PYTHONDIR=$HOME/pyathena_tigris
-export PYTHONPATH="$PYTHONDIR:$PYTHONPATH"
-pythonscript=$HOME/TIGRESS-CR/python/plot_slices.py
-mpiexec --ppn 16 -n 128 python -m mpi4py $pythonscript `pwd`
+echo "Submitting plotting job"
+cd $SCRIPTDIR
+qsub -v RUNDIR=$RUNDIR tigress_classic-plot.pbs
