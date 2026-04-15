@@ -1,0 +1,1 @@
+[2026-04-15 14:46:07] gen_job.py --machine nasa_athena --walltime 72:00:00 --queue long --preset bigbox --physics mhd_duale --shear --omega 56 --rundir-suffix big-Om56  # -> nasa_athena/tigress_classic_mhd_duale-8pc-big-Om56.pbs
