@@ -22,6 +22,7 @@ Preset shortcuts (--preset NAME) provide default mesh/mblock/dx:
 """
 
 import argparse
+import datetime
 import math
 import sys
 import os
@@ -622,15 +623,28 @@ def main():
     script, script_name = generate(args)
 
     if args.output:
-        with open(args.output, "w") as f:
-            f.write(script)
-        print(f"Written to {args.output}", file=sys.stderr)
+        outpath = args.output
     else:
+        outpath = script_name
         sys.stdout.write(script)
-        default_output = script_name
-        with open(default_output, "w") as f:
-            f.write(script)
-        print(f"Written to {default_output}", file=sys.stderr)
+        if os.path.exists(outpath):
+            ans = input(f"'{outpath}' already exists. Overwrite? [y/n] ").strip().lower()
+            if ans != "y":
+                print("Aborted. Script printed to stdout above.", file=sys.stderr)
+                sys.exit(0)
+
+    with open(outpath, "w") as f:
+        f.write(script)
+    print(f"Written to {outpath}", file=sys.stderr)
+
+    # Log the command that generated this script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    log_path = os.path.join(script_dir, "gen_job.log")
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cmd = os.path.relpath(sys.argv[0]) + " " + " ".join(sys.argv[1:])
+    with open(log_path, "a") as lf:
+        lf.write(f"[{timestamp}] {cmd}  # -> {outpath}\n")
+    print(f"Logged to {log_path}", file=sys.stderr)
 
 
 if __name__ == "__main__":
