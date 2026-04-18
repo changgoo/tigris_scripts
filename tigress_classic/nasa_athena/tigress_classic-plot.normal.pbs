@@ -1,0 +1,18 @@
+#PBS -q normal
+#PBS -l select=1:ncpus=32:mpiprocs=32:model=tur_ath
+#PBS -l walltime=008:00:00
+#PBS -m abe
+#PBS -M changgookim@gmail.com
+
+module purge
+module load PrgEnv-cray cray-pals cray-libpals craype-x86-turin perftools-base cray-hdf5-parallel cray-fftw
+module switch PrgEnv-cray PrgEnv-gnu
+
+# make quick snapshots
+cd $RUNDIR
+
+PYTHONDIR=$HOME/pyathena_tigris
+export PYTHONPATH="$PYTHONDIR:$PYTHONPATH"
+pythonscript=$HOME/TIGRESS-CR/python/plot_slices.py
+
+/home1/ckim14/myenv/bin/mpiexec -np 32 python -m mpi4py $pythonscript `pwd`

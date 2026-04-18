@@ -1,0 +1,81 @@
+#PBS -q devel
+#PBS -l select=8:ncpus=256:mpiprocs=256:model=tur_ath
+#PBS -l walltime=02:00:00
+#PBS -m abe
+#PBS -M changgookim@gmail.com
+
+usage="Usage: qsub -v [RSTNUM=final] $0"
+[[ -z "$RSTNUM" ]] && RSTNUM=final
+
+NPROCS=2048
+tlim=71:30:00
+
+module purge
+module load PrgEnv-cray cray-pals cray-libpals craype-x86-turin perftools-base cray-hdf5-parallel cray-fftw
+module switch PrgEnv-cray PrgEnv-gnu
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+prob=tigress_classic
+PID=TIGRESS
+SRCDIR=$HOME/tigris
+SCRIPTDIR=$HOME/tigris_scripts/tigress_classic/nasa_athena
+SCRIPT=tigress_classic_mhd_duale-8pc-big-Om56.pbs.refine
+
+physics=mhd_duale
+EXE=tigris_${physics}.exe
+INPUT=athinput.restart
+RSTDIR=/nobackup/$USER/tigress_classic/mhd_duale-8pc-b1.0-mhdbc_diode-shear-fbin_0.7-big-Om56
+RUNDIR=/nobackup/$USER/tigress_classic/mhd_duale-8pc-b1.0-mhdbc_diode-shear-fbin_0.7-big-Om56.refine
+
+TBLDIR=$SRCDIR/inputs/tables
+COOL_TBL="tigress_coolftn.txt"
+POPSYNTH_TBL="Z014_GenevaV00.txt"
+
+mesh_params="mesh/nx1=256 mesh/nx2=256 mesh/nx3=1024 mesh/x1min=-1024 mesh/x1max=1024 mesh/x2min=-1024 mesh/x2max=1024 mesh/x3min=-4096 mesh/x3max=4096 meshblock/nx1=32 meshblock/nx2=32 meshblock/nx3=32"
+
+params="job/problem_id=$PID time/tlim=500 $mesh_params cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 feedback/fbinary=0.7"
+extra_params="perturbation/rseed=1 particle1/fgas=0.9 particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=false mesh/mhd_outflow_bc=diode problem/beta0=1.0 mesh/ix1_bc=shear_periodic mesh/ox1_bc=shear_periodic hydro/fofc_shear=true orbital_advection/Omega0=0.056"
+rst_params="time/nlim=1 output1/file_number=0 output5/file_number=0 mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
+
+# ---------------------------------------------------------------------------
+# Run directory
+# ---------------------------------------------------------------------------
+echo $RUNDIR
+if [ -d $RUNDIR ]; then
+    echo 'directory exists'
+    if [[ $STARTFLAG != "-r" ]]; then
+        echo 'cleaning up'; rm -rf $RUNDIR/*
+    fi
+else
+    mkdir -p $RUNDIR
+fi
+cd $RUNDIR
+echo $params $extra_params
+
+set -o pipefail
+
+[ ! -f "$EXE" ]          && cp -p ${SCRIPTDIR}/$EXE .
+[ ! -f "$COOL_TBL" ]     && cp -p $TBLDIR/$COOL_TBL .
+[ ! -f "$POPSYNTH_TBL" ] && cp -p $TBLDIR/$POPSYNTH_TBL .
+
+cp ${SCRIPTDIR}/../$INPUT .
+
+# ---------------------------------------------------------------------------
+# Run
+# ---------------------------------------------------------------------------
+RSTINPUT=$RSTDIR/$PID.$RSTNUM.rst
+echo "Refining/Restarting from $RSTINPUT"
+rstnum=$(ls out.*.txt 2>/dev/null | wc -l)
+if [[ "$RSTNUM" == "final" ]]; then
+    mpiexec -np $NPROCS ./$EXE -r $RSTINPUT -t $tlim \
+        1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+else
+    mpiexec -np $NPROCS ./$EXE -r $RSTINPUT -i $INPUT -t $tlim $rst_params \
+        1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+fi
+
+EXITCODE=$?
+echo "EXITCODE = $EXITCODE"
+set +o pipefail
