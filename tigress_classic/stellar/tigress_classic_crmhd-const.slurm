@@ -77,7 +77,7 @@ medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3m
 params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
 extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=true hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 mesh/mhd_outflow_bc=$MHDBC mesh/cr_outflow_bc=$CRBC output2/dt=1 output3/dt=1 $periodic  problem/beta0=1"
-extra_params2="cr/sigma=1.e-$sigma cr/self_consistent_flag=0 cr/valfven_flag=$valfven_flag cr/vs_flag=$vs_flag"
+extra_params2="cr/sigma=1.e-$sigma cr/self_consistent_flag=0 cr/valfven_flag=$valfven_flag cr/vs_flag=$vs_flag output1/file_number=0 output5/file_number=0"
 
 # Print the run directory
 echo $RUNDIR
@@ -102,6 +102,9 @@ echo $params $extra_params $extra_params2
 # Enable pipefail option for better error handling
 set -o pipefail
 
+if [ ! -f "$EXE" ]; then
+    cp -p ${SCRIPTDIR}/$EXE .
+fi
 if [ ! -f "$COOL_TBL" ]; then
     cp -p "$TBLDIR/$COOL_TBL" .
 fi
@@ -120,7 +123,11 @@ if [[ ! -f "$RSTINPUT" && "$STARTFLAG" == "-i" ]]; then
 else
     echo "Restarting from $RSTINPUT"
     rstnum=`ls out.*.txt | wc -l`
-    srun $EXE -r $RSTINPUT -t 23:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+    if [[ $RSTNUM == "final" ]]; then
+        srun $EXE -r $RSTINPUT -t 23:30:00 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+    else
+        srun $EXE -r $RSTINPUT -i athinput.restart -t 23:30:00 $extra_params2 1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
+    fi
 fi
 
 EXITCODE=$?

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-BASEDIR="/scratch/gpfs/changgoo/tigress_classic"
 dir_pattern=${1:-*}
+BASEDIR=${2:-/scratch/gpfs/changgoo/tigress_classic}
 
 # enable nullglob so globs that don't match vanish instead of remaining literal
 shopt -s nullglob
