@@ -14,7 +14,7 @@ dcycle    = 0
 
 <output2>
 file_type   = hdf5      # Binary data dump
-variable    = prim      # variables to be output
+variable    = prim,uov  # variables to be output
 dt          = 1         # time increment between outputs
 dcycle      = 0
 ghost_zones = false
@@ -41,8 +41,8 @@ dcycle    = 0
 
 <output7>
 file_type   = hdf5      # Binary data dump
-variable    = uov       # variables to be output
-dt          = 10        # time increment between outputs
+variable    = d,p,Ec    # variables to be output
+dt          = 1         # time increment between outputs
 dcycle      = 0
 ghost_zones = false
 
@@ -90,8 +90,6 @@ iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
 neighbor_flooring = true
 fofc              = true
 fofc_shear        = false
-fofc_full         = false
-prolonged_fofc    = true
 dfloor            = 1.e-8
 pfloor            = 1.e-8
 tsqfloor          = 1.e-2
@@ -130,20 +128,15 @@ type    = complex
 gravity = true
 output  = true
 output_pm = false
-feedback  = true        # turn on feedback from particles
-accretion = 1
-mass_return = true
-lp_coefficient = 2.0
-csmin = 0.1
+feedback     = true     # turn on feedback from particles
+accretion    = true     # turn on accretion from particles
+mass_return  = true     # turn on mass_return from particles
 fgas    = 0.0
-r_return = -1           # negative for no return; 0 to entire volume
-t_return = 2.5
+r_return = 100           # negative for no return; 0 to entire volume
+t_return = 5
 dt_return = 1
-t_duration = 10
+A_return = 2
 return_to_warm = true
-type_ia_sn = false
-A_Ia = 4.4e-2
-B_Ia = 0.0
 
 <particle2>
 type      = none
@@ -161,7 +154,6 @@ E_inj         = 1.0                # Energy injected in units of 10^51 ergs
 M_ej          = 10                 # Ejecta mass (star) in Msun
 fe_CR         = 0.1               # energy fraction in CR
 tdec_scr      = 0.04              # decay time of CR scalar in Myr
-tdec_rt       = 10
 iSN           = 1        # turn on supernovae
 iFUV          = 1
 pop_synth_file = Z014_GenevaV00.txt
@@ -171,13 +163,10 @@ mratio_thresh = 0.1      # mass ratio threshold for energy inejction mode
 iredist       = false    # redistribute if momentum feedback?
 write_rprof   = false
 vmax          = 5000     # maximum velocity by the feedback injection
-fbinary       = 0.0
 
 <cr>
 vmax                 = 2e9
 fofc                 = true
-fofc_shear           = false
-fofc_full            = false
 neighbor_flooring    = true
 vflx                 = false
 taucell              = 1
@@ -186,12 +175,9 @@ src_flag             = 1
 losses_flag          = 1
 perp_diff_flag       = 1
 self_consistent_flag = 1
-valfven_flag         = 1
 obs_spectrum_flag    = 1
 postprocess_flag     = 0
-coll_ion_flag        = 1
-
-ecfloor              = 1e-18
+ecfloor              = 1e-20
 sigma                = 1e-25
 max_opacity          = 10000000000
 perp_to_par_diff     = 10
