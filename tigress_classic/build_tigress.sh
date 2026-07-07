@@ -9,23 +9,55 @@ NC='\033[0m' # No Color
 
 set -e
 
-# User-configurable options
-MACHINE=${1:-stellar}
-PHYSICS=${2:-hydro}
-# Default build option: 0 (normal build), 1 (debug build), 2 (no clean)
-BUILD_OPTION=${3:-0}
-SRC=${4:-tigris}
-FLUX=${5:-hll}
+# Defaults
+MACHINE="stellar"
+PHYSICS="hydro"
+GRAV="fft"
+BUILD_OPTION="0"
+SRC="tigris"
+FLUX="hll"
+WORKTREE=""
 
-# USAGE
-if [ "$#" -lt 1 ]; then
-    echo -e "${RED}Usage: $0 <machine> [physics] [build_option]${NC}"
-    echo -e "${YELLOW}Example: $0 stellar hydro 0${NC}"
+usage() {
+    echo -e "${RED}Usage: $0 --machine=<machine> [options]${NC}"
+    echo -e "${YELLOW}Options:${NC}"
+    echo -e "  --machine=<name>    Target machine (stellar|tiger|anvil) [default: stellar]"
+    echo -e "  --physics=<name>    Physics option (hydro|mhd|crmhd|*_duale|*_duals) [default: hydro]"
+    echo -e "  --grav=<name>       Gravity solver (fft|none) [default: fft]"
+    echo -e "  --build=<0|1|2>     0=normal, 1=debug, 2=no clean [default: 0]"
+    echo -e "  --src=<name>        Source repo directory name under \$HOME [default: tigris]"
+    echo -e "  --flux=<name>       Flux solver (hll|lhll) [default: hll]"
+    echo -e "  --worktree=<name>   Compile from \$HOME/\$src/.worktrees/<name>"
+    echo -e "${YELLOW}Example: $0 --machine=tiger --physics=mhd --worktree=mesh_level_mass_return${NC}"
     exit 1
+}
+
+if [ "$#" -lt 1 ]; then
+    usage
 fi
 
+for arg in "$@"; do
+    case "$arg" in
+        --machine=*) MACHINE="${arg#*=}" ;;
+        --physics=*) PHYSICS="${arg#*=}" ;;
+        --grav=*)    GRAV="${arg#*=}" ;;
+        --build=*)   BUILD_OPTION="${arg#*=}" ;;
+        --src=*)     SRC="${arg#*=}" ;;
+        --flux=*)    FLUX="${arg#*=}" ;;
+        --worktree=*) WORKTREE="${arg#*=}" ;;
+        --help|-h)   usage ;;
+        *) echo -e "${RED}Unknown option: $arg${NC}"; usage ;;
+    esac
+done
+
 # Source and build directories
-SRCDIR="$HOME/$SRC"
+if [ -n "$WORKTREE" ]; then
+    SRCDIR="$HOME/$SRC/.worktrees/$WORKTREE"
+    BRANCH=""
+else
+    SRCDIR="$HOME/$SRC"
+    BRANCH="-master"
+fi
 BUILDDIR="$SRCDIR"
 CURDIR="$(pwd)"
 PROB="tigress_classic"
@@ -43,6 +75,9 @@ elif [ "$MACHINE" == "tiger" ]; then
     module load intel-oneapi/2024.2 openmpi/oneapi-2024.2/4.1.6 hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4 fftw/oneapi-2024.2/3.3.10
     CC="icpx"
     CFLAG_OPTIONS="--cxx=$CC"
+    if [ "$BUILD_OPTION" == "1" ]; then
+        module purge; module load anaconda3/2023.3 fftw/gcc/3.3.10 intel-mpi/gcc/2021.13 hdf5/gcc/intel-mpi/1.14.4
+    fi
 elif [ "$MACHINE" == "anvil" ]; then
     module purge
     module load anaconda
@@ -51,25 +86,8 @@ elif [ "$MACHINE" == "anvil" ]; then
     module load fftw
     module load hdf5
     HDF5DIR="$RCAC_HDF5_ROOT"
-    CC="g++-simd"
-    CFLAG_OPTIONS="--cxx=$CC"
-    HDF5_LIB="${HDF5DIR}/lib64"
-    HDF5_INC="${HDF5DIR}/include"
-    PATH_OPTIONS="--lib_path=${HDF5_LIB} --include=${HDF5_INC}"
-elif [ "$MACHINE" == "nasa_athena" ]; then
-    module purge
-    module load PrgEnv-cray cray-pals cray-libpals craype-x86-turin perftools-base cray-hdf5-parallel cray-fftw
-    #CFLAGS="-flto -fopenmp-simd -march=znver5 -Wno-pass-failed -h std=c++11 -h aggress -h vector3 -hfp3"
-    #module switch PrgEnv-cray PrgEnv-intel
-    #module switch intel/latest intel/2025.3
-    #CFLAGS="-march=znver5"
-    #CC="icpx"
-    module switch PrgEnv-cray PrgEnv-gnu
-    CFLAGS="-Wno-alloc-size-larger-than"
-    CC="g++-simd"
-    CFLAG_OPTIONS="--cxx=$CC"
-    #module switch PrgEnv-cray PrgEnv-aocc
-    PATH_OPTIONS="--hdf5_path=${HDF5_ROOT} --fftw_path=${FFTW_ROOT}"
+    CFLAG="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -march=znver3 -fprefetch-loop-arrays"
+    CFLAG_OPTIONS="--cflag=${CFLAG}"
 else
     module purge
     CC="g++"
@@ -101,27 +119,46 @@ fi
 
 # build option
 if [ "$BUILD_OPTION" == "1" ]; then
-    DEBUG_OPTION="-debug"
-    CC="g++"
+    #DEBUG_OPTION="-debug"
+    CC="g++-simd"
+    CFLAG_OPTIONS="--cxx=$CC"
 else
     DEBUG_OPTION=""
 fi
+
+HDF5_LIB="${HDF5DIR}/lib64"
+HDF5_INC="${HDF5DIR}/include"
+PATH_OPTIONS="--lib_path=${HDF5_LIB} --include=${HDF5_INC}"
 
 if [ "$FLUX" == "lhll" ]; then
     PHYSICS="${PHYSICS}_lhll"
 fi
 
-EXE="${CURDIR}/${MACHINE}/${SRC}_${PHYSICS}${DEBUG_OPTION}.exe"
+if [ "$GRAV" == "none" ]; then
+    EXE="${CURDIR}/${MACHINE}/tigris${BRANCH}_${PHYSICS}${DEBUG_OPTION}.exe"
 
+    cd "$BUILDDIR"
 
-cd "$BUILDDIR"
+    if [ "$BUILD_OPTION" != "2" ]; then
+        echo -e  "${GREEN}Configuring Athena++ in $BUILDDIR.. for $PHYSICS${NC}"
+        echo -e  "./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS"
+        ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS
 
-if [ "$BUILD_OPTION" != "2" ]; then
-    echo -e  "${GREEN}Configuring Athena++ in $BUILDDIR.. for $PHYSICS${NC}"
-    echo -e  "${GREEN}./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav=blockfft -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS${NC}"
-    ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav=blockfft -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS --cflag="$CFLAGS"
+        make clean
+    fi
 
-    make clean
+else
+    EXE="${CURDIR}/${MACHINE}/tigris${BRANCH}_${PHYSICS}-${GRAV}${DEBUG_OPTION}.exe"
+
+    cd "$BUILDDIR"
+
+    if [ "$BUILD_OPTION" != "2" ]; then
+        echo -e  "${GREEN}Configuring Athena++ in $BUILDDIR.. for $PHYSICS${NC}"
+        echo -e  "./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav=$GRAV -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS"
+        ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav="$GRAV" -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS
+
+        make clean
+    fi
 fi
 
 echo -e  "${GREEN}Building Athena++ ${NC}"
