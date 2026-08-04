@@ -127,3 +127,12 @@ if [[ $EXITCODE -eq 3 ]]; then
     cd "$SLURMDIR"
     sbatch "$SCRIPT" "$CC" -r
 fi
+
+# make quick snapshots
+cd $RUNDIR
+module purge; module load anaconda3/2024.6 openmpi/gcc/4.1.6; conda activate pyathena
+
+PYTHONDIR=$HOME/pyathena_master
+export PYTHONPATH="$PYTHONDIR:$PYTHONPATH"
+pythonscript=$HOME/TIGRESS-CR/python/plot_slices_ncr.py
+srun python -m mpi4py $pythonscript `pwd`
