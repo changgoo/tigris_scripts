@@ -46,24 +46,30 @@ SCRIPT=${prob}_${physics}.slurm
 # Executable (produced by build_tigris.sh under $SCRIPTDIR/stellar/) and input file
 EXE=tigris_ncr_${physics}-${grav}.exe        # e.g. tigris_ncr_mhd-fft.exe
 EXEPATH=${SCRIPTDIR}/stellar/$EXE
-INPUT=${SCRIPTDIR}/athinput.${prob}_test     # lightweight test (32 blocks/ranks)
-# For the production box use: INPUT=${SCRIPTDIR}/athinput.${prob}  (and set -n 48 above)
+INPUT=${SCRIPTDIR}/athinput.${prob}
+
+# --- Test box: shorten the vertical extent so the run fits on 32 ranks -------
+# The input is the full production box: 64x64x384 (6144 pc tall) -> 2*2*12 = 48
+# blocks. TESTBOX overrides it to 64x64x256 (4096 pc tall) -> 2*2*8 = 32 blocks
+# -> 32 ranks, matching the -N 1 -n 32 SBATCH header above.
+# For the FULL production box: set TESTBOX="" and TAG="", and use -N 1 -n 48.
+TESTBOX="mesh/nx3=256 mesh/x3min=-2048 mesh/x3max=2048"
+TAG="-test"
+# ----------------------------------------------------------------------------
 
 # Data tables
 TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn_ncr.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
-# Build an informative run-directory name from the <mesh> block of the input:
-#   <physics>-ncr-<res>pc[-<TAG>]
-# (resolution is read from the input so the name always matches the run.)
+# Build an informative run-directory name: <physics>-ncr-<res>pc[<TAG>]
+# (resolution is read from the input's <mesh> block so the name matches the run.)
 mesh_val () {  # first match wins: the <mesh> block precedes <meshblock>
     grep -E "^[[:space:]]*$1[[:space:]]*=" "$INPUT" | head -1 | sed -E 's/#.*//; s/[^=]*=[[:space:]]*//; s/[[:space:]]*$//'
 }
 nx1=$(mesh_val nx1)
 x1min=$(mesh_val x1min); x1max=$(mesh_val x1max)
 res=$(( (x1max - x1min) / nx1 ))
-TAG=""                          # optional extra label (e.g. "-fgas0.7"); leave empty for none
 RUNNAME=${physics}-ncr-${res}pc${TAG}
 
 # Target run directory (informative subfolder under the requested base)
@@ -71,7 +77,7 @@ RUNDIR=/scratch/gpfs/$USER/tigress_ncr/$RUNNAME
 
 # Runtime parameter overrides (data-table filenames must be relative to RUNDIR).
 # output_timing=true turns on per-task timing output (every <time>/ncycle_out_timing cycles).
-params="job/problem_id=$PID job/output_timing=true \
+params="job/problem_id=$PID job/output_timing=true $TESTBOX \
         photchem_ncr/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
 
 echo "RUNDIR = $RUNDIR"

@@ -4,7 +4,7 @@ reference = Kim, JG et al. 2023; Kim, CG et al. 2023
 configure = --prob=tigress_ncr -fft --grav=fft -mpi -hdf5 --nghost=4 -b --flux=hlld -ncr
 
 <job>
-problem_id = TIGRESS # problem ID: basename of output filenames
+problem_id = TIGRESS_NCR # problem ID: basename of output filenames
 output_timing = true
 
 <output1>
@@ -115,6 +115,11 @@ healpix_lev_min = 4     # HealPix level at creation
 nexit_max     = 100     # Maximum number of rays to send to neighbor ranks (MPI only)
 tau_max       = 30.0    # Stop following a ray if tau > tau_max at all freq bins
 rotate_rays   = true    # Apply random rotation to ray directions
+pp_approx     = true    # Plane-parallel FUV approx above zp / below zm (FUV bands only; LyC excluded)
+zp            = 300.0   # Apply plane-parallel approximation above z = zp [pc]
+zm            = -300.0  # Apply plane-parallel approximation below z = zm [pc]
+width_frac    = 0.05    # Blend half-width as fraction of (zp - zm)
+N_mu          = 64      # Number of cos(theta) = mu bins at z = zp, zm
 
 <photchem>
 photchem = true
