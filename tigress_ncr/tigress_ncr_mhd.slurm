@@ -54,11 +54,25 @@ TBLDIR="$SRCDIR/inputs/tables"
 COOL_TBL="tigress_coolftn_ncr.txt"
 POPSYNTH_TBL="Z014_GenevaV00.txt"
 
-# Target run directory
-RUNDIR=/scratch/gpfs/$USER/tigress_ncr
+# Build an informative run-directory name from the <mesh> block of the input:
+#   <physics>-ncr-<res>pc[-<TAG>]
+# (resolution is read from the input so the name always matches the run.)
+mesh_val () {  # first match wins: the <mesh> block precedes <meshblock>
+    grep -E "^[[:space:]]*$1[[:space:]]*=" "$INPUT" | head -1 | sed -E 's/#.*//; s/[^=]*=[[:space:]]*//; s/[[:space:]]*$//'
+}
+nx1=$(mesh_val nx1)
+x1min=$(mesh_val x1min); x1max=$(mesh_val x1max)
+res=$(( (x1max - x1min) / nx1 ))
+TAG=""                          # optional extra label (e.g. "-fgas0.7"); leave empty for none
+RUNNAME=${physics}-ncr-${res}pc${TAG}
 
-# Runtime parameter overrides (data-table filenames must be relative to RUNDIR)
-params="job/problem_id=$PID photchem_ncr/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
+# Target run directory (informative subfolder under the requested base)
+RUNDIR=/scratch/gpfs/$USER/tigress_ncr/$RUNNAME
+
+# Runtime parameter overrides (data-table filenames must be relative to RUNDIR).
+# output_timing=true turns on per-task timing output (every <time>/ncycle_out_timing cycles).
+params="job/problem_id=$PID job/output_timing=true \
+        photchem_ncr/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
 
 echo "RUNDIR = $RUNDIR"
 echo "EXE    = $EXEPATH"
