@@ -1,30 +1,34 @@
 #!/bin/bash
-#SBATCH --job-name=crncr-16pc # short name for the job
+#SBATCH --job-name=crncr16u   # short name for the job (u = uniform xi_cr0)
 #SBATCH --account=eost        # account (mandatory for tiger3; harmless on stellar)
 #SBATCH -N 1                  # node count
 #SBATCH -n 32                 # task count (= number of meshblocks, 1 block/rank)
 #SBATCH --time=24:00:00       # total run time limit (HH:MM:SS)
 ##SBATCH --mail-type=all
 ##SBATCH --mail-user=changgoo@princeton.edu
-#SBATCH --output=crncr16-%j.out
-#SBATCH --error=crncr16-%j.err
+#SBATCH --output=crncr16u-%j.out
+#SBATCH --error=crncr16u-%j.err
 #
-# Lightweight CRMHD + NCR *coupling* smoke test of the TIGRESS-NCR executable
-# built by build_tigress.sh --physics=crmhd (i.e. -b --cr=mg --flux=hlld -ncr).
+# Lightweight CRMHD + NCR smoke test -- UNIFORM-xi_cr0 variant of the
+# TIGRESS-NCR executable built by build_tigress.sh --physics=crmhd
+# (-b --cr=mg --flux=hlld -ncr). Pairs with
+# tigress_ncr_crmhd_16pc_test_coupled.slurm: same crmhd exe and identical run
+# except that the NCR cosmic-ray ionization rate is NOT taken from the
+# transported CR energy, so the two runs isolate the effect of the coupling.
 #
-# The coupling (both directions) is turned on at runtime by cr/photchem_flag=1:
-#   - CR energy density  -> per-cell NCR cosmic-ray ionization rate (xi_cr)
-#   - NCR ion/neutral abundances -> CR scattering coefficient (CROpacity)
-# It requires <cr>/self_consistent_flag=1 and <photchem>/mode=ncr (both set in
-# athinput.tigress_ncr) and the 10-column cooling table shipped on the
-# ncr-cr-coupling branch (staged from SRCDIR below; the old 6-column table
-# makes NCRCoolFtnTable abort).
+# The CR<->NCR coupling is OFF here (cr/photchem_flag=0): NCR uses the uniform
+# input xi_cr0 and the CR scattering coefficient uses the equilibrium
+# Get_IonFraction path. photchem_ncr/shld_xi_cr_flag=false disables the column
+# attenuation of xi_cr, so xi_cr = xi_cr0 (2e-16) everywhere -- a genuinely
+# uniform baseline. (Drop that override to recover the standard shielded-xi_cr
+# NCR behavior.) CR transport still runs, so the gas dynamics match the coupled
+# run; only the ionization source differs.
 #
 # Task/rank count MUST equal the number of meshblocks (1 block/rank, no AMR):
 #   TESTBOX below: 64x64x256, 32^3 blocks -> 2*2*8 = 32 blocks -> -n 32 (-N 1)
 #
 # Usage:
-#   sbatch tigress_ncr_crmhd_16pc_test.slurm [CC] [-r]
+#   sbatch tigress_ncr_crmhd_16pc_test_uniform.slurm [CC] [-r]
 #     CC : icpx (default) or g++   -- selects the module set (must match the build)
 #     -r : restart from PID.final.rst instead of a fresh start
 
@@ -48,7 +52,7 @@ PID=TIGRESS_NCR
 SRCDIR=$HOME/tigris/.worktrees/ncr-cr-coupling  # worktree the exe was built from
 SCRIPTDIR=$HOME/tigris_scripts/$prob            # holds athinput.$prob
 SLURMDIR=$SCRIPTDIR/stellar                     # holds the exe and this script
-SCRIPT=${prob}_${physics}_16pc_test.slurm
+SCRIPT=${prob}_${physics}_16pc_test_uniform.slurm
 
 # Executable (under $SLURMDIR) and input file
 EXE=tigris_ncr_${physics}-${grav}.exe           # e.g. tigris_ncr_crmhd-fft.exe
@@ -60,7 +64,7 @@ INPUT=${SCRIPTDIR}/athinput.${prob}
 # blocks. TESTBOX overrides it to 64x64x256 (4096 pc tall) -> 2*2*8 = 32 blocks
 # -> 32 ranks, matching the -N 1 -n 32 SBATCH header above.
 TESTBOX="mesh/nx3=256 mesh/x3min=-2048 mesh/x3max=2048"
-TAG="-test"
+TAG="-test-uniform"
 # ----------------------------------------------------------------------------
 
 # Data tables (staged from the coupling worktree: 10-column cooling table).
@@ -82,8 +86,10 @@ RUNNAME=${physics}-ncr-${res}pc${TAG}
 RUNDIR=/scratch/gpfs/$USER/tigress_ncr/$RUNNAME
 
 # Runtime parameter overrides (data-table filenames must be relative to RUNDIR).
-# cr/photchem_flag=1 turns on the CR<->NCR coupling for this run.
-params="job/problem_id=$PID job/output_timing=true $TESTBOX cr/photchem_flag=1 \
+# cr/photchem_flag=0 keeps the CR<->NCR coupling OFF; shld_xi_cr_flag=false makes
+# the NCR ionization rate the uniform input xi_cr0 everywhere (no attenuation).
+params="job/problem_id=$PID job/output_timing=true $TESTBOX \
+        cr/photchem_flag=0 photchem_ncr/shld_xi_cr_flag=false \
         photchem_ncr/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
 
 echo "RUNDIR = $RUNDIR"
