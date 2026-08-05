@@ -78,6 +78,7 @@ RUNDIR=/scratch/gpfs/$USER/tigress_ncr/$RUNNAME
 # Runtime parameter overrides (data-table filenames must be relative to RUNDIR).
 # output_timing=true turns on per-task timing output (every <time>/ncycle_out_timing cycles).
 params="job/problem_id=$PID job/output_timing=true $TESTBOX \
+        ray_tracing/rayt_sparse=true \
         photchem_ncr/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
 
 echo "RUNDIR = $RUNDIR"
@@ -132,7 +133,11 @@ set +o pipefail
 #    sbatch "$SCRIPT" "$CC" -r
 #fi
 
-# Optional post-processing (pyathena) -- enable if your environment is set up:
-# cd "$RUNDIR"
-# module purge; module load anaconda3/2024.6 openmpi/gcc/4.1.6; conda activate pyathena
-# srun python -m mpi4py $HOME/pyathena/pyathena/tigresspp/plot_slices.py "$(pwd)"
+# make quick snapshots
+cd $RUNDIR
+module purge; module load anaconda3/2024.6 openmpi/gcc/4.1.6; conda activate pyathena
+
+PYTHONDIR=$HOME/pyathena_master
+export PYTHONPATH="$PYTHONDIR:$PYTHONPATH"
+pythonscript=$HOME/TIGRESS-CR/python/plot_slices_ncr.py
+srun python -m mpi4py $pythonscript `pwd`

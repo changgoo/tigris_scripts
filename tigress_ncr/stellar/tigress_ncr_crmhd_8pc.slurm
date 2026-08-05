@@ -82,8 +82,11 @@ RUNNAME=${physics}-ncr-${res}pc${TAG}
 RUNDIR=/scratch/gpfs/$USER/tigress_ncr/$RUNNAME
 
 # Runtime parameter overrides (data-table filenames must be relative to RUNDIR).
-# cr/photchem_flag=1 turns on the CR<->NCR coupling for this run.
+# cr/photchem_flag=1 turns on the CR<->NCR coupling; ray_tracing/rayt_sparse=true
+# solves ray tracing on the warm/cold hyperbolic cadence (dt_hyperbolic_wc).
+# Production ray-tracing reach: dist_xy_max=2048, eps_extinct=1e-8.
 params="job/problem_id=$PID job/output_timing=true $HIRES cr/photchem_flag=1 \
+        ray_tracing/rayt_sparse=true ray_tracing/dist_xy_max=2048 ray_tracing/eps_extinct=1.e-8 \
         photchem_ncr/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
 
 echo "RUNDIR = $RUNDIR"

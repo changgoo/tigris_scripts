@@ -74,6 +74,7 @@ RUNDIR=/scratch/gpfs/$USER/tigress_ncr/$RUNNAME
 
 # Runtime parameter overrides (data-table filenames must be relative to RUNDIR).
 params="job/problem_id=$PID job/output_timing=true $HIRES \
+        ray_tracing/rayt_sparse=true ray_tracing/dist_xy_max=2048 ray_tracing/eps_extinct=1.e-8 \
         photchem_ncr/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL"
 
 echo "RUNDIR = $RUNDIR"
