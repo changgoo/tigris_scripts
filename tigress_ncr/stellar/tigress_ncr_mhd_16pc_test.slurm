@@ -39,7 +39,7 @@ physics=mhd
 grav=fft
 prob=tigress_ncr
 PID=TIGRESS_NCR
-SRCDIR=$HOME/tigris/.worktrees/tigress-ncr   # worktree the exe was built from
+SRCDIR=$HOME/tigris/.worktrees/ncr-cr-coupling  # worktree the exe was built from (10-column cooling table)
 SCRIPTDIR=$HOME/tigris_scripts/$prob
 SCRIPT=${prob}_${physics}.slurm
 
