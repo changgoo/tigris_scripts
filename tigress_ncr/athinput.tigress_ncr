@@ -239,6 +239,7 @@ valfven_flag         = 1
 obs_spectrum_flag    = 1
 postprocess_flag     = 0
 coll_ion_flag        = 1
+photchem_flag        = 0    # 1: ion and neutral densities from NCR photochemistry
 
 ecfloor              = 1e-18
 sigma                = 1e-25
