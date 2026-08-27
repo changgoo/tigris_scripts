@@ -4,8 +4,8 @@
 #SBATCH -N 4                   # node count
 #SBATCH -n 384                 # task count (= number of meshblocks, 1 block/rank)
 #SBATCH --time=24:00:00        # total run time limit (HH:MM:SS)
-##SBATCH --mail-type=all
-##SBATCH --mail-user=changgoo@princeton.edu
+#SBATCH --mail-type=all
+#SBATCH --mail-user=changgoo@princeton.edu
 #SBATCH --output=crncr8pc-%j.out
 #SBATCH --error=crncr8pc-%j.err
 #
@@ -63,7 +63,7 @@ INPUT=${SCRIPTDIR}/athinput.${prob}
 # Box is unchanged (1024 x 1024 x 6144 pc from the input); only the cell count.
 # 128x128x768 with 32^3 blocks -> 4*4*24 = 384 blocks -> -N 4 -n 384.
 HIRES="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768"
-TAG=""                                        # production; no extra label
+TAG="-mesh-level"                             # distinguish mesh-level production runs
 # ------------------------------------------------------------------------------
 
 # Data tables (staged from the coupling worktree: 10-column cooling table).
