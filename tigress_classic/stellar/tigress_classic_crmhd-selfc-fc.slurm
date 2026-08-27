@@ -48,17 +48,17 @@ echo "submitting a job: $0 $STARTFLAG $vmax $fc $RSTNUM $MHDBC $CRBC $CC"
 fgas=0.7
 
 # Define problem and paths
-physics=crmhd
+physics=crmhd_duale_lhll
 prob=tigress_classic
 PID=TIGRESS
 SRCDIR=$HOME/tigris
 SCRIPTDIR=$HOME/tigris_scripts/$prob/stellar
-SCRIPT=${prob}_${physics}-selfc.slurm
+SCRIPT=${prob}_crmhd-selfc-fc.slurm
 
 # Define executable and input files
-EXE=tigris_${physics}.exe
+EXE=tigris-master_${physics}-blockfft.exe
 INPUT=athinput.$prob
-RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-8pc-b1-mhdbc_$MHDBC-crbc_$CRBC-sigma_selfc-Vmax${vmax}-fc${fc}
+RUNDIR=/scratch/gpfs/$USER/$prob/${physics}-8pc-b1-mhdbc_$MHDBC-crbc_$CRBC-sigma_selfc-Vmax${vmax}-fc${fc}-rst
 
 # Define table directories and files
 TBLDIR="$SRCDIR/inputs/tables"
@@ -71,7 +71,7 @@ medres_normal="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3m
 params="job/problem_id=$PID time/tlim=500 $medres_normal cooling/coolftn_file=$COOL_TBL feedback/pop_synth_file=$POPSYNTH_TBL orbital_advection/Omega0=0.0"
 periodic="mesh/ix1_bc=periodic mesh/ox1_bc=periodic"
 extra_params="perturbation/rseed=1 particle1/fgas=$fgas particle1/r_return=100 gravity/solve_grav_hyperbolic_dt=true hydro/dfloor=1.e-6 hydro/pfloor=1.e-6 mesh/mhd_outflow_bc=$MHDBC mesh/cr_outflow_bc=$CRBC output2/dt=1 output3/dt=1 $periodic"
-extra_params2="cr/vmax=${vmax}e9 problem/beta0=1 cr/ecfloor=1.e-18 feedback/fe_CR=${fc}"
+extra_params2="cr/vmax=${vmax}e9 problem/beta0=1 cr/ecfloor=1.e-15 feedback/fe_CR=${fc} hydro/ct_method=ctc"
 
 # Print the run directory
 echo $RUNDIR
