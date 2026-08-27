@@ -137,7 +137,7 @@ ceiling = true              # density floor to ceiling velocity and temperature
 <photchem_ncr>
 cool_hyd_cie_flag = false
 cool_dust_flag = false
-h2_diss_bg_flag = true
+h2_diss_bg_flag = false
 nsub_max = 50
 cfl_cool_sub = 0.1
 temp_hot0 = 20000.0
@@ -152,7 +152,7 @@ x_h2_cut = 1.e-2
 z_gas = 1.0
 z_dust = 1.0
 
-chi0 = 1.0
+chi0 = 0.0
 xi_cr0 = 2e-16          # unattenuated CR ionization rate [1/s]
 shld_n_hyd0 = 1e2
 shld_len0 = 0.0         # zero to turn off
