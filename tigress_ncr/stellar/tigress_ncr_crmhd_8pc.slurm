@@ -32,7 +32,7 @@
 #     CC : icpx (default) or g++   -- module set (must match the build)
 #     -r : restart from PID.final.rst instead of a fresh start
 
-CC=${1:-icpx}
+CC=icpx
 if [[ "$CC" == "icpx" || "$CC" == "icpx-b" ]] ; then
     module purge; module load anaconda3/2023.3 intel-oneapi/2024.2 openmpi/oneapi-2024.2/4.1.6 hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4 fftw/oneapi-2024.2/3.3.10
 elif [[ "$CC" == "g++" || "$CC" == "g++-b" ]] ; then
@@ -42,7 +42,7 @@ else
     CC=icpx
 fi
 
-STARTFLAG=$2
+STARTFLAG=$1
 
 # Problem definition and paths
 physics=crmhd
@@ -63,7 +63,7 @@ INPUT=${SCRIPTDIR}/athinput.${prob}
 # Box is unchanged (1024 x 1024 x 6144 pc from the input); only the cell count.
 # 128x128x768 with 32^3 blocks -> 4*4*24 = 384 blocks -> -N 4 -n 384.
 HIRES="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768"
-TAG="-mesh-level"                             # distinguish mesh-level production runs
+TAG=$2                             # distinguish mesh-level production runs
 # ------------------------------------------------------------------------------
 
 # Data tables (staged from the coupling worktree: 10-column cooling table).
@@ -138,7 +138,7 @@ set +o pipefail
 if [[ $EXITCODE -eq 3 ]]; then
     echo "Resubmitting"
     cd "$SLURMDIR"
-    sbatch "$SCRIPT" "$CC" -r
+    sbatch "$SCRIPT" -r "$TAG"
 fi
 
 # make quick snapshots

@@ -50,7 +50,7 @@ ghost_zones = false
 <time>
 cfl_number       = 0.3    # The Courant, Friedrichs, & Lewy (CFL) Number
 nlim             = -1     # cycle limit
-tlim             = 100.0  # time limit
+tlim             = 500.0  # time limit
 integrator       = rk2    # time integration algorithm
 xorder           = 2      # order of spatial reconstruction
 ncycle_out       = 10     # interval for stdout summary info
@@ -129,37 +129,54 @@ photchem = true
 mode = ncr
 bookkeeping = true          # Keep track of heating/cooling rates (uov)
 flag_op_split  = true       # Operator split update (required)
-flag_rad_force = false      # Turn on radiation pressure force
+flag_rad_force = true       # Turn on radiation pressure force (Simple and NCR modes)
 flag_update_dt_main = false # Update dt_main using dt_user=dt_coolchem
 cfl_photchem = 1.0          # dt_user = cfl_photchem*t_coolchem
 ceiling = true              # density floor to ceiling velocity and temperature
 
 <photchem_ncr>
-cool_hyd_cie_flag = false
-cool_dust_flag = false
-h2_diss_bg_flag = false
+# Solver and subcycling
 nsub_max = 50
 cfl_cool_sub = 0.1
 temp_hot0 = 20000.0
 temp_hot1 = 35000.0
-sigma_dust_pe0 = 1e-21
-sigma_dust_lw0 = 2e-21
-
-x_hi_cut = 1.e-2
+x_hi_cut  = 1.e-2   # skip a species' cooling/heating terms below these abundances
 x_hii_cut = 1.e-2
-x_h2_cut = 1.e-2
+x_h2_cut  = 1.e-2
 
+# Metallicity and dust abundance
 z_gas = 1.0
 z_dust = 1.0
 
+# Cooling/heating physics
+cool_hyd_cie_flag = false
+cool_dust_flag = false
+
+# Background radiation and local shielding. The code does not couple these
+# to ray_tracing: the chi0 background and the ray-traced field are
+# independent and add. The pairings below are the recommended settings for
+# THIS setup, where chi0 would represent the same stellar population the
+# ray tracing already resolves (double counting). Other problems may
+# legitimately use both, with chi0 as external background radiation on top
+# of the ray-traced internal sources.
+# ray_tracing = true : chi0 = 0, h2_diss_bg_flag = false, shld_len0 = 0
+#   (the ray-traced field, including H2-shielded LW, is the only radiation)
+# ray_tracing = false: chi0 > 0 (uniform ISRF; rescaled by SFR via SetChiFUV),
+#   h2_diss_bg_flag = true, shld_len0 > 0 (local shielding approximation)
 chi0 = 0.0
-xi_cr0 = 2e-16          # unattenuated CR ionization rate [1/s]
+h2_diss_bg_flag = false
+shld_len0 = 0.0
 shld_n_hyd0 = 1e2
-shld_len0 = 0.0         # zero to turn off
 shld_pow_idx = -0.7
-shld_column_hyd_cr0 = 9.35e20
+
+# Cosmic-ray ionization. MHD build (or <cr>/photchem_flag=0): uniform xi_cr0,
+# rescaled by SFR. CR build with <cr>/photchem_flag=1: per-cell rate from the
+# transported CR energy density; xi_cr0 unused.
+xi_cr0 = 2e-16                  # unattenuated CR ionization rate [1/s]
+shld_column_hyd_cr0 = 9.35e20   # attenuation column [cm^-2]; shld_xi_cr_flag defaults to on unless CR-coupled
 
 # Cross sections and photon energies in (LyC,LW,PE) bands
+# sigma_d is per H at Z_dust = 1 (scaled by z_dust)
 hnu[0]      = 18.0
 sigma_d[0]     = 1.0e-21 # smaller than theoretical estimate
 sigma_pi_HI[0] = 3.1e-18
