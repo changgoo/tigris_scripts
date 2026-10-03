@@ -13,8 +13,26 @@ git clone git@github.com:changgoo/tigris_scripts.git
 ```
 
 ## Compile
-See `compile.sh`.
+Use `build_tigress.sh` (run with no arguments for all options). On stellar, tiger and
+stellarai-amd, `<machine>/env.sh` supplies the module stack and complete compiler flags,
+reusing the toolchain benchmark of TIGRESS-NCR (`../tigress_ncr/<machine>/env.sh` and its
+README):
 
+| machine       | default toolchain (`--cc`) | compiler + MPI                    |
+|---------------|----------------------------|-----------------------------------|
+| stellar       | `icpx-impi`                | oneAPI 2024.2 icpx + Intel MPI    |
+| tiger         | `icpx-impi`                | oneAPI 2024.2 icpx + Intel MPI    |
+| stellarai-amd | `gcc-impi`                 | GCC 14 + Intel MPI                |
+
+```sh
+./build_tigress.sh --machine=stellar --physics=crmhd   # -> stellar/tigris-master_crmhd-fft-icpx-impi.exe
+```
+The toolchain is part of the exe name, and a job must load the same modules
+(`source <machine>/env.sh; load_toolchain <toolchain>`). The slurm scripts here still load
+their own modules and run the older exe names, so convert a script before using a new
+exe with it. Other machines (anvil, ...) keep their hard-coded settings in `build_tigress.sh`.
+
+### Legacy `compile.sh`
 First, the script use an alias `module_icpx` to load proper module. Recommended to add these lines to your `.bashrc` file (my choice after some trials and errors).
 ```sh
 alias module_gcc='module purge; module load anaconda3/2023.3 fftw/gcc/3.3.10 intel-mpi/gcc/2021.13 hdf5/gcc/intel-mpi/1.14.4'
