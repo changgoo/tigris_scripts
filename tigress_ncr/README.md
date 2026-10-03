@@ -32,6 +32,8 @@ point-to-point latency and one-sided progress (4x on stellarai-amd, 1.25x on Ste
 best compiler differs: GCC on Zen 5, icpx on Cascade Lake, where GCC 13 is 2x slower in NCR
 photochemistry.
 
+All three machines side by side: https://claude.ai/artifact/28UKFCgYPf9bFjSzwRyksr
+
 ## 1. Shell and modules
 
 Use Bash. If `module` is not already a shell function, initialize Environment Modules:

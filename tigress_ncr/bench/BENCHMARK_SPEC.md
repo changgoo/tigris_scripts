@@ -423,3 +423,4 @@ any run is SUSPECT. Runs that advanced a different NCYC are reported as not comp
 Report for stellarai-amd: https://claude.ai/artifact/H1B2iqL3a4F2cjiDQdvvtd
 Report for stellar: https://claude.ai/artifact/3re4pmVb3w7LYwZw5S3GL6
 Report for tiger: https://claude.ai/artifact/UMhHdYzbKcQkKxd4hsjkW2
+Combined report (all three machines): https://claude.ai/artifact/28UKFCgYPf9bFjSzwRyksr
