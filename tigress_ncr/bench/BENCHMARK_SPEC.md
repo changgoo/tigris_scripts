@@ -411,6 +411,7 @@ any run is SUSPECT. Runs that advanced a different NCYC are reported as not comp
 | machine | CPU | nodes | best toolchain | mhd s/cycle | crmhd s/cycle | mhd node-h/1e4 | crmhd node-h/1e4 | commit |
 |---|---|---|---|---|---|---|---|---|
 | stellarai-amd | 2x EPYC 9475F (Zen 5), 96 c, NDR 400 IB | 4 | gcc-impi + FLAGS_GCC (`preset-v512`) | 0.291 | 0.195 | 3.24 | 2.17 | eee94bc4f |
-| stellar | 2x Xeon Platinum 9242 (Cascade Lake), 96 c, HDR IB | 4 | icpx-impi + FLAGS_ICPX (`fast2`) | 0.737 | 0.411 | 8.19 | 4.57 | eee94bc4f |
+| stellar | 4x Xeon Platinum 8268 (Cascade Lake), 96 c, IB 100 Gb/s | 4 | icpx-impi + FLAGS_ICPX (`fast2`) | 0.737 | 0.411 | 8.19 | 4.57 | eee94bc4f |
 
 Report for stellarai-amd: https://claude.ai/artifact/H1B2iqL3a4F2cjiDQdvvtd
+Report for stellar: https://claude.ai/artifact/3re4pmVb3w7LYwZw5S3GL6

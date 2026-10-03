@@ -11,7 +11,7 @@
 #SBATCH --error=crncr8pc-%j.err
 #
 # 8 pc CRMHD + NCR *coupling* run of the TIGRESS-NCR executable on Stellar
-# (2x Intel Xeon Platinum 9242 Cascade Lake, 96 cores/node), built with --physics=crmhd
+# (4x Intel Xeon Platinum 8268 Cascade Lake, 96 cores/node), built with --physics=crmhd
 # (-b --cr=mg --flux=hlld -ncr).
 #
 # The coupling (both directions) is turned on at runtime by cr/photchem_flag=1:

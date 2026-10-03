@@ -11,7 +11,7 @@
 #SBATCH --error=ncr8pc-%j.err
 #
 # 8 pc PRODUCTION run of the TIGRESS-NCR (MHD) executable on Stellar
-# (2x Intel Xeon Platinum 9242 Cascade Lake, 96 cores/node).
+# (4x Intel Xeon Platinum 8268 Cascade Lake, 96 cores/node).
 #
 # Runs the production input (athinput.tigress_ncr) but overrides the mesh to 8 pc:
 #   128x128x768 over the full 1024x1024x6144 pc box, 32^3 blocks

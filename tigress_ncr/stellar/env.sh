@@ -1,6 +1,7 @@
 # Machine environment for Stellar (Princeton) Intel CPU nodes
-#   2x Intel Xeon Platinum 9242 (Cascade Lake-AP), 96 cores/node, 4 NUMA domains,
-#   AVX-512 (2 FMA units), 760 GB, HDR InfiniBand. Login nodes are Cascade Lake too.
+#   4x Intel Xeon Platinum 8268 (Cascade Lake, 24 cores, 2.9 GHz), 96 cores/node, 4 NUMA
+#   domains, AVX-512 (2 FMA units), 760 GB, ConnectX-6 InfiniBand at 100 Gb/s.
+#   Login nodes are Cascade Lake too (Xeon Gold 6242R).
 #
 # Machine-env contract (see ../bench/BENCHMARK_SPEC.md and ../bench/env_template.sh).
 # Sourced by build_tigress.sh (--machine=stellar), the benchmark scripts in ../bench,
@@ -31,7 +32,7 @@
 #   BENCH_DATA to BENCH_CACHE on scratch before submitting.
 
 # --- machine description ------------------------------------------------------------
-MACHINE_CPU="2x Intel Xeon Platinum 9242 (Cascade Lake)"
+MACHINE_CPU="4x Intel Xeon Platinum 8268 (Cascade Lake)"
 CORES_PER_NODE=96
 SLURM_PARTITION=pu
 SLURM_ACCOUNT=eost

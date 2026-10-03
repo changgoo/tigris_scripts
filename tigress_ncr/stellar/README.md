@@ -1,8 +1,9 @@
 # TIGRESS-NCR on Stellar
 
-Intel nodes: 2x Intel Xeon Platinum 9242 (Cascade Lake-AP, 2x 48 cores, 4 NUMA domains), 96
-cores and 760 GB per node, AVX-512 with two FMA units, HDR InfiniBand. The login nodes are
-Cascade Lake too, so builds there run on the compute nodes. The 8 pc runs (128x128x768, 32^3
+Intel nodes: 4x Intel Xeon Platinum 8268 (Cascade Lake, 24 cores at 2.9 GHz each, one NUMA
+domain per socket), 96 cores and 760 GB per node, AVX-512 with two FMA units, and ConnectX-6
+InfiniBand at 100 Gb/s. The login nodes are Cascade Lake too (Xeon Gold 6242R), so builds made
+there run on the compute nodes. The 8 pc runs (128x128x768, 32^3
 blocks, 384 meshblocks) fill exactly 4 nodes with one block per rank.
 
 Scratch is `/scratch/gpfs/$USER`, and run directories default to
@@ -30,6 +31,9 @@ reports `Compiler = clang++`. NVHPC 25.5 is installed but was not tried: nvc++ i
 contender for CPU-only code on x86, and there is no parallel HDF5 built for it.
 
 ## Benchmark (2026-10-03)
+
+Full report with machine specs, charts and the effect of every flag:
+https://claude.ai/artifact/3re4pmVb3w7LYwZw5S3GL6
 
 The workload is defined in `../bench/BENCHMARK_SPEC.md`: each run restarts a production
 checkpoint on 4 nodes and advances 200 cycles, built from tigris `eee94bc4f` like the
