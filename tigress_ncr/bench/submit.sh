@@ -5,9 +5,12 @@
 #
 # Reads partition/account/cores-per-node from <machine>/env.sh, the meshblock count from
 # the checkpoint header, and requests one rank per meshblock on whole nodes.
+# Checkpoints are staged from BENCH_DATA (e.g. /projects, often login-node only) to
+# BENCH_CACHE on scratch before submitting; the copy is reused while its size matches.
 # MPI tuning variables (OMPI_MCA_*, I_MPI_*, UCX_*) set in the calling shell are passed to
-# the job and recorded as the run's opts; so is SRUN_OPTS. Other env knobs: RSTFILE,
-# KEEP_RST, BENCH_TIME (slurm --time, default 00:30:00). See BENCHMARK_SPEC.md.
+# the job and recorded as the run's opts; so is SRUN_OPTS. VARIANT=<name> runs the flag
+# variant tigris_ncr_<physics>-fft-<tc>-<name>.exe (bench/flag_sweep.sh). Other env knobs:
+# RSTFILE (skip staging), KEEP_RST, BENCH_TIME (slurm --time, default 00:30:00).
 set -e
 MACHINE=${1:?usage: $0 MACHINE PHYSICS TOOLCHAIN [NCYC] [overrides...]}
 PHYSICS=${2:?usage: $0 MACHINE PHYSICS TOOLCHAIN [NCYC] [overrides...]}
@@ -21,14 +24,25 @@ MPIENV=$(env | grep -E '^(OMPI_MCA_|I_MPI_|UCX_)' | sort | tr '\n' ' ' || true)
 
 source "$NCR_DIR/$MACHINE/env.sh"
 [[ " $TOOLCHAINS " == *" $TC "* ]] || { echo "unknown toolchain $TC (one of: $TOOLCHAINS)"; exit 1; }
-[ -x "$NCR_DIR/$MACHINE/tigris_ncr_${PHYSICS}-fft-${TC}.exe" ] || {
-    echo "missing $MACHINE/tigris_ncr_${PHYSICS}-fft-${TC}.exe; build it with:"
+EXE=tigris_ncr_${PHYSICS}-fft-${TC}${VARIANT:+-$VARIANT}.exe
+[ -x "$NCR_DIR/$MACHINE/$EXE" ] || {
+    echo "missing $MACHINE/$EXE; build it with:"
     echo "  bash $NCR_DIR/build_tigress.sh --machine=$MACHINE --cc=$TC --physics=$PHYSICS --worktree=ncr-cr-coupling"
     exit 1; }
 
 RSTVAR=BENCH_RST_$PHYSICS
-RSTFILE=${RSTFILE:-${!RSTVAR}}
-[ -f "$RSTFILE" ] || { echo "restart file not found: '$RSTFILE' (set $RSTVAR in env.sh)"; exit 1; }
+if [ -z "$RSTFILE" ]; then
+    REL=${!RSTVAR}
+    [ -n "$REL" ] || { echo "set $RSTVAR in env.sh"; exit 1; }
+    RSTFILE=$BENCH_CACHE/$REL
+    SRC=$BENCH_DATA/$REL
+    if [ -r "$SRC" ] && [ "$(stat -c %s "$SRC")" != "$(stat -c %s "$RSTFILE" 2>/dev/null)" ]; then
+        echo "staging $SRC -> $RSTFILE"
+        mkdir -p "$(dirname "$RSTFILE")"
+        cp "$SRC" "$RSTFILE.part" && mv "$RSTFILE.part" "$RSTFILE"
+    fi
+fi
+[ -f "$RSTFILE" ] || { echo "restart file not found: '$RSTFILE' (BENCH_DATA=$BENCH_DATA)"; exit 1; }
 read -r NR _ _ _ < <(python3 "$BENCHDIR/rst_info.py" "$RSTFILE")
 NODES=$(( (NR + CORES_PER_NODE - 1) / CORES_PER_NODE ))
 
@@ -39,6 +53,6 @@ SB=(--partition="$SLURM_PARTITION" -N "$NODES" -n "$NR" --time="${BENCH_TIME:-00
 
 mkdir -p "$BENCHDIR/logs"
 cd "$BENCHDIR"
-echo "sbatch ${SB[*]} tigress_ncr_8pc_bench.slurm $*   [${MPIENV:-no MPI env}${SRUN_OPTS:+ SRUN_OPTS=$SRUN_OPTS}]"
-NCR_DIR="$NCR_DIR" RSTFILE="$RSTFILE" BENCH_MPIENV="$MPIENV" \
+echo "sbatch ${SB[*]} tigress_ncr_8pc_bench.slurm $*   [${VARIANT:+variant=$VARIANT }${MPIENV:-no MPI env}${SRUN_OPTS:+ SRUN_OPTS=$SRUN_OPTS}]"
+NCR_DIR="$NCR_DIR" RSTFILE="$RSTFILE" BENCH_MPIENV="$MPIENV" VARIANT="$VARIANT" \
     sbatch "${SB[@]}" tigress_ncr_8pc_bench.slurm "$@"

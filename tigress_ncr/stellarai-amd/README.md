@@ -35,8 +35,10 @@ use the `clang++` preset (mpicxx still calls icpx), so their configure summary r
 
 The workload is defined in `../bench/BENCHMARK_SPEC.md`. Each run restarts a Stellar
 production checkpoint on 4 nodes and advances 200 cycles; the times are seconds per cycle,
-averaged over ranks, from `TIGRESS_NCR.loop_time.txt`. Every build produced the same history
-output to the printed precision. Raw results are in `../bench/results/stellarai-amd.txt`;
+averaged over ranks, from `TIGRESS_NCR.loop_time.txt`. Repeated runs of a build reproduce the
+history output exactly. Different compilers agree to about 1e-5 (aocc vs gcc) to 6e-5
+(icpx vs gcc) in max relative difference over all columns (`../bench/compare_hst.py`), which
+is round-off amplified by the turbulent flow. Raw results are in `../bench/results/stellarai-amd.txt`;
 `python3 ../bench/summarize.py ../bench/results/stellarai-amd.txt` prints the full table.
 
 | toolchain   | MHD s/cycle | MHD ray tracing | CRMHD s/cycle | CRMHD integrator |

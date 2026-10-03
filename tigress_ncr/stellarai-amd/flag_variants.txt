@@ -1,0 +1,30 @@
+# Compiler-flag sweep for stellarai-amd (bench/flag_sweep.sh stellarai-amd).
+# One variant per line:  <toolchain> <variant> <complete compiler flags>
+# The flags REPLACE configure.py's preset flags entirely (build_tigress.sh --cxxflags).
+# All variants use Intel MPI so that differences come from the compiler alone.
+# Winners per compiler go to FLAGS_GCC / FLAGS_AOCC / FLAGS_ICPX in env.sh.
+
+# GCC 14
+gcc-impi  preset        -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays
+gcc-impi  O3            -O3 -std=c++11 -march=znver5
+gcc-impi  safe-lto      -O3 -std=c++11 -march=znver5 -fno-math-errno -fno-trapping-math -fopenmp-simd -flto=auto
+gcc-impi  fast          -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd
+gcc-impi  fast-lto      -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto=auto
+gcc-impi  fast-lto-wp   -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program
+gcc-impi  preset-v512   -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512
+gcc-impi  preset-unroll -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -funroll-loops
+gcc-impi  preset-O2     -O2 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays
+
+# AOCC 5.2 (clang 17)
+aocc-impi preset        -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto -fuse-ld=lld
+aocc-impi O3            -O3 -std=c++11 -march=znver5
+aocc-impi safe-lto      -O3 -std=c++11 -march=znver5 -fno-math-errno -fno-trapping-math -fopenmp-simd -flto -fuse-ld=lld
+aocc-impi preset-v512   -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto -fuse-ld=lld -mprefer-vector-width=512
+aocc-impi preset-zopt   -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto -fuse-ld=lld -zopt
+aocc-impi preset-unroll -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto -fuse-ld=lld -funroll-loops
+
+# oneAPI 2026.0 icpx (default fp-model=fast)
+icpx-impi preset        -O3 -std=c++11 -march=znver5 -ipo -qopenmp-simd -Wno-tautological-constant-compare -Wno-array-bounds
+icpx-impi fast2         -O3 -std=c++11 -march=znver5 -ipo -qopenmp-simd -fp-model=fast=2 -Wno-tautological-constant-compare -Wno-array-bounds
+icpx-impi precise       -O3 -std=c++11 -march=znver5 -ipo -qopenmp-simd -fp-model=precise -Wno-tautological-constant-compare -Wno-array-bounds
+icpx-impi preset-v512   -O3 -std=c++11 -march=znver5 -ipo -qopenmp-simd -mprefer-vector-width=512 -Wno-tautological-constant-compare -Wno-array-bounds

@@ -13,11 +13,15 @@
 # Milestone 2:           CRMHD NCR     --physics=crmhd  (adds --cr=mg)
 #
 # Machines with a <machine>/env.sh next to this script (e.g. stellarai-amd) use the
-# machine-env contract of bench/BENCHMARK_SPEC.md: --cc=<toolchain> selects a module stack
-# from env.sh (--cc=all builds every toolchain in turn), the executable is
-# <machine>/tigris_ncr_<physics>-<grav>-<toolchain>.exe, and a .buildinfo file next to it
-# records modules, flags and the source commit. stellar/tiger/anvil keep their
-# hard-coded module sets below.
+# machine-env contract of bench/BENCHMARK_SPEC.md:
+#   --cc=<toolchain> selects a module stack from env.sh (--cc=all builds each in turn;
+#     no --cc means the benchmarked DEFAULT_TOOLCHAIN);
+#   the compiler flags are the toolchain's complete, benchmarked TC_CXXFLAGS from env.sh
+#     (or --cxxflags=...). They REPLACE configure.py's --cxx preset flags in the generated
+#     Makefile; the preset is only used to run configure;
+#   the executable is <machine>/tigris_ncr_<physics>-<grav>-<toolchain>[-<suffix>].exe,
+#     with a .buildinfo file recording modules, flags and the source commit.
+# stellar/tiger/anvil keep their hard-coded module sets and configure presets below.
 
 # Define color codes
 RED='\033[0;31m'
@@ -39,6 +43,8 @@ WORKTREE=""
 EXE_SUFFIX=""
 TOOLCHAIN=""
 MAKE_JOBS=4
+CXXFLAGS_OVERRIDE=""
+SRCDIR_OVERRIDE=""
 
 usage() {
     echo -e "${RED}Usage: $0 --machine=<machine> [options]${NC}"
@@ -53,6 +59,9 @@ usage() {
     echo -e "  --exe_suffix=<tag>  Append -<tag> to the executable name (keeps the production exe intact)"
     echo -e "  --cc=<toolchain>    machines with <machine>/env.sh: a toolchain from its TOOLCHAINS,"
     echo -e "                      or 'all' [default: DEFAULT_TOOLCHAIN]; the exe name gets -<toolchain>"
+    echo -e "  --cxxflags=<flags>  env.sh machines: complete compiler flags instead of the toolchain's"
+    echo -e "                      TC_CXXFLAGS (flag sweeps; combine with --exe_suffix)"
+    echo -e "  --srcdir=<path>     Compile from this source tree (overrides --src/--worktree)"
     echo -e "${YELLOW}Example: $0 --machine=stellar --physics=mhd --worktree=tigress-ncr${NC}"
     echo -e "${YELLOW}         $0 --machine=stellarai-amd --cc=gcc-impi --physics=crmhd --worktree=ncr-cr-coupling${NC}"
     exit 1
@@ -73,6 +82,8 @@ for arg in "$@"; do
         --worktree=*) WORKTREE="${arg#*=}" ;;
         --exe_suffix=*) EXE_SUFFIX="-${arg#*=}" ;;
         --cc=*)      TOOLCHAIN="${arg#*=}" ;;
+        --cxxflags=*) CXXFLAGS_OVERRIDE="${arg#*=}" ;;
+        --srcdir=*)  SRCDIR_OVERRIDE="${arg#*=}" ;;
         --help|-h)   usage ;;
         *) echo -e "${RED}Unknown option: $arg${NC}"; usage ;;
     esac
@@ -85,6 +96,10 @@ if [ -n "$WORKTREE" ]; then
 else
     SRCDIR="$HOME/$SRC"
     BRANCH="-master"
+fi
+if [ -n "$SRCDIR_OVERRIDE" ]; then
+    SRCDIR="$SRCDIR_OVERRIDE"
+    BRANCH=""
 fi
 BUILDDIR="$SRCDIR"
 CURDIR="$(pwd)"
@@ -113,7 +128,9 @@ if [ -f "$MACHINE_ENV" ]; then
     source "$MACHINE_ENV"
     : "${TOOLCHAIN:=$DEFAULT_TOOLCHAIN}"
     load_toolchain "$TOOLCHAIN"
-    CFLAG_OPTIONS=(--cxx="$CXX_CHOICE" --cflag="$CFLAG")
+    CFLAG_OPTIONS=(--cxx="$CXX_PRESET")
+    FULL_CXXFLAGS="${CXXFLAGS_OVERRIDE:-$TC_CXXFLAGS}"
+    [ -n "$FULL_CXXFLAGS" ] || { echo -e "${RED}TC_CXXFLAGS not set for $TOOLCHAIN in $MACHINE_ENV${NC}"; exit 1; }
     EXE_SUFFIX="-${TOOLCHAIN}${EXE_SUFFIX}"
     CURDIR="$SCRIPT_DIR"   # exe goes to $SCRIPT_DIR/$MACHINE regardless of the cwd
 elif [ -n "$TOOLCHAIN" ]; then
@@ -213,6 +230,13 @@ else
     fi
 fi
 
+# env.sh machines: replace the preset's compiler flags with the toolchain's complete flags.
+# CXXFLAGS is used for compiling and linking (LTO/IPO); the HDF5 include path is re-added.
+if [ -n "$FULL_CXXFLAGS" ]; then
+    sed -i "s|^CXXFLAGS := .*|CXXFLAGS := ${FULL_CXXFLAGS} -I${HDF5_INC}|" Makefile
+    echo -e "${GREEN}CXXFLAGS := ${FULL_CXXFLAGS} -I${HDF5_INC}${NC}"
+fi
+
 echo -e  "${GREEN}Building Athena++ ${NC}"
 make all -j"$MAKE_JOBS"
 
@@ -230,7 +254,8 @@ echo -e  "${GREEN}Executable copied to $EXE${NC}"
     echo "commit:    $(git -C "$SRCDIR" log -1 --format='%H %s')"
     echo "dirty:     $(git -C "$SRCDIR" status --porcelain --untracked-files=no | wc -l) modified files"
     echo "configure: $PHY_OPTIONS ${CFLAG_OPTIONS[*]}"
-    grep -E "^ *(Compilation command|Linker flags):" "$SRCDIR/Makefile" 2>/dev/null || true
+    echo "flags:     ${FULL_CXXFLAGS:+$([ -n "$CXXFLAGS_OVERRIDE" ] && echo "--cxxflags override" || echo "TC_CXXFLAGS from env.sh")}"
+    echo "CXX:       $(sed -n 's/^CXX := //p' "$SRCDIR/Makefile") -> $( (mpicxx --showme 2>/dev/null || mpicxx -show 2>/dev/null) | awk '{print $1}')"
     sed -n 's/^CXXFLAGS := /CXXFLAGS:  /p; s/^LDFLAGS := /LDFLAGS:   /p' "$SRCDIR/Makefile"
     echo "modules:   $(module -t list 2>&1 | grep -v ':$' | tr '\n' ' ')"
 } > "${EXE%.exe}.buildinfo"

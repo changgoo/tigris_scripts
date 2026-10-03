@@ -20,30 +20,36 @@ SCRATCH_BASE=<scratch root>                 # run dirs: $SCRATCH_BASE/tigress_nc
 MAKE_JOBS=16
 MPI_LAUNCH="srun --cpu-bind=cores"
 
-# --- toolchains (first = preferred order for reports; DEFAULT is set after benchmarking) -
+# --- toolchains (DEFAULT = benchmarked best; build_tigress.sh uses it without --cc) ----
 TOOLCHAINS="<tc1> <tc2> ..."
 DEFAULT_TOOLCHAIN=<tc1>
 
 # --- benchmark checkpoints (8 pc, 384 meshblocks of 32^3) -------------------------------
-BENCH_RST_mhd=$SCRATCH_BASE/mhd-ncr-8pc/TIGRESS_NCR.00006.rst
-BENCH_RST_crmhd=$SCRATCH_BASE/crmhd-ncr-8pc/TIGRESS_NCR.00003.rst
+BENCH_DATA=/projects/EOSTRIKE/tigris-benchmark   # Princeton clusters; elsewhere: your copy
+BENCH_CACHE=$SCRATCH_BASE/tigris-benchmark      # compute-visible; bench/submit.sh stages here
+BENCH_RST_mhd=mhd-ncr-8pc/TIGRESS_NCR.00006.rst
+BENCH_RST_crmhd=crmhd-ncr-8pc/TIGRESS_NCR.00003.rst
+
+# --- best COMPLETE compiler flags per compiler (start values; replace with sweep winners)
+# They replace configure.py's preset flags in the Makefile (compile and link).
+FLAGS_GCC="-O3 -std=c++11 -march=<arch> -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays"
+FLAGS_CLANG="-O3 -std=c++11 -march=<arch> -ffast-math -fopenmp-simd -flto -fuse-ld=lld"
 
 # load_toolchain <tc>: module purge + module load the stack, then set
-#   CXX_CHOICE : configure.py --cxx preset (g++, g++-simd, clang++, icpx, ...)
-#   CFLAG      : appended to compile AND link flags via --cflag (arch, LTO/IPO, fast math)
-# Return non-zero for an unknown toolchain.
+#   CXX_PRESET  : configure.py --cxx preset used only to run configure (g++, clang++, ...)
+#   TC_CXXFLAGS : the complete compiler flags (usually one of FLAGS_* above)
+# Export the MPI wrapper's compiler variable if the stack mixes vendors
+# (e.g. I_MPI_CXX=clang++). Return non-zero for an unknown toolchain.
 load_toolchain() {
     local tc=${1:-$DEFAULT_TOOLCHAIN}
     module purge
+    unset I_MPI_CXX
     case "$tc" in
         <tc1>)
             module load <compiler> <mpi> <hdf5-for-that-compiler-and-mpi> <fftw>
-            CXX_CHOICE="g++-simd"
-            CFLAG="-march=<arch> -flto=auto"
-            ;;
+            CXX_PRESET=g++; TC_CXXFLAGS=$FLAGS_GCC ;;
         *)
             echo "load_toolchain: unknown toolchain '$tc' ($TOOLCHAINS)" >&2
-            return 1
-            ;;
+            return 1 ;;
     esac
 }

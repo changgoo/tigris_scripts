@@ -3,7 +3,8 @@
 
   summarize.py results/stellarai-amd.txt [results/other.txt ...] [--all]
 
-Groups runs by machine, physics, toolchain and opts (launcher options + MPI env);
+Groups runs by machine, physics, toolchain[:flag variant] and opts (launcher options +
+MPI env);
 reports the number of good runs, median and min seconds per cycle, the cost in
 node-hours per 10^4 cycles (median s/cycle x nodes, for comparing machines), the median
 rank-mean time of each timer, and the speed relative to the best group.
@@ -40,7 +41,8 @@ for fn in args:
 
 groups = defaultdict(list)
 for d in runs:
-    groups[(d.get('machine', '?'), d['physics'], d['tc'], d['opts'])].append(d)
+    tc = d['tc'] + ('' if d.get('variant', 'default') == 'default' else ':' + d['variant'])
+    groups[(d.get('machine', '?'), d['physics'], tc, d['opts'])].append(d)
 
 for machine in sorted({k[0] for k in groups}):
     for physics in ('mhd', 'crmhd'):

@@ -19,7 +19,8 @@
 #   TOOLCHAIN : one of TOOLCHAINS in env.sh; runs tigris_ncr_PHYSICS-fft-TOOLCHAIN.exe
 #   NCYC      : cycles to advance [default: 200]
 #   extra     : further block/par=value overrides
-# env RSTFILE    : restart file [default: BENCH_RST_<physics> from env.sh]
+# env RSTFILE    : restart file [default: $BENCH_CACHE/$BENCH_RST_<physics>; submit.sh stages it]
+# env VARIANT    : flag variant; runs tigris_ncr_PHYSICS-fft-TOOLCHAIN-VARIANT.exe
 # env SRUN_OPTS  : extra launcher options, e.g. "--distribution=block:block"
 # env OMPI_MCA_*, I_MPI_*, UCX_* : MPI tuning; recorded in the result line
 # env KEEP_RST   : 1 keeps the ~3-4 GB TIGRESS_NCR.final.rst written at exit
@@ -46,9 +47,9 @@ module list 2>&1
 SRCDIR=${SRCDIR:-$HOME/tigris/.worktrees/ncr-cr-coupling}
 TBLDIR=$SRCDIR/inputs/tables
 RSTVAR=BENCH_RST_$PHYSICS
-RSTFILE=${RSTFILE:-${!RSTVAR}}
-EXE=tigris_ncr_${PHYSICS}-fft-${TC}.exe
-RUNDIR=$SCRATCH_BASE/tigress_ncr/bench/${PHYSICS}-${TC}-${SLURM_JOB_ID}
+RSTFILE=${RSTFILE:-$BENCH_CACHE/${!RSTVAR}}
+EXE=tigris_ncr_${PHYSICS}-fft-${TC}${VARIANT:+-$VARIANT}.exe
+RUNDIR=$SCRATCH_BASE/tigress_ncr/bench/${PHYSICS}-${TC}${VARIANT:+-$VARIANT}-${SLURM_JOB_ID}
 
 [ -x "$MACHDIR/$EXE" ] || { echo "ERROR: executable not found: $MACHDIR/$EXE"; exit 1; }
 [ -f "$RSTFILE" ] || { echo "ERROR: restart file not found: '$RSTFILE'"; exit 1; }
@@ -81,7 +82,7 @@ T1=$(date +%s)
 echo "EXITCODE = $EXITCODE"
 
 python3 "$BENCHDIR/parse_loop_time.py" TIGRESS_NCR.loop_time.txt \
-    machine="$MACHINE" physics="$PHYSICS" tc="$TC" job="$SLURM_JOB_ID" \
+    machine="$MACHINE" physics="$PHYSICS" tc="$TC" variant="${VARIANT:-default}" job="$SLURM_JOB_ID" \
     nranks="$SLURM_NTASKS" nodes="$SLURM_JOB_NUM_NODES" rc="$EXITCODE" \
     job_wall="$((T1 - T0))" opts="${SRUN_OPTS:-default} ${BENCH_MPIENV:-}" | tee bench-summary.txt
 mkdir -p "$BENCHDIR/results"
