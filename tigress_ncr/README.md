@@ -22,7 +22,8 @@ rank per block, 4 nodes).
 |---|---|---|---|---|---|---|---|
 | stellarai-amd | 2x AMD EPYC 9475F, Zen 5 (96) | `gcc-impi` | GCC 14 + Intel MPI 2021.18, `-march=znver5`, fast math, LTO, 512-bit vectors | 0.291 | 0.195 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](stellarai-amd/README.md) |
 | stellar | 4x Intel Xeon Platinum 8268, Cascade Lake (96) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xCASCADELAKE -ipo -fp-model=fast=2` | 0.737 | 0.411 | `tigress_ncr_{mhd,crmhd}_8pc_tc.slurm` | [README](stellar/README.md) |
-| tiger, anvil | | (legacy) | fixed modules in `build_tigress.sh` | | | | no `env.sh` yet |
+| tiger | 2x Intel Xeon Platinum 8480+, Sapphire Rapids (112; 96 used) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xSAPPHIRERAPIDS -ipo -fp-model=fast=2` | 0.510 | 0.328 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](tiger/README.md) |
+| anvil | | (legacy) | fixed modules in `build_tigress.sh` | | | | no `env.sh` yet |
 
 An 8 pc run costs 2.1-2.5x fewer node-hours on stellarai-amd than on Stellar (newer cores,
 and ray tracing is 3x faster there). On both machines Intel MPI is clearly faster than
@@ -130,7 +131,7 @@ CC=icpx sbatch tigress_ncr_mhd_8pc<_tc>.slurm -r       # another toolchain (buil
 The script names are in the [machine table](#machines). The run directory is
 `$RUNBASE/<physics>-ncr-8pc<TAG>`; `RUNBASE` defaults to `<scratch>/tigress_ncr`
 (`/scratch/gpfs/$USER/tigress_ncr` on Stellar, `/scratch/gpfs/EOST/$USER/tigress_ncr` on
-stellarai-amd).
+stellarai-amd and tiger).
 
 - With `-r`, the job restarts from `TIGRESS_NCR.final.rst`, or from the newest
   `TIGRESS_NCR.NNNNN.rst` when there is no final file. To continue a run from another
