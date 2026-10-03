@@ -28,9 +28,10 @@ README):
 ./build_tigress.sh --machine=stellar --physics=crmhd   # -> stellar/tigris-master_crmhd-fft-icpx-impi.exe
 ```
 The toolchain is part of the exe name, and a job must load the same modules
-(`source <machine>/env.sh; load_toolchain <toolchain>`). The slurm scripts here still load
-their own modules and run the older exe names, so convert a script before using a new
-exe with it. Other machines (anvil, ...) keep their hard-coded settings in `build_tigress.sh`.
+(`source <machine>/env.sh; load_toolchain <toolchain>`). Job scripts made by `gen_job.py`
+do this (see below). The hand-written slurm scripts in `stellar/` and `tiger/` still load
+their own modules and run the older exe names, so convert one before using a new exe with
+it. Other machines (anvil, ...) keep their hard-coded settings in `build_tigress.sh`.
 
 ### Legacy `compile.sh`
 First, the script use an alias `module_icpx` to load proper module. Recommended to add these lines to your `.bashrc` file (my choice after some trials and errors).
@@ -67,7 +68,13 @@ At the end, it will automatically call a script for quick snapshot image creatio
 ## Unified job script generator (`gen_job.py`)
 
 `gen_job.py` in the `tigress_classic/` directory generates job scripts for all machines.
-Use `--machine` to select the target system; Slurm (stellar/tiger/anvil) and PBS (nasa_athena) are both supported.
+Use `--machine` to select the target system; Slurm (stellar/tiger/stellarai-amd/anvil) and PBS (nasa_athena) are both supported.
+
+On stellar, tiger and stellarai-amd the job sources `<machine>/env.sh`, loads the toolchain
+`CC` (default: `DEFAULT_TOOLCHAIN` of env.sh) and runs the exe `build_tigress.sh` built for it,
+`tigris-master_<physics>-fft-<toolchain>.exe`. Pass `--worktree`/`--grav` with the same values
+as the build, and pick another toolchain at submission with `sbatch <script> -i CC=gcc-impi`.
+The job stops with the build command to run if the exe is missing.
 
 ### Mesh geometry
 

@@ -2,7 +2,12 @@
 """
 gen_job.py — Unified job script generator for tigress_classic.
 
-Supports Slurm (stellar, tiger, anvil) and PBS (nasa_athena).
+Supports Slurm (stellar, tiger, stellarai-amd, anvil) and PBS (nasa_athena).
+
+Machines with a <machine>/env.sh (stellar, tiger, stellarai-amd) load the module stack of
+the toolchain CC from it at run time (CC=<toolchain> at submission; default
+DEFAULT_TOOLCHAIN of env.sh) and run the executable build_tigress.sh writes for it:
+  tigris[-master]_<physics>-<grav>-<toolchain>.exe
 
 Mesh geometry
 -------------
@@ -38,17 +43,8 @@ MACHINES = {
         "cores_per_node": 96,
         "scratch": "/scratch/gpfs/$USER",
         "scriptdir": "$HOME/tigris_scripts/tigress_classic/stellar",
-        "mod_icpx": (
-            "module purge; module load anaconda3/2023.3 "
-            "intel-oneapi/2024.2 openmpi/oneapi-2024.2/4.1.6 "
-            "hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4 fftw/oneapi-2024.2/3.3.10"
-        ),
-        "mod_gpp": (
-            "module purge; module load anaconda3/2023.3 "
-            "fftw/gcc/3.3.10 intel-mpi/gcc/2021.13 hdf5/gcc/intel-mpi/1.14.4"
-        ),
+        "env": True,   # modules from <scriptdir>/env.sh
         "mod_snap": "module purge; module load anaconda3/2024.6 openmpi/gcc/4.1.6; conda activate pyathena",
-        "default_cc": "icpx",
     },
     "tiger": {
         "scheduler": "slurm",
@@ -57,17 +53,20 @@ MACHINES = {
         "cores_per_node": 112,
         "scratch": "/scratch/gpfs/EOST/$USER",
         "scriptdir": "$HOME/tigris_scripts/tigress_classic/tiger",
-        "mod_icpx": (
-            "module purge; module load anaconda3/2023.3 "
-            "intel-oneapi/2024.2 openmpi/oneapi-2024.2/4.1.6 "
-            "hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4 fftw/oneapi-2024.2/3.3.10"
-        ),
-        "mod_gpp": (
-            "module purge; module load anaconda3/2023.3 "
-            "fftw/gcc/3.3.10 intel-mpi/gcc/2021.13 hdf5/gcc/intel-mpi/1.14.4"
-        ),
+        "env": True,
         "mod_snap": "module purge; module load anaconda3/2024.6 openmpi/gcc/4.1.6; conda activate pyathena",
-        "default_cc": "icpx",
+    },
+    "stellarai-amd": {
+        "scheduler": "slurm",
+        "account": "eost",
+        "partition_default": "cpu",
+        "cores_per_node": 96,
+        "scratch": "/scratch/gpfs/EOST/$USER",
+        "scriptdir": "$HOME/tigris_scripts/tigress_classic/stellarai-amd",
+        "env": True,
+        # the pyathena conda env is not set up on this cluster yet: snapshots are skipped without it
+        "mod_snap": "module purge; module load anaconda3/2024.6 openmpi/gcc/5.0.10; conda activate pyathena",
+        "snap_guard": True,
     },
     "anvil": {
         "scheduler": "slurm",
@@ -165,11 +164,18 @@ def tlim_from_walltime(wt, margin_min=30):
     return sec_to_walltime(secs)
 
 
-def run_modules(machine, cc):
-    mcfg = MACHINES[machine]
-    if machine in ("anvil", "nasa_athena"):
-        return mcfg["mod_run"]
-    return mcfg["mod_icpx"] if cc.startswith("icpx") else mcfg["mod_gpp"]
+def exe_name(args, mcfg):
+    """Executable name as build_tigress.sh writes it ($CC is expanded by the job)."""
+    if args.exe:
+        return args.exe
+    if not mcfg.get("env"):
+        return "tigris_${physics}.exe"
+    branch = "" if args.worktree else "-master"
+    return f"tigris{branch}_${{physics}}-{args.grav}-${{CC}}.exe"
+
+
+def src_dir(args):
+    return f"$HOME/tigris/.worktrees/{args.worktree}" if args.worktree else "$HOME/tigris"
 
 
 # ---------------------------------------------------------------------------
@@ -316,7 +322,9 @@ def _run_block(launcher, nprocs, tlim_run, resubmit_cmd):
 def generate_slurm(args, nx, mb, dx, nprocs, nodes, tlim_run,
                    script_name, rundir, mesh_str, params_str, extra_str):
     mcfg = MACHINES[args.machine]
-    cc = args.cc or mcfg["default_cc"]
+    use_env = mcfg.get("env", False)
+    cc = args.cc or ("" if use_env else mcfg["default_cc"])
+    cc_usage = cc or "<DEFAULT_TOOLCHAIN of env.sh>"
 
     # Header
     lines = ["#!/bin/bash",
@@ -335,12 +343,14 @@ def generate_slurm(args, nx, mb, dx, nprocs, nodes, tlim_run,
         "#SBATCH --output=tigress-%j.out",
         "#SBATCH --error=tigress-%j.err",
         "",
-        run_modules(args.machine, cc),
-        "",
+    ]
+    if not use_env:
+        lines += [mcfg["mod_run"], ""]
+    lines += [
         "# ---------------------------------------------------------------------------",
         "# Arguments: positional STARTFLAG (-i or -r) + optional KEY=VALUE overrides",
         "# ---------------------------------------------------------------------------",
-        f'usage="Usage: sbatch {script_name} <-i|-r> [RSTNUM=final] [CC={cc}]"',
+        f'usage="Usage: sbatch {script_name} <-i|-r> [RSTNUM=final] [CC={cc_usage}]"',
         "STARTFLAG=",
         "RSTNUM=final",
         f"CC={cc}",
@@ -359,6 +369,16 @@ def generate_slurm(args, nx, mb, dx, nprocs, nodes, tlim_run,
         "    fi",
         "done",
         '[[ -z "$STARTFLAG" ]] && echo "$usage" && exit 1',
+    ]
+    if use_env:
+        lines += [
+            "",
+            "# Modules: the toolchain's stack from env.sh, the same one build_tigress.sh built with",
+            f"source {mcfg['scriptdir']}/env.sh",
+            "CC=${CC:-$DEFAULT_TOOLCHAIN}",
+            'load_toolchain "$CC" || exit 1',
+        ]
+    lines += [
         'echo "submitting: STARTFLAG=$STARTFLAG RSTNUM=$RSTNUM CC=$CC"',
         "",
         "# ---------------------------------------------------------------------------",
@@ -366,12 +386,12 @@ def generate_slurm(args, nx, mb, dx, nprocs, nodes, tlim_run,
         "# ---------------------------------------------------------------------------",
         "prob=tigress_classic",
         "PID=TIGRESS",
-        "SRCDIR=$HOME/tigris",
+        f"SRCDIR={src_dir(args)}",
         f"SCRIPTDIR={mcfg['scriptdir']}",
         f"SCRIPT={script_name}",
         "",
         f"physics={args.physics}",
-        "EXE=tigris_${physics}.exe",
+        f"EXE={exe_name(args, mcfg)}",
         "INPUT=athinput.$prob",
         f"RUNDIR={rundir}",
         "",
@@ -386,22 +406,43 @@ def generate_slurm(args, nx, mb, dx, nprocs, nodes, tlim_run,
         'rst_params="output1/file_number=0 output5/file_number=0"',
     ]
 
-    lines += _run_block("srun", nprocs, tlim_run,
+    if use_env:
+        build = (f"build_tigress.sh --machine={args.machine} --cc=$CC --physics=$physics"
+                 + (f" --grav={args.grav}" if args.grav != "fft" else "")
+                 + (f" --worktree={args.worktree}" if args.worktree else ""))
+        lines += [
+            "",
+            'if [ ! -f "$RUNDIR/$EXE" ] && [ ! -f "$SCRIPTDIR/$EXE" ]; then',
+            '    echo "ERROR: executable not found: $SCRIPTDIR/$EXE" >&2',
+            f'    echo "       build it with: {build}" >&2',
+            "    exit 1",
+            "fi",
+        ]
+
+    lines += _run_block("$MPI_LAUNCH" if use_env else "srun", nprocs, tlim_run,
                         f"sbatch $SCRIPT -r CC=$CC")
 
     # Snapshots
+    pyscript = "pythonscript=$HOME/TIGRESS-CR/python/plot_slices.py"
+    snap = [
+        mcfg["mod_snap"],
+        "PYTHONDIR=$HOME/pyathena",
+        "export PYTHONPATH=$PYTHONDIR:$PYTHONPATH",
+        pyscript,
+        "srun python -m mpi4py $pythonscript `pwd`",
+    ]
+    if mcfg.get("snap_guard"):
+        snap.remove(pyscript)
+        snap = ([pyscript, 'if [ -d "$HOME/.conda/envs/pyathena" ] && [ -f "$pythonscript" ]; then']
+                + ["    " + l for l in snap]
+                + ["else", '    echo "Skipping snapshots: pyathena env or $pythonscript not found"', "fi"])
     lines += [
         "",
         "# ---------------------------------------------------------------------------",
         "# Snapshots",
         "# ---------------------------------------------------------------------------",
         "cd $RUNDIR",
-        mcfg["mod_snap"],
-        "PYTHONDIR=$HOME/pyathena",
-        "export PYTHONPATH=$PYTHONDIR:$PYTHONPATH",
-        "pythonscript=$HOME/TIGRESS-CR/python/plot_slices.py",
-        "srun python -m mpi4py $pythonscript `pwd`",
-    ]
+    ] + snap
 
     return "\n".join(lines) + "\n"
 
@@ -592,7 +633,15 @@ def main():
     p.add_argument("--partition", default=None,
                    help="Override Slurm partition")
     p.add_argument("--cc", default=None,
-                   help="Compiler tag for module loading (Slurm only; default: machine default)")
+                   help="Toolchain baked in as the job's default CC (Slurm only). env.sh machines: "
+                        "a toolchain of env.sh [default: its DEFAULT_TOOLCHAIN at run time]")
+    p.add_argument("--worktree", default=None,
+                   help="env.sh machines: the exe and tables come from this tigris worktree "
+                        "(as build_tigress.sh --worktree)")
+    p.add_argument("--grav", default="fft",
+                   help="env.sh machines: gravity solver in the exe name (as build_tigress.sh --grav)")
+    p.add_argument("--exe", default=None,
+                   help="Executable name under the machine directory (overrides the default name)")
 
     # Physics
     phy = p.add_argument_group("physics")
