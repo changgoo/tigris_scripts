@@ -29,6 +29,7 @@ BUILD_OPTION="0"
 SRC="tigris"
 FLUX="hll"
 WORKTREE=""
+EXE_SUFFIX=""
 
 usage() {
     echo -e "${RED}Usage: $0 --machine=<machine> [options]${NC}"
@@ -40,6 +41,7 @@ usage() {
     echo -e "  --src=<name>        Source repo directory name under \$HOME [default: tigris]"
     echo -e "  --flux=<name>       Flux solver (hll|lhll) [default: hll]"
     echo -e "  --worktree=<name>   Compile from \$HOME/\$src/.worktrees/<name>"
+    echo -e "  --exe_suffix=<tag>  Append -<tag> to the executable name (keeps the production exe intact)"
     echo -e "${YELLOW}Example: $0 --machine=stellar --physics=mhd --worktree=tigress-ncr${NC}"
     exit 1
 }
@@ -57,6 +59,7 @@ for arg in "$@"; do
         --src=*)     SRC="${arg#*=}" ;;
         --flux=*)    FLUX="${arg#*=}" ;;
         --worktree=*) WORKTREE="${arg#*=}" ;;
+        --exe_suffix=*) EXE_SUFFIX="-${arg#*=}" ;;
         --help|-h)   usage ;;
         *) echo -e "${RED}Unknown option: $arg${NC}"; usage ;;
     esac
@@ -144,7 +147,7 @@ if [ "$FLUX" == "lhll" ]; then
 fi
 
 if [ "$GRAV" == "none" ]; then
-    EXE="${CURDIR}/${MACHINE}/tigris${BRANCH}_ncr_${PHYSICS}${DEBUG_OPTION}.exe"
+    EXE="${CURDIR}/${MACHINE}/tigris${BRANCH}_ncr_${PHYSICS}${DEBUG_OPTION}${EXE_SUFFIX}.exe"
 
     cd "$BUILDDIR"
 
@@ -157,7 +160,7 @@ if [ "$GRAV" == "none" ]; then
     fi
 
 else
-    EXE="${CURDIR}/${MACHINE}/tigris${BRANCH}_ncr_${PHYSICS}-${GRAV}${DEBUG_OPTION}.exe"
+    EXE="${CURDIR}/${MACHINE}/tigris${BRANCH}_ncr_${PHYSICS}-${GRAV}${DEBUG_OPTION}${EXE_SUFFIX}.exe"
 
     cd "$BUILDDIR"
 

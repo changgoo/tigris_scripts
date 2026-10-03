@@ -126,7 +126,15 @@ if [ ! -f "$RSTINPUT" ]; then
 else
     echo "Restarting"
     rstnum=$(ls out.*.txt 2>/dev/null | wc -l)
-    srun "./$EXE" -r "$RSTINPUT" -t 23:30:00 \
+    # Parameters absent from the restart file (e.g. a new <hydro> switch) cannot be
+    # set on the command line; put them in $RESTART_ADD in the run directory.
+    RESTART_ADD=athinput.restart_add
+    ADDARG=""
+    if [ -f "$RESTART_ADD" ]; then
+        ADDARG="-i $RESTART_ADD"
+        echo "Restart add-on input: $RESTART_ADD"
+    fi
+    srun "./$EXE" -r "$RSTINPUT" $ADDARG -t 23:30:00 \
         1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
 fi
 
