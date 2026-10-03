@@ -61,7 +61,7 @@ BENCH_RST_crmhd=crmhd-ncr-8pc/TIGRESS_NCR.00003.rst  # t=150, CR<->NCR coupled
 #   icpx : variant fast2  (0.512, 0.328): -fp-model=fast=2 makes NCR photochemistry 25%
 #          faster than the default fp-model=fast (preset: 0.529, 0.343); adding
 #          -qopt-zmm-usage=high ties (0.519, 0.326); oneAPI 2026.0 with fast2 ties (0.523,
-#          0.327); precise costs 5-14% (vs preset); -march=sapphirerapids instead of
+#          0.327); precise costs 6-14% (vs preset); -march=sapphirerapids instead of
 #          -xSAPPHIRERAPIDS is within noise for MHD, but its CRMHD integrator is 7% slower.
 #   GCC  : variant preset (0.533, 0.347): every fast-math + LTO variant ties within the
 #          placement noise (+-3%); without -ffast-math the photochemistry is 25-40% slower

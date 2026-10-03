@@ -403,8 +403,9 @@ any run is SUSPECT. Runs that advanced a different NCYC are reported as not comp
   (`constexpr int Accretion::rctrl;` in `accretion.cpp`) as a local patch. `flag_sweep.sh`
   keeps uncommitted changes in existing build lanes when their commit is unchanged, so apply
   the patch to the lanes too.
-- Node placement can matter more than flags. On tiger, runs on the `tiger-i*` racks were 3-6%
-  faster than the same executable on `tiger-g*` racks, which Slurm lists as identical. Look
+- Node placement can matter more than flags. On tiger, MHD runs on the `tiger-i*` racks were 6-7%
+  faster (mostly ray tracing) and CRMHD runs 1-4% faster than the same executable on
+  `tiger-g*` racks, which Slurm lists as identical. Look
   at `sacct -j <job> -X -o NodeList` before you read meaning into a gap under ~4%.
 - GCC 11 (tiger's only GCC) has the same `Accretion::rctrl` link failure as GCC 13.
 - Tiger has no SSH key for GitHub; fetch over HTTPS (works without a prompt there).
@@ -421,3 +422,4 @@ any run is SUSPECT. Runs that advanced a different NCYC are reported as not comp
 
 Report for stellarai-amd: https://claude.ai/artifact/H1B2iqL3a4F2cjiDQdvvtd
 Report for stellar: https://claude.ai/artifact/3re4pmVb3w7LYwZw5S3GL6
+Report for tiger: https://claude.ai/artifact/UMhHdYzbKcQkKxd4hsjkW2

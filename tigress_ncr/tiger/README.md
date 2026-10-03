@@ -41,6 +41,9 @@ local patch in `$HOME/tigris/.worktrees/ncr-cr-coupling` and in the build lanes,
 
 ## Benchmark (2026-10-03)
 
+Full report with machine specs, charts and the effect of every flag:
+https://claude.ai/artifact/UMhHdYzbKcQkKxd4hsjkW2
+
 The workload is defined in `../bench/BENCHMARK_SPEC.md`: each run restarts a production
 checkpoint on 4 nodes and advances 200 cycles, built from tigris `eee94bc4f` like the Stellar
 and stellarai-amd runs. Times are seconds per cycle, averaged over ranks, median of 3 runs.
@@ -71,9 +74,10 @@ labelled `variant=preset`.
   integrator but up to 10% faster in photochemistry (with icpx's default `fp-model=fast`), which
   cancels out. On Stellar, GCC 13 was 2x slower in photochemistry.
 - oneAPI 2026.0 is not faster than 2024.2.
-- **Node placement matters more than most flags.** Runs on the `tiger-i*` racks were
-  repeatedly 3-6% faster than runs of the same executable on `tiger-g*` racks (e.g. MHD
-  icpx2026-impi 0.499 on `i` racks vs 0.529 on `g` racks). Slurm lists the two groups as
+- **Node placement matters more than most flags.** 12 of the 76 runs landed on the
+  `tiger-i*` racks. MHD runs there were 6-7% faster than the same executable on `tiger-g*`
+  racks (e.g. icpx2026-impi 0.499 vs 0.529), about 80% of it in ray tracing; CRMHD runs were
+  1-4% faster. Slurm lists the two groups as
   identical hardware, and a job can't choose a group through a feature, so treat differences
   under ~4% as ties.
 
@@ -88,18 +92,18 @@ history check.
 | | `fast2-v512` (+`-qopt-zmm-usage=high`) | 0.519 | 0.326 | tie |
 | | `march` (`-march=sapphirerapids`) | 0.499 | 0.357 | single runs; integrator 7% slower in CRMHD |
 | | `preset-v512` | 0.534 | 0.354 | |
-| | `precise` | 0.558 | 0.391 | 5-14% slower than `preset` |
+| | `precise` | 0.558 | 0.391 | 6-14% slower than `preset` |
 | icpx 2026.0 | `fast2` | 0.523 | 0.327 | ties 2024.2 |
 | | `preset` | 0.536 | 0.346 | |
 | GCC 11.5 | `preset` (fast math, LTO, `-fwhole-program`, prefetch) | 0.533 | 0.347 | the matrix runs |
-| | `preset-v512` | 0.522 | 0.362 | best MHD, worst CRMHD of the fast-math variants |
+| | `preset-v512` | 0.522 | 0.362 | ~2% slower than `preset` on like racks; its 0.500 MHD run was on a `tiger-i*` rack |
 | | `fast-lto-wp` / `preset-unroll` | 0.532 / 0.534 | 0.345 / 0.350 | tie |
-| | `fast-lto` / `fast` (no LTO) / `preset-O2` | 0.533 / 0.545 / 0.514 | 0.359 / 0.369 / 0.374 | single runs |
+| | `fast-lto` / `fast` (no LTO) / `preset-O2` | 0.533 / 0.545 / 0.514 | 0.359 / 0.369 / 0.374 | single runs; the `preset-O2` MHD run was on a `tiger-i*` rack |
 | | `safe-lto` / `O3` (no fast math) | 0.576 / 0.601 | 0.393 / 0.419 | photochemistry 25-40% slower |
 
 Correctness (`../bench/compare_hst.py`, every matrix, sweep and confirmation run): no MHD
 history column differs by more than 1e-3 for any build. CRMHD runs differ from the reference
-in up to 16 columns by more than 1e-3 and up to 6 by more than 1e-2, and every CRMHD history
+in up to 16 columns by more than 1e-3 and up to 7 by more than 1e-2, and every CRMHD history
 has the same 3 NaN columns. Three repeats of the reference executable already differ in 7
 columns by more than 1e-2. No build is flagged.
 
@@ -157,4 +161,4 @@ nohup bench/run_matrix.sh tiger 200 1 > bench/logs/matrix.log 2>&1 &   # everyth
 ```
 
 To compare toolchains fairly, note which racks each run used
-(`sacct -j <job> -X -o NodeList`): `tiger-i*` nodes run 3-6% faster than `tiger-g*` nodes.
+(`sacct -j <job> -X -o NodeList`): `tiger-i*` nodes run MHD 6-7% and CRMHD 1-4% faster than `tiger-g*` nodes.
