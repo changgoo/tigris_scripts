@@ -1,5 +1,9 @@
 # Build and run TIGRESS-NCR with cosmic rays on Stellar
 
+For the AMD (Zen 5) nodes of stellarai-amd, see
+[`stellarai-amd/README.md`](stellarai-amd/README.md): the build uses
+`--machine=stellarai-amd --cc=gcc-impi`, and the jobs live in `stellarai-amd/`.
+
 This procedure builds the CRMHD + NCR executable and submits the coupled
 TIGRESS-NCR job on Stellar.  Commands below are literal: they do not depend on
 shell aliases such as `ml`.  The standard environment variables `HOME` and

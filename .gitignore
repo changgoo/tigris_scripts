@@ -4,3 +4,5 @@ __pycache__
 *.exe
 *.png
 *.dat
+*.buildinfo
+tigress_ncr/bench/logs/

@@ -11,6 +11,13 @@
 #
 # Milestone 1 (default): MHD-only NCR  --physics=mhd
 # Milestone 2:           CRMHD NCR     --physics=crmhd  (adds --cr=mg)
+#
+# Machines with a <machine>/env.sh next to this script (e.g. stellarai-amd) use the
+# machine-env contract of bench/BENCHMARK_SPEC.md: --cc=<toolchain> selects a module stack
+# from env.sh (--cc=all builds every toolchain in turn), the executable is
+# <machine>/tigris_ncr_<physics>-<grav>-<toolchain>.exe, and a .buildinfo file next to it
+# records modules, flags and the source commit. stellar/tiger/anvil keep their
+# hard-coded module sets below.
 
 # Define color codes
 RED='\033[0;31m'
@@ -30,11 +37,13 @@ SRC="tigris"
 FLUX="hll"
 WORKTREE=""
 EXE_SUFFIX=""
+TOOLCHAIN=""
+MAKE_JOBS=4
 
 usage() {
     echo -e "${RED}Usage: $0 --machine=<machine> [options]${NC}"
     echo -e "${YELLOW}Options:${NC}"
-    echo -e "  --machine=<name>    Target machine (stellar|tiger|anvil) [default: stellar]"
+    echo -e "  --machine=<name>    Target machine (stellar|stellarai-amd|tiger|anvil) [default: stellar]"
     echo -e "  --physics=<name>    Physics option (mhd|crmhd|*_duale|*_duals) [default: mhd]"
     echo -e "  --grav=<name>       Gravity solver (fft|none) [default: fft]"
     echo -e "  --build=<0|1|2>     0=normal, 1=debug, 2=no clean [default: 0]"
@@ -42,7 +51,10 @@ usage() {
     echo -e "  --flux=<name>       Flux solver (hll|lhll) [default: hll]"
     echo -e "  --worktree=<name>   Compile from \$HOME/\$src/.worktrees/<name>"
     echo -e "  --exe_suffix=<tag>  Append -<tag> to the executable name (keeps the production exe intact)"
+    echo -e "  --cc=<toolchain>    machines with <machine>/env.sh: a toolchain from its TOOLCHAINS,"
+    echo -e "                      or 'all' [default: DEFAULT_TOOLCHAIN]; the exe name gets -<toolchain>"
     echo -e "${YELLOW}Example: $0 --machine=stellar --physics=mhd --worktree=tigress-ncr${NC}"
+    echo -e "${YELLOW}         $0 --machine=stellarai-amd --cc=gcc-impi --physics=crmhd --worktree=ncr-cr-coupling${NC}"
     exit 1
 }
 
@@ -60,6 +72,7 @@ for arg in "$@"; do
         --flux=*)    FLUX="${arg#*=}" ;;
         --worktree=*) WORKTREE="${arg#*=}" ;;
         --exe_suffix=*) EXE_SUFFIX="-${arg#*=}" ;;
+        --cc=*)      TOOLCHAIN="${arg#*=}" ;;
         --help|-h)   usage ;;
         *) echo -e "${RED}Unknown option: $arg${NC}"; usage ;;
     esac
@@ -76,20 +89,47 @@ fi
 BUILDDIR="$SRCDIR"
 CURDIR="$(pwd)"
 PROB="tigress_ncr"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MACHINE_ENV="$SCRIPT_DIR/$MACHINE/env.sh"
+
+# --cc=all: build every toolchain of the machine, one at a time (they share $SRCDIR).
+if [ "$TOOLCHAIN" == "all" ]; then
+    [ -f "$MACHINE_ENV" ] || { echo -e "${RED}--cc=all needs $MACHINE_ENV${NC}"; exit 1; }
+    TOOLCHAINS=$(source "$MACHINE_ENV" && echo "$TOOLCHAINS")
+    for tc in $TOOLCHAINS; do
+        args=()
+        for arg in "$@"; do [[ $arg == --cc=* ]] || args+=("$arg"); done
+        echo -e "${CYAN}=== toolchain $tc ===${NC}"
+        bash "${BASH_SOURCE[0]}" "${args[@]}" --cc="$tc"
+    done
+    exit 0
+fi
 
 # Machine-specific module loading
-if [ "$MACHINE" == "stellar" ]; then
+if [ -f "$MACHINE_ENV" ]; then
+    # Module stacks and flags live in <machine>/env.sh, which the slurm scripts source
+    # too. The toolchain is part of the exe name so a job can never load a module set
+    # that does not match its executable.
+    source "$MACHINE_ENV"
+    : "${TOOLCHAIN:=$DEFAULT_TOOLCHAIN}"
+    load_toolchain "$TOOLCHAIN"
+    CFLAG_OPTIONS=(--cxx="$CXX_CHOICE" --cflag="$CFLAG")
+    EXE_SUFFIX="-${TOOLCHAIN}${EXE_SUFFIX}"
+    CURDIR="$SCRIPT_DIR"   # exe goes to $SCRIPT_DIR/$MACHINE regardless of the cwd
+elif [ -n "$TOOLCHAIN" ]; then
+    echo -e "${RED}--cc needs $MACHINE_ENV${NC}"; exit 1
+elif [ "$MACHINE" == "stellar" ]; then
     module purge
     module load anaconda3/2023.3
     module load intel-oneapi/2024.2 openmpi/oneapi-2024.2/4.1.6 hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4 fftw/oneapi-2024.2/3.3.10
     CC="icpx"
-    CFLAG_OPTIONS="--cxx=$CC"
+    CFLAG_OPTIONS=(--cxx=$CC)
 elif [ "$MACHINE" == "tiger" ]; then
     module purge
     module load anaconda3/2023.3
     module load intel-oneapi/2024.2 openmpi/oneapi-2024.2/4.1.6 hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4 fftw/oneapi-2024.2/3.3.10
     CC="icpx"
-    CFLAG_OPTIONS="--cxx=$CC"
+    CFLAG_OPTIONS=(--cxx=$CC)
     if [ "$BUILD_OPTION" == "1" ]; then
         module purge; module load anaconda3/2023.3 fftw/gcc/3.3.10 intel-mpi/gcc/2021.13 hdf5/gcc/intel-mpi/1.14.4
     fi
@@ -102,7 +142,7 @@ elif [ "$MACHINE" == "anvil" ]; then
     module load hdf5
     HDF5DIR="$RCAC_HDF5_ROOT"
     CFLAG="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -march=znver3 -fprefetch-loop-arrays"
-    CFLAG_OPTIONS="--cflag=${CFLAG}"
+    CFLAG_OPTIONS=(--cflag="$CFLAG")
 else
     module purge
     CC="g++"
@@ -129,11 +169,11 @@ else
     exit 1
 fi
 
-# build option
-if [ "$BUILD_OPTION" == "1" ]; then
+# build option (debug uses g++-simd; not applicable to <machine>/env.sh machines)
+if [ "$BUILD_OPTION" == "1" ] && [ ! -f "$MACHINE_ENV" ]; then
     #DEBUG_OPTION="-debug"
     CC="g++-simd"
-    CFLAG_OPTIONS="--cxx=$CC"
+    CFLAG_OPTIONS=(--cxx=$CC)
 else
     DEBUG_OPTION=""
 fi
@@ -153,8 +193,8 @@ if [ "$GRAV" == "none" ]; then
 
     if [ "$BUILD_OPTION" != "2" ]; then
         echo -e  "${GREEN}Configuring Athena++ in $BUILDDIR.. for $PHYSICS${NC}"
-        echo -e  "./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS"
-        ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS
+        echo -e  "./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS ${CFLAG_OPTIONS[*]}"
+        python3 ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS "${CFLAG_OPTIONS[@]}"
 
         make clean
     fi
@@ -166,19 +206,34 @@ else
 
     if [ "$BUILD_OPTION" != "2" ]; then
         echo -e  "${GREEN}Configuring Athena++ in $BUILDDIR.. for $PHYSICS${NC}"
-        echo -e  "./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav=$GRAV -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS"
-        ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav="$GRAV" -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS $CFLAG_OPTIONS
+        echo -e  "./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav=$GRAV -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS ${CFLAG_OPTIONS[*]}"
+        python3 ./configure.py --prob="$PROB" $DEBUG_OPTION --nghost=4 -fft -fb --grav="$GRAV" -mpi -hdf5 $PHY_OPTIONS $PATH_OPTIONS "${CFLAG_OPTIONS[@]}"
 
         make clean
     fi
 fi
 
 echo -e  "${GREEN}Building Athena++ ${NC}"
-make all -j4
+make all -j"$MAKE_JOBS"
 
 mkdir -p "$(dirname "$EXE")"
 cp bin/athena "$EXE"
 echo -e  "${GREEN}Executable copied to $EXE${NC}"
+
+# Provenance: what was built, from which commit, with which modules and flags.
+{
+    echo "exe:       $(basename "$EXE")"
+    echo "date:      $(date -Iseconds)"
+    echo "host:      $(hostname)"
+    echo "machine:   $MACHINE  toolchain: ${TOOLCHAIN:-n/a}"
+    echo "source:    $SRCDIR"
+    echo "commit:    $(git -C "$SRCDIR" log -1 --format='%H %s')"
+    echo "dirty:     $(git -C "$SRCDIR" status --porcelain --untracked-files=no | wc -l) modified files"
+    echo "configure: $PHY_OPTIONS ${CFLAG_OPTIONS[*]}"
+    grep -E "^ *(Compilation command|Linker flags):" "$SRCDIR/Makefile" 2>/dev/null || true
+    sed -n 's/^CXXFLAGS := /CXXFLAGS:  /p; s/^LDFLAGS := /LDFLAGS:   /p' "$SRCDIR/Makefile"
+    echo "modules:   $(module -t list 2>&1 | grep -v ':$' | tr '\n' ' ')"
+} > "${EXE%.exe}.buildinfo"
 
 cd "$CURDIR"
 set +e
