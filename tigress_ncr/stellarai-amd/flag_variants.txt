@@ -20,6 +20,7 @@ aocc-impi preset        -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -
 aocc-impi O3            -O3 -std=c++11 -march=znver5
 aocc-impi safe-lto      -O3 -std=c++11 -march=znver5 -fno-math-errno -fno-trapping-math -fopenmp-simd -flto -fuse-ld=lld
 aocc-impi preset-v512   -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto -fuse-ld=lld -mprefer-vector-width=512
+# REJECTED: -zopt miscompiles (MHD history off by 20 columns, dt off 36%; bench/compare_hst.py)
 aocc-impi preset-zopt   -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto -fuse-ld=lld -zopt
 aocc-impi preset-unroll -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto -fuse-ld=lld -funroll-loops
 

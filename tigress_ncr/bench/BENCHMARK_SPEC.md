@@ -51,12 +51,20 @@ first window after a restart is partial and is dropped, which leaves 19 windows 
   machines; `s_cycle` compares toolchains on one machine.
 
 **Correctness gate.** All runs of one physics end at the same time, so their final
-`TIGRESS_NCR.hst` rows must agree. Builds with the same compiler and math flags agree
-exactly, at the printed 6 digits. Different compilers or math modes differ at round-off level,
-and the turbulent flow amplifies that over 200 cycles. On stellarai-amd, the maximum relative
-difference over all columns was about 1e-5 (aocc vs gcc) to 6e-5 (icpx vs gcc).
-`compare_hst.py` reports it. A difference above ~1e-3, a NaN, or a different end time
-means the build is suspect and its timing is invalid. See §4 G.
+`TIGRESS_NCR.hst` rows must agree within run-to-run noise. The runs are **not bitwise
+reproducible, even for one executable**, because ray tracing and the CR/feedback paths depend
+on MPI message order. So `compare_hst.py` measures the spread between repeats of the
+reference build and flags builds outside it. On stellarai-amd:
+
+- MHD: no column differs by more than 1e-3, for any build or repeat.
+- CRMHD: 5–15 columns differ by more than 1e-3 (at most 6 by more than 1e-2) between any two runs,
+  same executable included.
+- The CRMHD history has 3 NaN columns for every build, strict `-O3` and icpx `precise`
+  included. That comes from the code or the state, not the compiler; it is skipped.
+- AOCC `-zopt` gave MHD results with 20 columns off and dt off by 36%: a miscompile,
+  rejected regardless of speed.
+
+A SUSPECT build is excluded from the decision. See §4 G.
 
 ## 2. Files
 
@@ -143,6 +151,11 @@ that matches the compiler. Examples: `gcc`, `gcc-impi`, `icpx-impi`, `aocc`, `nv
    the old slurm scripts show which stacks the production runs used so far. Include
    that stack among the candidates (on stellar: oneAPI 2024.2 icpx + Open MPI 4.1.6, which built
    the benchmark checkpoints).
+
+4. **Temporary files** (the user's base rule): never use `/tmp`. Use `<scratch>/tmp/<task>`
+   (on stellarai-amd, `/scratch/gpfs/EOST/changgoo/tmp`) and delete it when the task is done.
+   Home directories aren't shared between clusters, so copy `~/.claude/CLAUDE.md` to the new
+   machine (adjusting the path) or confirm the scratch path with the user.
 
 ### What the agent discovers vs. what the user provides
 
@@ -295,7 +308,8 @@ It builds each variant for both physics in `LANES` (default 3) parallel detached
 `$HOME/tigris/.worktrees/build-lane-<i>`, at the same commit as the reference worktree. Then
 it submits everything with `VARIANT=<name>` and prints the summary (rows `tc:variant`). The
 build step for 19 variants x 2 physics takes about 15 minutes. Repeat the top 2–3 variants per
-compiler (`ONLY='gcc-impi (preset|fast-lto)' SKIP_BUILD=1 bench/flag_sweep.sh <M> 200 2`).
+compiler. `ONLY` is an extended regex on `<tc>|<variant>|<flags>`:
+`ONLY='^(gcc-impi\|(preset|fast)|aocc-impi\|preset)\|' SKIP_BUILD=1 bench/flag_sweep.sh <M> 200 2`.
 Then copy the winners into `FLAGS_*` in env.sh and rebuild the defaults
 (`--cc=all`, both physics). Do not edit `flag_sweep.sh`, `submit.sh` or `run_matrix.sh` while
 one of them is running: bash reads scripts incrementally.
@@ -304,14 +318,15 @@ one of them is running: bash reads scripts incrementally.
 
 ```bash
 cd $SCRATCH_BASE/tigress_ncr/bench
-python3 $HOME/tigris_scripts/tigress_ncr/bench/compare_hst.py mhd-*   --ref=mhd-gcc-impi
-python3 $HOME/tigris_scripts/tigress_ncr/bench/compare_hst.py crmhd-* --ref=crmhd-gcc-impi
+python3 $HOME/tigris_scripts/tigress_ncr/bench/compare_hst.py mhd-*   --ref=mhd-<default-tc>-<jobid prefix>
+python3 $HOME/tigris_scripts/tigress_ncr/bench/compare_hst.py crmhd-* --ref=crmhd-<default-tc>-<jobid prefix>
 ```
 
-Use the reference machine's default toolchain as `--ref` when it exists. Runs with the same
-build give 0. Expect up to ~1e-4 between compilers and math modes. Investigate anything
-above 1e-3, NaN, or a different end time. Runs that advanced a different NCYC are reported
-as not comparable.
+`--ref` is a substring. Every matching directory counts as a repeat of the reference
+build and sets the envelope, so pick a pattern that matches only plain runs of one
+toolchain. On stellarai-amd, `--ref=mhd-gcc-impi-7` matches the gcc-impi runs 772–786 and
+not the `-preset-...` variants. Run it after the matrix and again after the sweep; the exit status is 1 if
+any run is SUSPECT. Runs that advanced a different NCYC are reported as not comparable.
 
 ### H. Diagnose with the timer breakdown
 
@@ -383,4 +398,6 @@ as not comparable.
 
 | machine | CPU | nodes | best toolchain | mhd s/cycle | crmhd s/cycle | mhd node-h/1e4 | crmhd node-h/1e4 | commit |
 |---|---|---|---|---|---|---|---|---|
-| stellarai-amd | 2x EPYC 9475F (Zen 5), 96 c | 4 | gcc-impi | 0.290 | 0.194 | 3.23 | 2.16 | eee94bc4f |
+| stellarai-amd | 2x EPYC 9475F (Zen 5), 96 c, NDR 400 IB | 4 | gcc-impi + FLAGS_GCC (`preset-v512`) | 0.291 | 0.195 | 3.24 | 2.17 | eee94bc4f |
+
+Report for stellarai-amd: https://claude.ai/artifact/H1B2iqL3a4F2cjiDQdvvtd

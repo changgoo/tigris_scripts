@@ -50,10 +50,17 @@ BENCH_CACHE=$SCRATCH_BASE/tigris-benchmark      # compute-node visible copy
 BENCH_RST_mhd=mhd-ncr-8pc/TIGRESS_NCR.00006.rst      # t=300
 BENCH_RST_crmhd=crmhd-ncr-8pc/TIGRESS_NCR.00003.rst  # t=150, CR<->NCR coupled
 
-# --- best flags per compiler (complete sets; from the flag sweep) ---------------------
-FLAGS_GCC="-O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays"
+# --- best flags per compiler: complete sets, winners of the flag sweep (2026-10-03) ----
+# flag_variants.txt, 3 runs each, Intel MPI. Fast math is worth 6-17% over plain -O3, and
+# -fno-math-errno/-fno-trapping-math alone recovers only part of it. The GCC/AOCC
+# variants with fast math + LTO tie within the ~2-3% run-to-run noise.
+#   GCC  : variant preset-v512   (MHD 0.292, CRMHD 0.195 s/cycle)
+#   AOCC : variant preset        (0.299, 0.198); -zopt miscompiles (MHD history wrong)
+#   icpx : variant fast2         (0.291, 0.220); default fp-model=fast is 14% slower on CRMHD,
+#          fp-model=precise 35-70% slower
+FLAGS_GCC="-O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512"
 FLAGS_AOCC="-O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto -fuse-ld=lld"
-FLAGS_ICPX="-O3 -std=c++11 -march=znver5 -ipo -qopenmp-simd -Wno-tautological-constant-compare -Wno-array-bounds"
+FLAGS_ICPX="-O3 -std=c++11 -march=znver5 -ipo -qopenmp-simd -fp-model=fast=2 -Wno-tautological-constant-compare -Wno-array-bounds"
 
 load_toolchain() {
     local tc=${1:-$DEFAULT_TOOLCHAIN}

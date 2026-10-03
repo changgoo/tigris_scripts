@@ -17,28 +17,31 @@ is part of the executable name (`tigris_ncr_<physics>-fft-<cc>.exe`, with a `.bu
 | `--cc`      | compiler      | MPI               | HDF5 (parallel)                    |
 |-------------|---------------|-------------------|------------------------------------|
 | `gcc-impi`  | GCC 14        | Intel MPI 2021.18 | hdf5/gcc/intel-mpi/1.14.6          |
+| `aocc-impi` | AOCC 5.2      | Intel MPI 2021.18 | hdf5/gcc/intel-mpi/1.14.6 (`I_MPI_CXX=clang++`) |
 | `icpx-impi` | oneAPI 2026.0 | Intel MPI 2021.18 | hdf5/oneapi-2026.0/intel-mpi       |
 | `aocc`      | AOCC 5.2      | Open MPI 5.0.10   | hdf5/aocc-5.2.0/openmpi-5.0.10     |
 | `gcc`       | GCC 14        | Open MPI 5.0.10   | hdf5/gcc/openmpi-5.0.10            |
 | `icpx`      | oneAPI 2026.0 | Open MPI 5.0.10   | hdf5/oneapi-2026.0/openmpi-5.0.10  |
 
 All stacks link FFTW from AOCL (`aocl/{gcc,aocc}/ST/5.3.0`); there is no fftw module.
-All builds use `-march=znver5` and fast math (the same as icpx's default `fp-model=fast` on
-Stellar).
 
-configure.py's `icpx` preset hard-codes `-xhost`, which on AMD builds a binary that
-refuses to start ("can only be run on Intel(R) processors"). The icpx toolchains therefore
-use the `clang++` preset (mpicxx still calls icpx), so their configure summary reports
-`Compiler = clang++`.
+Compiler flags come from env.sh, not from configure.py: each toolchain's complete flag set
+(`FLAGS_GCC`, `FLAGS_AOCC`, `FLAGS_ICPX`) replaces the Makefile's `CXXFLAGS`. The sets are
+the winners of the flag sweep below. configure.py's `icpx` preset would add `-xhost`, which
+on AMD builds a binary that refuses to start ("can only be run on Intel(R) processors").
 
-## Benchmark (2026-10-02)
+## Benchmark (2026-10-02/03)
+
+Full report with machine specs, charts and an explanation of every flag:
+https://claude.ai/artifact/H1B2iqL3a4F2cjiDQdvvtd
 
 The workload is defined in `../bench/BENCHMARK_SPEC.md`. Each run restarts a Stellar
 production checkpoint on 4 nodes and advances 200 cycles; the times are seconds per cycle,
-averaged over ranks, from `TIGRESS_NCR.loop_time.txt`. Repeated runs of a build reproduce the
-history output exactly. Different compilers agree to about 1e-5 (aocc vs gcc) to 6e-5
-(icpx vs gcc) in max relative difference over all columns (`../bench/compare_hst.py`), which
-is round-off amplified by the turbulent flow. Raw results are in `../bench/results/stellarai-amd.txt`;
+averaged over ranks, from `TIGRESS_NCR.loop_time.txt`. Repeated runs agree within ~0.5-3%.
+The runs are not bitwise reproducible, even for one executable, because ray tracing and CR
+depend on message order. `../bench/compare_hst.py` checks each build against the spread between
+repeats: every stack and flag variant passes, except AOCC `-zopt`, which gives wrong MHD
+results. Raw results are in `../bench/results/stellarai-amd.txt`;
 `python3 ../bench/summarize.py ../bench/results/stellarai-amd.txt` prints the full table.
 
 | toolchain   | MHD s/cycle | MHD ray tracing | CRMHD s/cycle | CRMHD integrator |
@@ -58,17 +61,25 @@ MHD: `mhd-ncr-8pc/TIGRESS_NCR.00006.rst` (t=300). CRMHD: `crmhd-ncr-8pc/TIGRESS_
   `rdma`) or switching to `pml=ob1` did not help (1.16 to 1.18 s/cycle).
 - The compiler matters for CRMHD, where the cycle is compute-bound and ray tracing is cheap
   (~0.015 s): GCC and AOCC are ~25% faster than icpx in the integrator.
-- `--distribution=block:block` vs `block:cyclic` made no difference (within 0.3%), and
-  repeated gcc-impi runs agreed within 0.5%.
+- `--distribution=block:block` vs `block:cyclic` made no difference (within 0.3%).
 
-Recommendation: use **gcc-impi**, the default of the production scripts.
+### Compiler-flag sweep (Intel MPI, `flag_variants.txt`, 3 runs for the top variants)
+
+| compiler | chosen variant | MHD | CRMHD | notes |
+|---|---|---|---|---|
+| GCC 14 | `preset-v512` | 0.292 | 0.195 | fast-math + LTO variants all tie within noise; plain `-O3` is 8-12% slower |
+| AOCC 5.2 | `preset` | 0.299 | 0.198 | `-zopt` miscompiles (rejected); plain `-O3` is 2-13% slower |
+| icpx 2026.0 | `fast2` | 0.291 | 0.220 | `-fp-model=fast=2` is 14% faster than the default on CRMHD; `precise` 35-50% slower |
+
+Recommendation: use **gcc-impi** with `FLAGS_GCC`. It is the default of `build_tigress.sh` and
+of the production scripts. The final build reran at 0.291 (MHD) and 0.198 (CRMHD) s/cycle.
 
 ## Build
 
 ```bash
 cd $HOME/tigris_scripts/tigress_ncr
-bash ./build_tigress.sh --machine=stellarai-amd --cc=gcc-impi --physics=mhd   --worktree=ncr-cr-coupling
-bash ./build_tigress.sh --machine=stellarai-amd --cc=gcc-impi --physics=crmhd --worktree=ncr-cr-coupling
+bash ./build_tigress.sh --machine=stellarai-amd --physics=mhd   --worktree=ncr-cr-coupling   # gcc-impi
+bash ./build_tigress.sh --machine=stellarai-amd --physics=crmhd --worktree=ncr-cr-coupling
 bash ./build_tigress.sh --machine=stellarai-amd --cc=all --physics=mhd --worktree=ncr-cr-coupling  # every toolchain
 ```
 
