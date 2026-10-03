@@ -73,7 +73,7 @@ for rep in $(seq "$REPEATS"); do
         IFS='|' read -r tc var _ <<< "$v"
         for p in $PHYSICS_LIST; do
             [ -x "$NCR_DIR/$MACHINE/tigris_ncr_${p}-fft-${tc}-${var}.exe" ] || { echo "skip $p $tc-$var: no exe"; continue; }
-            until [ "$(squeue -h -u "$USER" | wc -l)" -lt "$MAXJ" ]; do sleep 30; done
+            until [ "$(squeue -h -u "$USER" $SLURM_QUEUE_FILTER | wc -l)" -lt "$MAXJ" ]; do sleep 30; done
             out=$(VARIANT=$var "$BENCHDIR/submit.sh" "$MACHINE" "$p" "$tc" "$NCYC")
             echo "$out" | tail -1
             IDS+=("$(echo "$out" | grep -oE 'Submitted batch job [0-9]+' | grep -oE '[0-9]+$')")

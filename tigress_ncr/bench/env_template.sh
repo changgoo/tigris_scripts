@@ -15,6 +15,7 @@ CORES_PER_NODE=<physical cores per node>
 SLURM_PARTITION=<partition>
 SLURM_ACCOUNT=<account or empty>
 SLURM_MAX_JOBS=<max queued jobs per user>   # sacctmgr show qos / trial sbatch
+SLURM_QUEUE_FILTER=""                       # squeue filter for jobs that count, e.g. "--qos=<debug qos>"
 SLURM_EXTRA=""                              # extra sbatch options, e.g. "--constraint=..."
 SCRATCH_BASE=<scratch root>                 # run dirs: $SCRATCH_BASE/tigress_ncr/...
 MAKE_JOBS=16

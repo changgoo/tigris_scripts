@@ -6,7 +6,8 @@
 #   nohup bench/run_matrix.sh MACHINE [NCYC] [REPEATS] [PHYSICS...] > bench/logs/matrix.log 2>&1 &
 #
 # Defaults: NCYC=200, REPEATS=1, PHYSICS="mhd crmhd". Toolchains whose executable is
-# missing are skipped with a warning. TOOLCHAINS="a b" in the environment restricts the set.
+# missing are skipped with a warning. SLURM_QUEUE_FILTER (env.sh, e.g. "--qos=stellar-debug")
+# limits which of your jobs count against SLURM_MAX_JOBS. TOOLCHAINS="a b" in the environment restricts the set.
 # Waits for the submitted jobs to finish, then prints the summary table.
 MACHINE=${1:?usage: $0 MACHINE [NCYC] [REPEATS] [PHYSICS...]}
 NCYC=${2:-200}
@@ -21,7 +22,7 @@ source "$NCR_DIR/$MACHINE/env.sh"
 TCS=${ONLY_TC:-$TOOLCHAINS}
 MAXJ=${SLURM_MAX_JOBS:-5}
 
-njobs() { squeue -h -u "$USER" | wc -l; }
+njobs() { squeue -h -u "$USER" $SLURM_QUEUE_FILTER | wc -l; }
 JOBS=()
 for rep in $(seq "$REPEATS"); do
     for phys in $PHYSICS_LIST; do

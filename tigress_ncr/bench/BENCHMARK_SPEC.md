@@ -100,6 +100,7 @@ tigress_ncr/
 | `MACHINE_CPU`, `CORES_PER_NODE` | hardware; nodes requested = ceil(384 / CORES_PER_NODE) |
 | `SLURM_PARTITION`, `SLURM_ACCOUNT`, `SLURM_EXTRA` | sbatch options (`SLURM_EXTRA` is free-form, may be empty) |
 | `SLURM_MAX_JOBS` | the per-user queued-job limit; `run_matrix.sh` stays below it |
+| `SLURM_QUEUE_FILTER` | optional `squeue` filter for the jobs that count against `SLURM_MAX_JOBS` (e.g. `--qos=stellar-debug` when the bench jobs have their own QOS); empty counts all your jobs |
 | `SCRATCH_BASE` | run directories go under `$SCRATCH_BASE/tigress_ncr/` |
 | `MAKE_JOBS` | `make -j` |
 | `MPI_LAUNCH` | the launcher prefix, e.g. `srun --cpu-bind=cores` |
@@ -393,11 +394,23 @@ any run is SUSPECT. Runs that advanced a different NCYC are reported as not comp
   records only the MPI variables set in your shell before modules load.
 - Run `module load` inside `$(...)` or a pipe and it runs in a subshell, so nothing
   stays loaded. Load first, then inspect.
+- On Stellar, jobs of 30 minutes or less go to `stellar-debug`, which has its own limits (10
+  queued, 2 running). Production jobs sit in other QOSes, so `SLURM_QUEUE_FILTER` keeps them out
+  of the count.
+- GCC 13 + LTO fails to link the code with `undefined reference to Accretion::rctrl`, because an
+  odr-used `static constexpr` member has no namespace-scope definition, which C++11 requires.
+  GCC 14 and icpx happen to inline it. Stellar's GCC builds carry the one-line fix
+  (`constexpr int Accretion::rctrl;` in `accretion.cpp`) as a local patch. `flag_sweep.sh`
+  keeps uncommitted changes in existing build lanes when their commit is unchanged, so apply
+  the patch to the lanes too.
+- icpx needs `-ipo` for this code. Without it, the `omp declare simd` vector variants of
+  functions defined in another file are never emitted, and the link fails.
 
 ## 6. Cross-machine results (median s/cycle, 200 cycles, 384 ranks)
 
 | machine | CPU | nodes | best toolchain | mhd s/cycle | crmhd s/cycle | mhd node-h/1e4 | crmhd node-h/1e4 | commit |
 |---|---|---|---|---|---|---|---|---|
 | stellarai-amd | 2x EPYC 9475F (Zen 5), 96 c, NDR 400 IB | 4 | gcc-impi + FLAGS_GCC (`preset-v512`) | 0.291 | 0.195 | 3.24 | 2.17 | eee94bc4f |
+| stellar | 2x Xeon Platinum 9242 (Cascade Lake), 96 c, HDR IB | 4 | icpx-impi + FLAGS_ICPX (`fast2`) | 0.737 | 0.411 | 8.19 | 4.57 | eee94bc4f |
 
 Report for stellarai-amd: https://claude.ai/artifact/H1B2iqL3a4F2cjiDQdvvtd

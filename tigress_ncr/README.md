@@ -1,278 +1,198 @@
-# Build and run TIGRESS-NCR with cosmic rays on Stellar
+# Build and run TIGRESS-NCR (with cosmic rays)
 
-For the AMD (Zen 5) nodes of stellarai-amd, see
-[`stellarai-amd/README.md`](stellarai-amd/README.md): the build uses
-`--machine=stellarai-amd --cc=gcc-impi`, and the jobs live in `stellarai-amd/`.
+This directory builds the TIGRESS-NCR problem generator (`src/pgen/tigress_ncr.cpp` of
+[tigris](https://github.com/PrincetonUniversity/tigris)) and runs it on the Princeton
+clusters. Every machine has a directory `<machine>/` with:
 
-This procedure builds the CRMHD + NCR executable and submits the coupled
-TIGRESS-NCR job on Stellar.  Commands below are literal: they do not depend on
-shell aliases such as `ml`.  The standard environment variables `HOME` and
-`USER` are used because the build and job scripts use the same paths.
+- `env.sh`: the module stack of each toolchain and its complete compiler flags. The
+  default toolchain (`DEFAULT_TOOLCHAIN`) is the one that benchmarked fastest on that machine.
+- the production Slurm scripts, which source `env.sh`, so a job always loads the modules its
+  executable was built with;
+- the executables `tigris_ncr_<physics>-fft-<toolchain>.exe`, each with a `.buildinfo`
+  (commit, modules, flags);
+- `README.md`: hardware, benchmark results and machine-specific notes.
 
-The coupled configuration has all three of these settings:
+## Machines
 
-- the executable is configured with `--cr=mg` and `-ncr`;
-- `athinput.tigress_ncr` sets `<photchem>/mode = ncr` and
-  `<cr>/self_consistent_flag = 1`;
-- the Slurm job supplies the runtime override `cr/photchem_flag=1`.
+The best toolchain is chosen by `bench/` (see [Benchmarks](#9-benchmarks-and-new-machines)).
+Times are seconds per cycle for the 8 pc runs (128x128x768, 384 meshblocks of 32^3, one MPI
+rank per block, 4 nodes).
 
-Together, these settings allow CR energy density to set the local NCR cosmic-ray
-ionization rate and allow NCR ion/neutral abundances to set the CR scattering
-coefficient.
+| machine | CPU (cores/node) | default `--cc` | stack | MHD | CRMHD | jobs | notes |
+|---|---|---|---|---|---|---|---|
+| stellarai-amd | 2x AMD EPYC 9475F, Zen 5 (96) | `gcc-impi` | GCC 14 + Intel MPI 2021.18, `-march=znver5`, fast math, LTO, 512-bit vectors | 0.291 | 0.195 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](stellarai-amd/README.md) |
+| stellar | 2x Intel Xeon Platinum 9242, Cascade Lake (96) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xCASCADELAKE -ipo -fp-model=fast=2` | 0.737 | 0.411 | `tigress_ncr_{mhd,crmhd}_8pc_tc.slurm` | [README](stellar/README.md) |
+| tiger, anvil | | (legacy) | fixed modules in `build_tigress.sh` | | | | no `env.sh` yet |
 
-## 1. Start a login shell and initialize Modules
+An 8 pc run costs 2.1-2.5x fewer node-hours on stellarai-amd than on Stellar (newer cores,
+and ray tracing is 3x faster there). On both machines Intel MPI is clearly faster than
+Open MPI for MHD, whose cycle is dominated by ray tracing, which is limited by MPI
+point-to-point latency and one-sided progress (4x on stellarai-amd, 1.25x on Stellar). The
+best compiler differs: GCC on Zen 5, icpx on Cascade Lake, where GCC 13 is 2x slower in NCR
+photochemistry.
 
-Log in to Stellar and use Bash.  If `module` is not already defined by the
-login shell, initialize Environment Modules explicitly:
+## 1. Shell and modules
+
+Use Bash. If `module` is not already a shell function, initialize Environment Modules:
 
 ```bash
 source /usr/share/Modules/init/bash
-type module
-type sbatch
-type squeue
+type module sbatch squeue
 ```
 
-The last three commands should report a shell function for `module` and paths
-for the Slurm commands.  Do not substitute a local alias such as `ml` for the
-`module` commands below.
+## 2. Repositories
 
-## 2. Verify the repository layout
-
-The scripts assume these exact locations:
+The build and job scripts assume these paths (home directories are not shared between
+clusters, so set them up on each one):
 
 ```text
-$HOME/tigris
-$HOME/tigris/.worktrees/ncr-cr-coupling
-$HOME/tigris_scripts/tigress_ncr
+$HOME/tigris                                  # source
+$HOME/tigris/.worktrees/ncr-cr-coupling       # the branch that is built and run
+$HOME/tigris_scripts/tigress_ncr              # this directory
 ```
-
-Verify the main source repository and this scripts repository:
-
-```bash
-test -d "$HOME/tigris/.git"
-test -f "$HOME/tigris_scripts/tigress_ncr/build_tigress.sh"
-test -f "$HOME/tigris_scripts/tigress_ncr/athinput.tigress_ncr"
-```
-
-If the main source repository is missing, clone it explicitly:
 
 ```bash
 git clone git@github.com:PrincetonUniversity/tigris.git "$HOME/tigris"
-```
-
-The job uses the `ncr-cr-coupling` source worktree because that branch contains
-the coupled code and the required 10-column cooling table.  Check an existing
-worktree before using it:
-
-```bash
 git -C "$HOME/tigris" fetch origin ncr-cr-coupling
-git -C "$HOME/tigris/.worktrees/ncr-cr-coupling" status --short --branch
+git -C "$HOME/tigris" worktree add "$HOME/tigris/.worktrees/ncr-cr-coupling" ncr-cr-coupling
 ```
 
-Stop and resolve any unmerged or modified files reported by `git status` before
-building.  Once the worktree is clean and checked out on the local
-`ncr-cr-coupling` branch, fast-forward it explicitly:
+For an existing worktree, check that it is clean and fast-forward it:
 
 ```bash
+git -C "$HOME/tigris/.worktrees/ncr-cr-coupling" status --short --branch
 git -C "$HOME/tigris/.worktrees/ncr-cr-coupling" merge --ff-only origin/ncr-cr-coupling
 ```
 
-If the worktree does not exist, create a clean detached worktree at the remote
-branch instead:
+The jobs copy two data tables from the worktree, so both must exist:
 
 ```bash
-mkdir -p "$HOME/tigris/.worktrees"
-git -C "$HOME/tigris" fetch origin ncr-cr-coupling
-git -C "$HOME/tigris" worktree add --detach \
-  "$HOME/tigris/.worktrees/ncr-cr-coupling" origin/ncr-cr-coupling
+ls "$HOME/tigris/.worktrees/ncr-cr-coupling/inputs/tables/"{tigress_coolftn_ncr.txt,Z014_GenevaV00.txt}
 ```
 
-Confirm that the source and both runtime tables exist:
+## 3. The coupled CR + NCR configuration
 
-```bash
-test -f "$HOME/tigris/.worktrees/ncr-cr-coupling/src/pgen/tigress_ncr.cpp"
-test -f "$HOME/tigris/.worktrees/ncr-cr-coupling/inputs/tables/tigress_coolftn_ncr.txt"
-test -f "$HOME/tigris/.worktrees/ncr-cr-coupling/inputs/tables/Z014_GenevaV00.txt"
-```
+A coupled run has all three of these settings:
 
-## 3. Load the Stellar build environment
+- the executable is configured with `--cr=mg` and `-ncr` (`--physics=crmhd`);
+- `athinput.tigress_ncr` sets `<photchem>/mode = ncr` and `<cr>/self_consistent_flag = 1`;
+- the job passes the runtime override `cr/photchem_flag=1`.
 
-Use the Intel oneAPI/Open MPI stack used by both the build script and the
-`icpx` path in the Slurm jobs:
+Together they let the CR energy density set the local NCR cosmic-ray ionization rate, and the
+NCR ion/neutral abundances set the CR scattering coefficient. The MHD build
+(`--physics=mhd`) runs NCR photochemistry and ray tracing without cosmic rays.
 
-```bash
-module purge
-module load anaconda3/2023.3
-module load intel-oneapi/2024.2
-module load openmpi/oneapi-2024.2/4.1.6
-module load hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4
-module load fftw/oneapi-2024.2/3.3.10
-module list
-command -v icpx
-command -v mpicxx
-```
+## 4. Build
 
-`build_tigress.sh` repeats these `module purge` and `module load` commands so
-the build is not affected by previously loaded modules.
-
-## 4. Build the CRMHD + NCR executable
-
-Run the build script from `tigress_ncr/`; its current directory determines
-where the finished executable is copied.
+Run from anywhere; the executable goes to `<machine>/`. Without `--cc`, the build uses the
+machine's default toolchain and its benchmarked flags:
 
 ```bash
 cd "$HOME/tigris_scripts/tigress_ncr"
-bash ./build_tigress.sh \
-  --machine=stellar \
-  --physics=crmhd \
-  --grav=fft \
-  --build=0 \
-  --src=tigris \
-  --flux=hll \
-  --worktree=ncr-cr-coupling
+bash ./build_tigress.sh --machine=<machine> --physics=crmhd --worktree=ncr-cr-coupling
+bash ./build_tigress.sh --machine=<machine> --physics=mhd   --worktree=ncr-cr-coupling
 ```
 
-This configures Athena++ with the effective physics options
-`-b --cr=mg --flux=hlld -ncr`, builds with four make jobs, and copies the
-result here:
+For example, on Stellar this produces `stellar/tigris_ncr_crmhd-fft-icpx-impi.exe` and
+`stellar/tigris_ncr_mhd-fft-icpx-impi.exe`. Other options:
 
-```text
-$HOME/tigris_scripts/tigress_ncr/stellar/tigris_ncr_crmhd-fft.exe
-```
+| option | meaning |
+|---|---|
+| `--cc=<toolchain>` | another stack from `TOOLCHAINS` in `env.sh`; `--cc=all` builds each in turn |
+| `--physics=` | `mhd`, `crmhd`, or `*_duale`/`*_duals` (dual energy) |
+| `--exe_suffix=<tag>` | appends `-<tag>` to the name, to keep the production executable intact |
+| `--cxxflags='...'` | replaces the toolchain's complete compiler flags (flag tests) |
+| `--srcdir=<path>` | builds another source tree instead of `--worktree` |
 
-Verify it before submitting:
+`build_tigress.sh` loads the modules with `load_toolchain` from `env.sh`, runs `configure.py`,
+then writes the toolchain's complete flags (`TC_CXXFLAGS`) into the Makefile in place of
+configure's preset flags. Check the result:
 
 ```bash
-test -x "$HOME/tigris_scripts/tigress_ncr/stellar/tigris_ncr_crmhd-fft.exe"
-ls -lh "$HOME/tigris_scripts/tigress_ncr/stellar/tigris_ncr_crmhd-fft.exe"
+cat stellar/tigris_ncr_crmhd-fft-icpx-impi.buildinfo    # commit, dirty files, CXXFLAGS, modules
 ```
 
-## 5. Check the job-specific settings
+Builds of one source tree share its `obj/` directory, so run them one at a time.
 
-The Slurm scripts currently use account `eost`.  Set `#SBATCH --account` to a
-different allocation if needed.  The production script also sends mail to the
-address in `#SBATCH --mail-user`; update that line before submitting if it is
-not your address.
+## 5. Run the 8 pc production jobs
 
-The batch job selects its compiler environment from its first argument.  Use
-`icpx`, matching the module stack and build above.  Inside the allocation the
-job explicitly runs the equivalent of:
+The jobs run the production input `athinput.tigress_ncr` with the mesh refined to 8 pc
+(`mesh/nx1=128 nx2=128 nx3=768`), on 4 full nodes with 384 ranks.
 
 ```bash
-module purge
-module load anaconda3/2023.3
-module load intel-oneapi/2024.2
-module load openmpi/oneapi-2024.2/4.1.6
-module load hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4
-module load fftw/oneapi-2024.2/3.3.10
+cd "$HOME/tigris_scripts/tigress_ncr/<machine>"
+sbatch tigress_ncr_crmhd_8pc<_tc>.slurm          # fresh start
+sbatch tigress_ncr_crmhd_8pc<_tc>.slurm -r       # restart
+sbatch tigress_ncr_crmhd_8pc<_tc>.slurm -r TAG   # run directory crmhd-ncr-8pc<TAG>
+CC=icpx sbatch tigress_ncr_mhd_8pc<_tc>.slurm -r       # another toolchain (built first)
 ```
 
-The coupled jobs copy the executable, input file, cooling table, and population
-synthesis table into a run directory under
-`/scratch/gpfs/$USER/tigress_ncr/`.
+The script names are in the [machine table](#machines). The run directory is
+`$RUNBASE/<physics>-ncr-8pc<TAG>`; `RUNBASE` defaults to `<scratch>/tigress_ncr`
+(`/scratch/gpfs/$USER/tigress_ncr` on Stellar, `/scratch/gpfs/EOST/$USER/tigress_ncr` on
+stellarai-amd).
 
-Important: submitting without `-r` is a fresh start.  If the target run
-directory already exists, the job deletes its contents before launching.
-Inspect or move any existing run data first.
+- With `-r`, the job restarts from `TIGRESS_NCR.final.rst`, or from the newest
+  `TIGRESS_NCR.NNNNN.rst` when there is no final file. To continue a run from another
+  cluster, copy its checkpoint into the run directory first.
+- A fresh start refuses to clean a run directory that contains restart files.
+- Each segment copies the executable and tables again, so `CC=...` with `-r` switches a running
+  campaign to another build.
+- Athena stops on a 23.5 h soft limit (exit code 3) and the job resubmits itself with the same
+  `CC`, `RUNBASE` and `TAG`.
+- Parameters that are missing from a restart file go in `athinput.restart_add` in the run
+  directory (CRMHD job).
 
-## 6. Submit the one-node coupled test job
-
-Start with the 16 pc coupled job.  It uses one node, 32 MPI ranks, and one
-32-cubed meshblock per rank:
-
-```bash
-cd "$HOME/tigris_scripts/tigress_ncr/stellar"
-sbatch ./tigress_ncr_crmhd_16pc_test_coupled.slurm icpx
-```
-
-Slurm prints a job ID.  The run directory is:
-
-```text
-/scratch/gpfs/$USER/tigress_ncr/crmhd-ncr-16pc-test-coupled
-```
-
-Monitor it with explicit Slurm commands, replacing `JOB_ID` with the number
-printed by `sbatch`:
+Monitor with:
 
 ```bash
 squeue --user "$USER"
-scontrol show job JOB_ID
-tail -f "$HOME/tigris_scripts/tigress_ncr/stellar/crncr16c-JOB_ID.out"
-tail -f "$HOME/tigris_scripts/tigress_ncr/stellar/crncr16c-JOB_ID.err"
+tail -f "$RUNBASE/crmhd-ncr-8pc/out.r0.txt"   # Athena stdout (out.txt for a fresh start)
 ```
 
-The Slurm output should show `cr/photchem_flag=1` in `params`.  Athena's own
-standard output and error are written inside the run directory:
+## 6. Other job scripts on Stellar
+
+`stellar/` also has the older scripts, which load oneAPI 2024.2 + Open MPI 4.1.6 directly and
+run `stellar/tigris_ncr_<physics>-fft.exe` (no toolchain in the name):
+`tigress_ncr_{mhd,crmhd}_8pc.slurm`, the one-node 16 pc tests
+`tigress_ncr_crmhd_16pc_test_{coupled,uniform}.slurm` and `tigress_ncr_mhd_16pc_test.slurm`,
+`tigress_ncr_mhd_8pc_diag.slurm`, and `tigress_ncr_slices.slurm`.
+
+Since `stellar/env.sh` exists, `build_tigress.sh --machine=stellar` names executables after
+their toolchain. To rebuild the executable for an old script, build the `icpx` toolchain
+(the same modules) and copy it:
 
 ```bash
-tail -f "/scratch/gpfs/$USER/tigress_ncr/crmhd-ncr-16pc-test-coupled/out.txt"
-tail -f "/scratch/gpfs/$USER/tigress_ncr/crmhd-ncr-16pc-test-coupled/err.txt"
+bash ./build_tigress.sh --machine=stellar --cc=icpx --physics=crmhd --worktree=ncr-cr-coupling
+cp stellar/tigris_ncr_crmhd-fft-icpx.exe stellar/tigris_ncr_crmhd-fft.exe
 ```
 
-The test job does not automatically resubmit.  If it produced
-`TIGRESS_NCR.final.rst` and needs another walltime segment, submit a restart:
+The old and new 8 pc scripts use the same run directories, so `sbatch
+tigress_ncr_crmhd_8pc_tc.slurm -r` continues a run that the old script started.
+
+## 7. Snapshot postprocessing
+
+After Athena exits, the jobs make slice plots with `$HOME/TIGRESS-CR/python/plot_slices_ncr.py`
+in the `pyathena` conda env (`$HOME/.conda/envs/pyathena`, `$HOME/pyathena_master`). The
+env.sh-based scripts skip this step when those are missing. A failed plot does not affect
+the simulation; check `out*.txt`/`err*.txt` in the run directory.
+
+## 8. Troubleshooting
+
+- `executable not found`: build it for the toolchain in `CC` (section 4).
+- `can only be run on Intel(R) processors`: an icpx `-x...`/`-xhost` build on AMD. The env.sh
+  flags use `-march=<arch>` there.
+- GCC 13 fails to link with `undefined reference to Accretion::rctrl`: a source bug in
+  tigris (an odr-used `static constexpr` member without a definition, which C++11 requires).
+  See [stellar/README.md](stellar/README.md#gcc-13-and-accretionrctrl).
+
+## 9. Benchmarks and new machines
+
+[`bench/BENCHMARK_SPEC.md`](bench/BENCHMARK_SPEC.md) describes how a machine's `env.sh`,
+default toolchain and flags are chosen: two production checkpoints restarted for 200 cycles,
+every toolchain, then a compiler-flag sweep. Follow it to port to a new cluster. Raw results
+are in `bench/results/<machine>.txt`:
 
 ```bash
-test -f "/scratch/gpfs/$USER/tigress_ncr/crmhd-ncr-16pc-test-coupled/TIGRESS_NCR.final.rst"
-cd "$HOME/tigris_scripts/tigress_ncr/stellar"
-sbatch ./tigress_ncr_crmhd_16pc_test_coupled.slurm icpx -r
+python3 bench/summarize.py bench/results/stellar.txt
 ```
-
-## 7. Submit the four-node 8 pc production job
-
-After the coupled test is satisfactory, submit the 8 pc job.  It uses four
-nodes and 384 MPI ranks:
-
-```bash
-cd "$HOME/tigris_scripts/tigress_ncr/stellar"
-sbatch ./tigress_ncr_crmhd_8pc.slurm icpx
-```
-
-Its run directory is:
-
-```text
-/scratch/gpfs/$USER/tigress_ncr/crmhd-ncr-8pc-mesh-level
-```
-
-This production job requests a 23.5-hour Athena soft limit within a 24-hour
-Slurm allocation.  When Athena exits with code 3 at that soft limit, the script
-automatically submits the next restart as:
-
-```bash
-cd "$HOME/tigris_scripts/tigress_ncr/stellar"
-sbatch ./tigress_ncr_crmhd_8pc.slurm icpx -r
-```
-
-For a manual restart, first confirm that the final restart file exists, then
-run the same command:
-
-```bash
-test -f "/scratch/gpfs/$USER/tigress_ncr/crmhd-ncr-8pc-mesh-level/TIGRESS_NCR.final.rst"
-cd "$HOME/tigris_scripts/tigress_ncr/stellar"
-sbatch ./tigress_ncr_crmhd_8pc.slurm icpx -r
-```
-
-## 8. Postprocessing dependency
-
-After Athena exits, both coupled job scripts attempt snapshot postprocessing.
-That step expects all of the following to exist:
-
-```text
-$HOME/.conda/envs/pyathena
-$HOME/pyathena_master
-$HOME/TIGRESS-CR/python/plot_slices_ncr.py
-```
-
-It explicitly changes to this environment:
-
-```bash
-module purge
-module load anaconda3/2024.6
-module load openmpi/gcc/4.1.6
-conda activate pyathena
-```
-
-A missing postprocessing dependency can make the final plotting step fail, but
-it does not change whether the preceding Athena simulation completed.  Check
-both the Slurm logs and the Athena logs in the run directory when diagnosing a
-job.

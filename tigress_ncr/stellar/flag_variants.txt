@@ -1,0 +1,28 @@
+# Compiler-flag sweep for Stellar Intel nodes (bench/flag_sweep.sh stellar).
+# One variant per line:  <toolchain> <variant> <complete compiler flags>
+# The flags REPLACE configure.py's preset flags entirely (build_tigress.sh --cxxflags).
+# Every variant of a compiler uses the same MPI (the matrix winner for that compiler), so
+# differences come from the flags alone. Winners go to FLAGS_GCC / FLAGS_ICPX in env.sh.
+# Cascade Lake has two AVX-512 FMA units per core, so 512-bit vectors are worth trying.
+
+# GCC 13 (gcc-toolset)
+gcc-impi  preset        -O3 -std=c++11 -march=cascadelake -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays
+gcc-impi  O3            -O3 -std=c++11 -march=cascadelake
+gcc-impi  safe-lto      -O3 -std=c++11 -march=cascadelake -fno-math-errno -fno-trapping-math -fopenmp-simd -flto=auto
+gcc-impi  fast          -O3 -std=c++11 -march=cascadelake -ffast-math -fopenmp-simd
+gcc-impi  fast-lto      -O3 -std=c++11 -march=cascadelake -ffast-math -fopenmp-simd -flto=auto
+gcc-impi  fast-lto-wp   -O3 -std=c++11 -march=cascadelake -ffast-math -fopenmp-simd -flto=auto -fwhole-program
+gcc-impi  preset-v512   -O3 -std=c++11 -march=cascadelake -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512
+gcc-impi  preset-unroll -O3 -std=c++11 -march=cascadelake -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -funroll-loops
+gcc-impi  preset-O2     -O2 -std=c++11 -march=cascadelake -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays
+
+# oneAPI 2024.2 icpx (default fp-model=fast); "preset" is configure.py's icpx preset with
+# -xhost spelled out for Cascade Lake (what the legacy stellar build produced)
+icpx-impi preset        -O3 -std=c++11 -ipo -xCASCADELAKE -qopenmp-simd -Wno-tautological-constant-compare -Wno-array-bounds
+icpx-impi march         -O3 -std=c++11 -ipo -march=cascadelake -qopenmp-simd -Wno-tautological-constant-compare -Wno-array-bounds
+# FAILS TO LINK: without -ipo the "omp declare simd" vector variants of the EOS floor
+# functions (_ZGVeN8..ApplyPrimitiveFloors) are not emitted; -ipo is required for icpx.
+icpx-impi no-ipo       -O3 -std=c++11 -xCASCADELAKE -qopenmp-simd -Wno-tautological-constant-compare -Wno-array-bounds
+icpx-impi fast2         -O3 -std=c++11 -ipo -xCASCADELAKE -qopenmp-simd -fp-model=fast=2 -Wno-tautological-constant-compare -Wno-array-bounds
+icpx-impi precise       -O3 -std=c++11 -ipo -xCASCADELAKE -qopenmp-simd -fp-model=precise -Wno-tautological-constant-compare -Wno-array-bounds
+icpx-impi preset-v512   -O3 -std=c++11 -ipo -xCASCADELAKE -qopenmp-simd -qopt-zmm-usage=high -Wno-tautological-constant-compare -Wno-array-bounds
