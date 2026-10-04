@@ -1,0 +1,4 @@
+# rayt-termination-iallreduce branch: rank-0 RMA counter (default) with comm-loop timers
+<ray_tracing>
+termination = rma
+comm_timing = true

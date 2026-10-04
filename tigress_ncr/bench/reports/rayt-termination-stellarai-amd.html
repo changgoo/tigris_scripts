@@ -1,0 +1,197 @@
+<title>Ray-Tracing Termination Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+<style>
+/* Layout: one reading column (~44rem); tables and the chart may run wider inside their own scrollers. */
+:root {
+  --bg: #f9f9f7; --surface: #fcfcfb; --fg: #0b0b0b; --fg2: #52514e; --muted: #898781;
+  --rule: #e1e0d9; --axis: #c3c2b7; --accent: #1c5cab; --hl: #e8f0fb;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
+  --good: #006300;
+  --display: "Source Serif 4", Georgia, serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d0d0d; --surface: #1a1a19; --fg: #ffffff; --fg2: #c3c2b7; --muted: #898781;
+  --rule: #2c2c2a; --axis: #383835; --accent: #86b6ef; --hl: #182434;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+  --good: #0ca30c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d0d0d; --surface: #1a1a19; --fg: #ffffff; --fg2: #c3c2b7; --muted: #898781;
+  --rule: #2c2c2a; --axis: #383835; --accent: #86b6ef; --hl: #182434;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+  --good: #0ca30c; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--body); }
+main { max-width: 46rem; margin: 0 auto; padding-inline: 16px; padding-block: 40px 64px; display: flex; flex-direction: column; gap: 28px; }
+header { display: flex; flex-direction: column; gap: 8px; }
+.eyebrow { font: 500 12px/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 600 2rem/1.2 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 600 1.3rem/1.3 var(--display); margin: 0; text-wrap: balance; }
+p, ul { margin: 0; }
+ul { padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; }
+section { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.lede { font-size: 1.05rem; color: var(--fg2); }
+code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--rule); border-radius: 3px; padding: 0 3px; }
+.finding { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.finding strong { color: var(--accent); }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th { font: 500 11.5px/1.3 var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); border-bottom-color: var(--axis); }
+th:first-child, td:first-child, td.l, th.l { text-align: left; }
+td.num { font-family: var(--mono); }
+tr.win td { background: var(--hl); }
+tr.win td.num.key { font-weight: 600; }
+.sub { color: var(--muted); font-size: 12.5px; }
+.chart { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 14px 8px; position: relative; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--fg2); margin-bottom: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+svg text { font-family: var(--mono); font-size: 11px; fill: var(--fg2); }
+svg .tick { fill: var(--muted); }
+#tip { position: absolute; pointer-events: none; background: var(--bg); color: var(--fg); border: 1px solid var(--axis); border-radius: 4px; padding: 6px 9px; font: 12px/1.45 var(--mono); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 14px; }
+dt { color: var(--muted); font-family: var(--mono); font-size: 12.5px; padding-top: 2px; }
+dd { margin: 0; min-width: 0; }
+footer { color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--rule); padding-top: 14px; }
+</style>
+
+<main>
+<header>
+  <div class="eyebrow">tigris · tigress_ncr · stellarai-amd · 2026-10-04</div>
+  <h1>Ray-tracing termination test with Open MPI</h1>
+  <p class="lede">MHD+NCR ran 4× slower with Open MPI 5.0.10 than with Intel MPI. Four runs suggested by the ray-tracing author, plus two Intel MPI runs, find the cause: the rank-0 RMA termination counter. Termination by a nonblocking allreduce removes the gap and costs nothing with Intel MPI.</p>
+</header>
+
+<section>
+  <h2>Result</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Job</th><th class="l">MPI</th><th class="l">termination</th><th class="l">UCX_RNDV_THRESH</th><th>s / cycle</th><th>ray tracing s / cycle</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1009</td><td class="l">Open MPI</td><td class="l">rma</td><td class="l">default</td><td class="num key">1.124</td><td class="num">0.983</td></tr>
+      <tr class="win"><td class="num">1010</td><td class="l">Open MPI</td><td class="l">iallreduce</td><td class="l">default</td><td class="num key">0.279</td><td class="num">0.139</td></tr>
+      <tr><td class="num">1011</td><td class="l">Open MPI</td><td class="l">rma</td><td class="l">inf</td><td class="num key">0.771</td><td class="num">0.628</td></tr>
+      <tr><td class="num">1012</td><td class="l">Open MPI</td><td class="l">iallreduce</td><td class="l">inf</td><td class="num key">0.284</td><td class="num">0.141</td></tr>
+      <tr><td class="num">1013</td><td class="l">Intel MPI</td><td class="l">rma</td><td class="l">default</td><td class="num key">0.283</td><td class="num">0.145</td></tr>
+      <tr class="win"><td class="num">1014</td><td class="l">Intel MPI</td><td class="l">iallreduce</td><td class="l">default</td><td class="num key">0.283</td><td class="num">0.146</td></tr>
+    </tbody>
+  </table></div>
+  <p class="sub">200 cycles from the MHD 8 pc checkpoint, 384 ranks on 4 nodes, gcc 14 build of <code>rayt-termination-iallreduce</code> (commit 4f309c2), <code>comm_timing = true</code> in every run. Seconds per cycle are rank means from <code>loop_time.txt</code>.</p>
+</section>
+
+<section>
+  <h2>Where the ray-tracing time goes</h2>
+  <p>Each bar is the average over ranks of the seconds spent per ray trace in each phase of the communication loop (56 traces per run, from <code>mesh_task_time.txt</code>). Hover a segment for the slowest rank's value.</p>
+  <div class="chart" id="chart">
+    <div class="legend" id="legend"></div>
+    <div class="scroll"><svg id="svg" role="img" aria-label="Stacked bars of ray-tracing phase time per run"></svg></div>
+    <div id="tip" hidden></div>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>Run</th><th>trace</th><th>send</th><th>probe + recv</th><th>send-test</th><th>termination</th><th>RayTrace task</th></tr></thead>
+    <tbody id="phase-table"></tbody>
+  </table></div>
+  <p class="sub">Cells show average over ranks / slowest rank, in seconds per ray trace. The RayTrace task column is the task time per rank per trace.</p>
+</section>
+
+<section>
+  <h2>Findings</h2>
+  <div class="finding">
+    <p><strong>Termination is the bottleneck.</strong> With rma on Open MPI, ranks spend 2.5 s per trace (3.2 s on the slowest rank) in the termination check, against about 0.7 s for all other phases. Intel MPI runs the same RMA counter in 0.08 s. The earlier swap of Open MPI's one-sided component (ucx vs rdma) changed nothing because both are slow when 383 ranks poll one counter on rank 0.</p>
+  </div>
+  <div class="finding">
+    <p><strong>Message protocol is secondary.</strong> <code>UCX_RNDV_THRESH=inf</code> helps only while rma is in use (termination drops from 2.5 to 1.65 s). With iallreduce it has no effect: 0.279 vs 0.284 s/cycle. UCX 1.22 chose <code>dc_mlx5</code> between nodes and <code>sysv</code>/<code>cma</code> shared memory within a node in every run.</p>
+  </div>
+  <div class="finding">
+    <p><strong>Load imbalance is the next limit.</strong> With iallreduce, a ray trace takes about 0.47 s per rank, close to the slowest rank's trace phase (0.42 s, against a 0.12 s average). Photons per rank range from 12 thousand to 4.1 million per output window. Fewer, larger messages or pre-posted receives would recover little on this machine; balancing the trace work would recover more.</p>
+  </div>
+  <div class="finding">
+    <p><strong>iallreduce is safe as the default on both libraries.</strong> With Intel MPI it runs at 0.283 s/cycle, the same as rma, and its termination phase is slightly shorter (0.077 vs 0.083 s per trace).</p>
+  </div>
+  <div class="finding">
+    <p><strong>Results are unchanged.</strong> The final history rows of all six runs agree with job 1009 in every column to better than 1e-3, time step included.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Caveats and next run</h2>
+  <ul>
+    <li>Each configuration ran once. The rma baseline (1.124) agrees with the three earlier Open MPI builds (1.16–1.20 s/cycle).</li>
+    <li>CRMHD was not rerun; it traces rays rarely and showed little dependence on the MPI library.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>How it was run</h2>
+  <dl>
+    <dt>machine</dt><dd>stellarai-amd: 2× AMD EPYC 9475F (Zen 5, 96 cores per node), NDR 400 InfiniBand</dd>
+    <dt>Open MPI</dt><dd>gcc/14 + openmpi/gcc/5.0.10, UCX 1.22.0</dd>
+    <dt>Intel MPI</dt><dd>gcc/14 + Intel MPI 2021.18</dd>
+    <dt>flags</dt><dd><code>-O3 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512</code></dd>
+    <dt>parameters</dt><dd>The checkpoint lacks <code>termination</code> and <code>comm_timing</code>, and a command-line override of a missing key is an error. A partial input file read after the restart (<code>-r start.rst -i athinput.override</code>) adds them: <code>bench/overrides/rayt_{rma,iallreduce}_timing.in</code>, passed with <code>INPUT_OVERRIDE</code>.</dd>
+    <dt>tools</dt><dd><code>tigris_scripts/tigress_ncr/bench/submit.sh</code>, <code>parse_rayt_comm.py</code>, <code>compare_hst.py</code></dd>
+    <dt>run dirs</dt><dd><code>/scratch/gpfs/EOST/changgoo/tigress_ncr/bench/mhd-gcc*-rtterm-10{09..13}</code></dd>
+  </dl>
+</section>
+
+<footer>Phase times exclude the first output window, which holds start-up after the restart.</footer>
+</main>
+
+<script>
+const PH = ["trace", "send", "probe + recv", "send-test", "termination"];
+const RUNS = [
+  { id: "1009", label: "1009 Open MPI · rma", mean: [0.174, 0.126, 0.130, 0.299, 2.508], max: [0.534, 0.476, 0.506, 1.432, 3.178], rt: 3.336 },
+  { id: "1011", label: "1011 Open MPI · rma · RNDV=inf", mean: [0.149, 0.095, 0.096, 0.069, 1.647], max: [0.501, 0.402, 0.431, 0.315, 2.001], rt: 2.130 },
+  { id: "1010", label: "1010 Open MPI · iallreduce", mean: [0.123, 0.067, 0.069, 0.053, 0.104], max: [0.423, 0.080, 0.081, 0.063, 0.129], rt: 0.470 },
+  { id: "1012", label: "1012 Open MPI · iallreduce · RNDV=inf", mean: [0.126, 0.070, 0.070, 0.050, 0.107], max: [0.432, 0.082, 0.083, 0.062, 0.132], rt: 0.479 },
+  { id: "1013", label: "1013 Intel MPI · rma", mean: [0.107, 0.041, 0.194, 0.033, 0.083], max: [0.441, 0.051, 0.366, 0.040, 0.115], rt: 0.492 },
+  { id: "1014", label: "1014 Intel MPI · iallreduce", mean: [0.107, 0.042, 0.202, 0.034, 0.077], max: [0.444, 0.051, 0.245, 0.041, 0.095], rt: 0.495 },
+];
+const COL = ["--s1", "--s2", "--s3", "--s4", "--s5"];
+
+document.getElementById("legend").innerHTML = PH.map((p, i) =>
+  `<span><i style="background:var(${COL[i]})"></i>${p}</span>`).join("");
+
+document.getElementById("phase-table").innerHTML = RUNS.map(r =>
+  `<tr><td class="l">${r.label}</td>` +
+  r.mean.map((m, i) => `<td class="num">${m.toFixed(3)} / ${r.max[i].toFixed(3)}</td>`).join("") +
+  `<td class="num">${r.rt.toFixed(3)}</td></tr>`).join("");
+
+const svg = document.getElementById("svg"), tip = document.getElementById("tip"), box = document.getElementById("chart");
+const W = 640, LBL = 230, PADR = 50, ROW = 34, BAR = 18, TOP = 6, XMAX = 3.5;
+const H = TOP + RUNS.length * ROW + 26;
+svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+svg.setAttribute("width", W); svg.style.maxWidth = "none"; svg.style.width = "100%"; svg.style.minWidth = "520px";
+const x = v => LBL + v / XMAX * (W - LBL - PADR);
+const ns = "http://www.w3.org/2000/svg";
+const el = (t, a, txt) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.appendChild(e); return e; };
+
+for (let t = 0; t <= XMAX + 1e-9; t += 0.5) {
+  el("line", { x1: x(t), x2: x(t), y1: TOP, y2: TOP + RUNS.length * ROW, stroke: "var(--rule)", "stroke-width": 1 });
+  el("text", { x: x(t), y: TOP + RUNS.length * ROW + 16, "text-anchor": "middle", class: "tick" }, t.toFixed(1));
+}
+el("text", { x: W - PADR, y: H - 1, "text-anchor": "end", class: "tick" }, "s per ray trace (average over ranks)");
+
+RUNS.forEach((r, j) => {
+  const y = TOP + j * ROW + (ROW - BAR) / 2;
+  el("text", { x: LBL - 10, y: y + BAR / 2 + 4, "text-anchor": "end" }, r.label);
+  let acc = 0;
+  r.mean.forEach((m, i) => {
+    const x0 = x(acc), x1 = x(acc + m); acc += m;
+    const w = Math.max(x1 - x0 - 2, 0.8);
+    const rect = el("rect", { x: x0, y, width: w, height: BAR, rx: i === 4 ? 3 : 1, fill: `var(${COL[i]})` });
+    const hit = el("rect", { x: x0, y: y - 6, width: Math.max(x1 - x0, 6), height: BAR + 12, fill: "transparent" });
+    hit.addEventListener("mousemove", ev => {
+      const b = box.getBoundingClientRect();
+      tip.innerHTML = `${r.label}<br>${PH[i]}: ${m.toFixed(3)} s average<br>slowest rank: ${r.max[i].toFixed(3)} s`;
+      tip.hidden = false;
+      tip.style.left = Math.min(ev.clientX - b.left + 12, b.width - 230) + "px";
+      tip.style.top = (ev.clientY - b.top + 12) + "px";
+      rect.setAttribute("opacity", 0.8);
+    });
+    hit.addEventListener("mouseleave", () => { tip.hidden = true; rect.setAttribute("opacity", 1); });
+  });
+  el("text", { x: x(acc) + 6, y: y + BAR / 2 + 4, style: "fill:var(--fg)" }, acc.toFixed(2));
+});
+</script>

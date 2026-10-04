@@ -1,0 +1,4 @@
+# rayt-termination-iallreduce branch: nonblocking-allreduce termination with comm-loop timers
+<ray_tracing>
+termination = iallreduce
+comm_timing = true
