@@ -9,7 +9,8 @@ HDF5DIR=$RCAC_HDF5_ROOT
 
 # CC=g++
 mpi_hdf5_include_path="$HDF5DIR/include"
-cflag="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -march=znver3 -fprefetch-loop-arrays"
+# -fno-finite-math-only keeps the solver's NaN checks, which -ffast-math would remove
+cflag="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -fno-finite-math-only -march=znver3 -fprefetch-loop-arrays"
 options="${debug_option} -mpi -hdf5 --include=${mpi_hdf5_include_path}"
 
 physics=$1

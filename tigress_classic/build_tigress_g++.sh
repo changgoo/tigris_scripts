@@ -37,7 +37,8 @@ if [ "$MACHINE" == "stellar" ]; then
     # module load intel-oneapi/2024.2 openmpi/oneapi-2024.2/4.1.6 hdf5/oneapi-2024.2/openmpi-4.1.6/1.14.4 fftw/oneapi-2024.2/3.3.10
     module purge; module load anaconda3/2023.3 fftw/gcc/3.3.10 intel-mpi/gcc/2021.13 hdf5/gcc/intel-mpi/1.14.4
     CC="g++-simd"
-    CFLAG_OPTIONS="--cxx=$CC"
+    # configure.py's g++-simd preset has -ffast-math; keep the NaN checks
+    CFLAG_OPTIONS="--cxx=$CC --cflag=-fno-finite-math-only"
 elif [ "$MACHINE" == "tiger" ]; then
     module purge
     module load anaconda3/2023.3
@@ -52,7 +53,8 @@ elif [ "$MACHINE" == "anvil" ]; then
     module load fftw
     module load hdf5
     HDF5DIR="$RCAC_HDF5_ROOT"
-    CFLAG="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -march=znver3 -fprefetch-loop-arrays"
+    # -fno-finite-math-only keeps the solver's NaN checks, which -ffast-math would remove
+    CFLAG="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -fno-finite-math-only -march=znver3 -fprefetch-loop-arrays"
     CFLAG_OPTIONS="--cflag=${CFLAG}"
 else
     module purge

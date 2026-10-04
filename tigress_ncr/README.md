@@ -21,8 +21,8 @@ rank per block, 4 nodes).
 | machine | CPU (cores/node) | default `--cc` | stack | MHD | CRMHD | jobs | notes |
 |---|---|---|---|---|---|---|---|
 | stellarai-amd | 2x AMD EPYC 9475F, Zen 5 (96) | `gcc-impi` | GCC 14 + Intel MPI 2021.18, `-march=znver5`, fast math, LTO, 512-bit vectors | 0.291 | 0.195 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](stellarai-amd/README.md) |
-| stellar | 4x Intel Xeon Platinum 8268, Cascade Lake (96) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xCASCADELAKE -ipo -fp-model=fast=2` | 0.737 | 0.411 | `tigress_ncr_{mhd,crmhd}_8pc_tc.slurm` | [README](stellar/README.md) |
-| tiger | 2x Intel Xeon Platinum 8480+, Sapphire Rapids (112; 96 used) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xSAPPHIRERAPIDS -ipo -fp-model=fast=2` | 0.510 | 0.328 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](tiger/README.md) |
+| stellar | 4x Intel Xeon Platinum 8268, Cascade Lake (96) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xCASCADELAKE -ipo -fp-model=fast` | 0.749 | 0.431 | `tigress_ncr_{mhd,crmhd}_8pc_tc.slurm` | [README](stellar/README.md) |
+| tiger | 2x Intel Xeon Platinum 8480+, Sapphire Rapids (112; 96 used) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xSAPPHIRERAPIDS -ipo -fp-model=fast` | 0.529 | 0.343 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](tiger/README.md) |
 | anvil | | (legacy) | fixed modules in `build_tigress.sh` | | | | no `env.sh` yet |
 
 An 8 pc run costs 2.1-2.5x fewer node-hours on stellarai-amd than on Stellar (newer cores,
@@ -36,6 +36,35 @@ best compiler differs: GCC on Zen 5, icpx on Cascade Lake, where GCC 13 is 2x sl
 photochemistry.
 
 All three machines side by side: https://claude.ai/artifact/28UKFCgYPf9bFjSzwRyksr
+
+### Floating-point model: no finite-math flags in production
+
+The production flags keep the compiler from assuming that NaNs never occur. icpx
+`-fp-model=fast=2`, and GCC/Clang `-ffast-math` without `-fno-finite-math-only`, let the
+compiler assume finite math. Every NaN test in the solver then compiles to `false`, and `x/x`
+folds to 1 (checked with icpx 2024.2 and GCC 13 using `bench/nan_check.cpp`).
+
+These tests are the solver's safety nets for bad cells:
+- the C2P density and pressure floors, which also catch NaN;
+- the CR-FOFC and CRAverage flags;
+- the revert of the implicit CR update;
+- the NCR solver's bail-out on a NaN temperature;
+- NaN guards in the accretion reset.
+
+With finite-math flags, a NaN that should be floored or repaired passes silently into the
+fluxes and spreads.
+
+The flag-sweep correctness check compares history files over 200-cycle restarts. It cannot
+catch this, because these branches only matter in rare bad cells. On Stellar, `fast2` was
+3.5% (CRMHD) and 1% (MHD) faster than `fp-model=fast`. That is not worth losing the safety nets.
+
+- **Production:** icpx `-fp-model=fast`, and `-ffast-math -fno-finite-math-only` for GCC/AOCC.
+- **Enforcement:** `build_tigress.sh` builds and runs `bench/nan_check.cpp` with each build's
+  final flags. It refuses flags that remove NaN checks unless `ALLOW_FINITE_MATH=1`, which only
+  `bench/flag_sweep.sh` sets for timing-only variants. The result is recorded as `nan_checks:`
+  in the `.buildinfo` file.
+- **Benchmarks:** the timings in the table were measured before this change for stellarai-amd
+  (GCC/AOCC with plain `-ffast-math`). Re-run the sweep there with the new flags.
 
 ## 1. Shell and modules
 

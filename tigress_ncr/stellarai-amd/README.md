@@ -77,6 +77,14 @@ MHD: `mhd-ncr-8pc/TIGRESS_NCR.00006.rst` (t=300). CRMHD: `crmhd-ncr-8pc/TIGRESS_
 Recommendation: use **gcc-impi** with `FLAGS_GCC`. It is the default of `build_tigress.sh` and
 of the production scripts. The final build reran at 0.291 (MHD) and 0.198 (CRMHD) s/cycle.
 
+Since 2026-10-04, `FLAGS_GCC` and `FLAGS_AOCC` add `-fno-finite-math-only`, and `FLAGS_ICPX`
+uses `-fp-model=fast` instead of `fast=2`. Plain `-ffast-math` and `fast=2` assume finite
+math, which compiles every NaN check in the solver to false (see `../README.md`,
+"Floating-point model"). The timings above were measured before this change, so re-run the
+GCC sweep (`ONLY=gcc-impi bench/flag_sweep.sh stellarai-amd 200 3`) to confirm them.
+Executables built here before 2026-10-04 with these flags have no working NaN checks. Rebuild
+them before further production use.
+
 ## Build
 
 ```bash

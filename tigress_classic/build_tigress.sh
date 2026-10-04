@@ -135,7 +135,8 @@ elif [ "$MACHINE" == "anvil" ]; then
     module load fftw
     module load hdf5
     HDF5DIR="$RCAC_HDF5_ROOT"
-    CFLAG="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -march=znver3 -fprefetch-loop-arrays"
+    # -fno-finite-math-only keeps the solver's NaN checks, which -ffast-math would remove
+    CFLAG="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -fno-finite-math-only -march=znver3 -fprefetch-loop-arrays"
     CFLAG_OPTIONS=(--cflag="$CFLAG")
 else
     module purge
@@ -173,7 +174,8 @@ fi
 if [ "$BUILD_OPTION" == "1" ] && [ ! -f "$MACHINE_ENV" ]; then
     #DEBUG_OPTION="-debug"
     CC="g++-simd"
-    CFLAG_OPTIONS=(--cxx=$CC)
+    # configure.py's g++-simd preset has -ffast-math; keep the NaN checks
+    CFLAG_OPTIONS=(--cxx=$CC --cflag=-fno-finite-math-only)
 else
     DEBUG_OPTION=""
 fi

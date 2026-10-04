@@ -33,8 +33,10 @@ BENCH_RST_crmhd=crmhd-ncr-8pc/TIGRESS_NCR.00003.rst
 
 # --- best COMPLETE compiler flags per compiler (start values; replace with sweep winners)
 # They replace configure.py's preset flags in the Makefile (compile and link).
-FLAGS_GCC="-O3 -std=c++11 -march=<arch> -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays"
-FLAGS_CLANG="-O3 -std=c++11 -march=<arch> -ffast-math -fopenmp-simd -flto -fuse-ld=lld"
+# Keep NaN checks: -ffast-math implies -ffinite-math-only, which compiles every NaN test in
+# the solver to false; -fno-finite-math-only restores them (build_tigress.sh checks this).
+FLAGS_GCC="-O3 -std=c++11 -march=<arch> -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays"
+FLAGS_CLANG="-O3 -std=c++11 -march=<arch> -ffast-math -fno-finite-math-only -fopenmp-simd -flto -fuse-ld=lld"
 
 # load_toolchain <tc>: module purge + module load the stack, then set
 #   CXX_PRESET  : configure.py --cxx preset used only to run configure (g++, clang++, ...)

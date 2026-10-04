@@ -1,3 +1,6 @@
+# NOTE (2026-10-04): variants with -fp-model=fast=2 or -ffast-math without
+# -fno-finite-math-only remove the solver's NaN checks; they are timing-only and must not
+# become FLAGS_* in env.sh (build_tigress.sh refuses them outside bench/flag_sweep.sh).
 # Compiler-flag sweep for stellarai-amd (bench/flag_sweep.sh stellarai-amd).
 # One variant per line:  <toolchain> <variant> <complete compiler flags>
 # The flags REPLACE configure.py's preset flags entirely (build_tigress.sh --cxxflags).

@@ -31,6 +31,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 set -e
+BUILD_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # before any cd
 
 # Defaults
 MACHINE="stellar"
@@ -158,7 +159,8 @@ elif [ "$MACHINE" == "anvil" ]; then
     module load fftw
     module load hdf5
     HDF5DIR="$RCAC_HDF5_ROOT"
-    CFLAG="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -march=znver3 -fprefetch-loop-arrays"
+    # -fno-finite-math-only keeps the solver's NaN checks, which -ffast-math would remove
+    CFLAG="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -fno-finite-math-only -march=znver3 -fprefetch-loop-arrays"
     CFLAG_OPTIONS=(--cflag="$CFLAG")
 else
     module purge
@@ -235,6 +237,39 @@ fi
 if [ -n "$FULL_CXXFLAGS" ]; then
     sed -i "s|^CXXFLAGS := .*|CXXFLAGS := ${FULL_CXXFLAGS} -I${HDF5_INC}|" Makefile
     echo -e "${GREEN}CXXFLAGS := ${FULL_CXXFLAGS} -I${HDF5_INC}${NC}"
+
+    # NaN semantics of the final flags. The solver's safety nets are NaN tests (C2P floors,
+    # CR-FOFC, CRAverage, NCR bail-out); finite-math flags (icpx -fp-model=fast=2, GCC/Clang
+    # -ffast-math without -fno-finite-math-only) compile them to false. Refuse such builds
+    # unless ALLOW_FINITE_MATH=1 (benchmark-only variants, e.g. bench/flag_sweep.sh).
+    NAN_CHECK_SRC="$BUILD_SCRIPT_DIR/bench/nan_check.cpp"
+    NAN_CHECK_STATUS="not run"
+    if [ -f "$NAN_CHECK_SRC" ]; then
+        mkdir -p obj
+        if mpicxx ${FULL_CXXFLAGS} "$NAN_CHECK_SRC" -o obj/nan_check > obj/nan_check.log 2>&1; then
+            if NAN_OUT=$(./obj/nan_check 0 2>&1); then
+                NAN_CHECK_STATUS="kept"
+            elif echo "$NAN_OUT" | grep -q "nan_checks="; then
+                NAN_CHECK_STATUS="REMOVED"
+            else
+                NAN_CHECK_STATUS="not run (the test binary does not run on this host)"
+            fi
+        else
+            NAN_CHECK_STATUS="not run (the test does not compile; see obj/nan_check.log)"
+        fi
+    fi
+    echo -e "${GREEN}NaN checks with these flags: ${NAN_CHECK_STATUS}${NC}"
+    if [ "$NAN_CHECK_STATUS" = "REMOVED" ]; then
+        if [ "${ALLOW_FINITE_MATH:-0}" = "1" ]; then
+            echo -e "${YELLOW}WARNING: these flags remove NaN checks (ALLOW_FINITE_MATH=1);" \
+                    "not for production runs${NC}"
+        else
+            echo -e "${RED}ERROR: these flags remove the solver's NaN checks (finite-math" \
+                    "assumption). Use -fp-model=fast (icpx) or add -fno-finite-math-only" \
+                    "(GCC/Clang), or set ALLOW_FINITE_MATH=1 for a benchmark-only build.${NC}"
+            exit 1
+        fi
+    fi
 fi
 
 echo -e  "${GREEN}Building Athena++ ${NC}"
@@ -255,6 +290,7 @@ echo -e  "${GREEN}Executable copied to $EXE${NC}"
     echo "dirty:     $(git -C "$SRCDIR" status --porcelain --untracked-files=no | wc -l) modified files"
     echo "configure: $PHY_OPTIONS ${CFLAG_OPTIONS[*]}"
     echo "flags:     ${FULL_CXXFLAGS:+$([ -n "$CXXFLAGS_OVERRIDE" ] && echo "--cxxflags override" || echo "TC_CXXFLAGS from env.sh")}"
+    echo "nan_checks: ${NAN_CHECK_STATUS:-n/a (no env.sh flags)}"
     echo "CXX:       $(sed -n 's/^CXX := //p' "$SRCDIR/Makefile") -> $( (mpicxx --showme 2>/dev/null || mpicxx -show 2>/dev/null) | awk '{print $1}')"
     sed -n 's/^CXXFLAGS := /CXXFLAGS:  /p; s/^LDFLAGS := /LDFLAGS:   /p' "$SRCDIR/Makefile"
     echo "modules:   $(module -t list 2>&1 | grep -v ':$' | tr '\n' ' ')"

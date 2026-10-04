@@ -113,3 +113,25 @@ python3 gen_job.py --machine stellar --mesh 512 512 2048 --mblock 64 --dx 2 --ph
 
 Run `python3 gen_job.py --help` for all options.
 
+
+## Compiler flags: keep NaN checks
+
+The solver's safety nets for bad cells are NaN tests: the C2P density and pressure floors,
+the CR-FOFC and CRAverage flags, the CR implicit-update revert, and the NCR solver bail-out.
+`-ffast-math` (GCC/Clang) and icpx `-fp-model=fast=2` let the compiler assume finite math, so
+all of these compile to `false`.
+
+The scripts here therefore keep NaN checks:
+- The explicit `-ffast-math` flag sets (anvil, delta, `build_tigress*.sh`) add
+  `-fno-finite-math-only`.
+- The `g++-simd` builds pass `--cflag=-fno-finite-math-only`, because configure.py's
+  `g++-simd` preset hard-codes `-ffast-math`.
+- The Stellar/Tiger `icpx` preset keeps icpx's default `fp-model=fast`, which keeps NaN
+  checks.
+
+`../tigress_ncr/bench/nan_check.cpp` tests a flag set:
+
+    mpicxx <flags> ../tigress_ncr/bench/nan_check.cpp -o nan_check && ./nan_check 0
+
+It prints `nan_checks=kept` for safe flag sets. See also `../tigress_ncr/README.md`, section
+"Floating-point model".

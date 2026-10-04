@@ -213,8 +213,8 @@ everywhere keeps the comparison fair:
 
 | family | `CXX_PRESET` | starting `FLAGS_*` |
 |---|---|---|
-| GCC | `g++` | `-O3 -std=c++11 -march=<arch> -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays` |
-| AOCC / LLVM clang | `clang++` | `-O3 -std=c++11 -march=<arch> -ffast-math -fopenmp-simd -flto -fuse-ld=lld` |
+| GCC | `g++` | `-O3 -std=c++11 -march=<arch> -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays` |
+| AOCC / LLVM clang | `clang++` | `-O3 -std=c++11 -march=<arch> -ffast-math -fno-finite-math-only -fopenmp-simd -flto -fuse-ld=lld` |
 | oneAPI icpx | `clang++` | `-O3 -std=c++11 -march=<arch> -ipo -qopenmp-simd -Wno-tautological-constant-compare -Wno-array-bounds` |
 | NVHPC / Cray | `clang++` (or `g++`) | the vendor's `-O3 -fast`-style set with its arch flag |
 
@@ -300,6 +300,15 @@ cover:
 - `-mprefer-vector-width=512` on AVX-512 CPUs;
 - `-funroll-loops` and `-O2`;
 - vendor extras (AOCC `-zopt`; icpx `-fp-model=fast=2` and `precise`).
+
+**Production flags must keep NaN checks.** Finite-math variants (icpx `-fp-model=fast=2`, or
+`-ffast-math` without `-fno-finite-math-only`) compile every NaN test in the solver to false:
+the C2P floors, CR-FOFC, CRAverage, the CR implicit-update revert and the NCR bail-out. The
+history check below cannot detect this, because these branches act only in rare bad cells.
+
+- Such variants may be timed; the sweep sets `ALLOW_FINITE_MATH=1`.
+- They must not become `FLAGS_*`. `build_tigress.sh` runs `bench/nan_check.cpp` with each
+  build's flags and refuses a finite-math build otherwise.
 
 ```bash
 nohup bench/flag_sweep.sh <M> 200 1 > bench/logs/sweep.log 2>&1 &
@@ -417,8 +426,8 @@ any run is SUSPECT. Runs that advanced a different NCYC are reported as not comp
 | machine | CPU | nodes | best toolchain | mhd s/cycle | crmhd s/cycle | mhd node-h/1e4 | crmhd node-h/1e4 | commit |
 |---|---|---|---|---|---|---|---|---|
 | stellarai-amd | 2x EPYC 9475F (Zen 5), 96 c, NDR 400 IB | 4 | gcc-impi + FLAGS_GCC (`preset-v512`) | 0.291 | 0.195 | 3.24 | 2.17 | eee94bc4f |
-| stellar | 4x Xeon Platinum 8268 (Cascade Lake), 96 c, IB 100 Gb/s | 4 | icpx-impi + FLAGS_ICPX (`fast2`) | 0.737 | 0.411 | 8.19 | 4.57 | eee94bc4f |
-| tiger | 2x Xeon Platinum 8480+ (Sapphire Rapids), 112 c (96 used), IB NDR200 | 4 | icpx-impi + FLAGS_ICPX (`fast2`) | 0.510 | 0.328 | 5.67 | 3.64 | eee94bc4f |
+| stellar | 4x Xeon Platinum 8268 (Cascade Lake), 96 c, IB 100 Gb/s | 4 | icpx-impi + FLAGS_ICPX (`-fp-model=fast`; `fast2` was 0.737/0.411 but removes NaN checks) | 0.749 | 0.431 | 8.32 | 4.79 | eee94bc4f |
+| tiger | 2x Xeon Platinum 8480+ (Sapphire Rapids), 112 c (96 used), IB NDR200 | 4 | icpx-impi + FLAGS_ICPX (`-fp-model=fast`; `fast2` was 0.510/0.328 but removes NaN checks) | 0.529 | 0.343 | 5.88 | 3.81 | eee94bc4f |
 
 Report for stellarai-amd: https://claude.ai/artifact/H1B2iqL3a4F2cjiDQdvvtd
 Report for stellar: https://claude.ai/artifact/3re4pmVb3w7LYwZw5S3GL6

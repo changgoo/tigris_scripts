@@ -27,6 +27,9 @@ NCR_DIR="$(dirname "$BENCHDIR")"
 VFILE=$NCR_DIR/$MACHINE/flag_variants.txt
 [ -f "$VFILE" ] || { echo "missing $VFILE"; exit 1; }
 source "$NCR_DIR/$MACHINE/env.sh"
+# Variants may assume finite math (e.g. icpx fast2, plain -ffast-math). They are timed here
+# only; build_tigress.sh refuses them for normal builds because they remove NaN checks.
+export ALLOW_FINITE_MATH=1
 
 # variant list: "tc|variant|flags"
 mapfile -t VARS < <(grep -vE '^\s*(#|$)' "$VFILE" | awk '{tc=$1; v=$2; $1=""; $2=""; sub(/^ +/,""); print tc "|" v "|" $0}' \

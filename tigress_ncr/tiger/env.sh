@@ -56,18 +56,24 @@ BENCH_CACHE=$SCRATCH_BASE/tigris-benchmark      # compute-node visible copy
 BENCH_RST_mhd=mhd-ncr-8pc/TIGRESS_NCR.00006.rst      # t=300
 BENCH_RST_crmhd=crmhd-ncr-8pc/TIGRESS_NCR.00003.rst  # t=150, CR<->NCR coupled
 
-# --- best flags per compiler: complete sets, winners of the flag sweep (2026-10-03) ----
+# --- flags per compiler: complete sets, from the flag sweep (2026-10-03), restricted to
+# flags that keep NaN checks (2026-10-04; see ../README.md, "Floating-point model").
 # flag_variants.txt, Intel MPI, median of 3 runs for the top variants. s/cycle as MHD, CRMHD.
-#   icpx : variant fast2  (0.512, 0.328): -fp-model=fast=2 makes NCR photochemistry 25%
-#          faster than the default fp-model=fast (preset: 0.529, 0.343); adding
+#   icpx : default fp-model=fast (preset: 0.529, 0.343). The sweep winner fast2 (0.512, 0.328;
+#          -fp-model=fast=2 makes NCR photochemistry 25% faster) removes NaN checks and is
+#          benchmark-only; adding
 #          -qopt-zmm-usage=high ties (0.519, 0.326); oneAPI 2026.0 with fast2 ties (0.523,
 #          0.327); precise costs 6-14% (vs preset); -march=sapphirerapids instead of
 #          -xSAPPHIRERAPIDS is within noise for MHD, but its CRMHD integrator is 7% slower.
 #   GCC  : variant preset (0.533, 0.347): every fast-math + LTO variant ties within the
 #          placement noise (+-3%); without -ffast-math the photochemistry is 25-40% slower
-#          (safe-lto: 0.576, 0.393; plain -O3: 0.601, 0.419).
-FLAGS_GCC="-O3 -std=c++11 -march=sapphirerapids -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays"
-FLAGS_ICPX="-O3 -std=c++11 -ipo -xSAPPHIRERAPIDS -qopenmp-simd -fp-model=fast=2 -Wno-tautological-constant-compare -Wno-array-bounds"
+#          (safe-lto: 0.576, 0.393; plain -O3: 0.601, 0.419). -fno-finite-math-only keeps the
+#          NaN checks that -ffast-math would remove (cost not benchmarked yet).
+# NaN checks: fp-model=fast=2 and plain -ffast-math assume finite math, so every NaN test in
+# the solver (C2P floors, CR-FOFC, CRAverage, the NCR bail-out) compiles to false;
+# build_tigress.sh refuses such flags (bench/nan_check.cpp).
+FLAGS_GCC="-O3 -std=c++11 -march=sapphirerapids -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays"
+FLAGS_ICPX="-O3 -std=c++11 -ipo -xSAPPHIRERAPIDS -qopenmp-simd -fp-model=fast -Wno-tautological-constant-compare -Wno-array-bounds"
 
 load_toolchain() {
     local tc=${1:-$DEFAULT_TOOLCHAIN}
