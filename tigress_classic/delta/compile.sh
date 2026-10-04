@@ -8,7 +8,8 @@ set -e
 module purge
 module load gcc openmpi
 module load fftw hdf5
-cflag="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -march=znver3 -fprefetch-loop-arrays"
+# -fno-finite-math-only keeps the solver's NaN checks, which -ffast-math would remove
+cflag="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -fno-finite-math-only -march=znver3 -fprefetch-loop-arrays"
 
 # CC=g++
 echo $HDF5_HOME

@@ -51,7 +51,8 @@ elif [ "$MACHINE" == "anvil" ]; then
     module load fftw
     module load hdf5
     HDF5DIR="$RCAC_HDF5_ROOT"
-    CFLAG="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -march=znver3 -fprefetch-loop-arrays"
+    # -fno-finite-math-only keeps the solver's NaN checks, which -ffast-math would remove
+    CFLAG="-fopenmp-simd -fwhole-program -flto=auto -ffast-math -fno-finite-math-only -march=znver3 -fprefetch-loop-arrays"
     CFLAG_OPTIONS="--cflag=${CFLAG}"
 else
     module purge
