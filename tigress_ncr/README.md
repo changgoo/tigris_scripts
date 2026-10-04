@@ -28,7 +28,10 @@ rank per block, 4 nodes).
 An 8 pc run costs 2.1-2.5x fewer node-hours on stellarai-amd than on Stellar (newer cores,
 and ray tracing is 3x faster there). On both machines Intel MPI is clearly faster than
 Open MPI for MHD, whose cycle is dominated by ray tracing, which is limited by MPI
-point-to-point latency and one-sided progress (4x on stellarai-amd, 1.25x on Stellar). The
+point-to-point latency and one-sided progress (4x on stellarai-amd, 1.25x on Stellar). On
+stellarai-amd the Open MPI gap comes from the rank-0 RMA termination counter and disappears
+with `<ray_tracing>/termination = iallreduce`
+([report](bench/reports/rayt-termination-stellarai-amd.md)). The
 best compiler differs: GCC on Zen 5, icpx on Cascade Lake, where GCC 13 is 2x slower in NCR
 photochemistry.
 

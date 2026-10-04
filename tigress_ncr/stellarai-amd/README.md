@@ -58,7 +58,10 @@ MHD: `mhd-ncr-8pc/TIGRESS_NCR.00006.rst` (t=300). CRMHD: `crmhd-ncr-8pc/TIGRESS_
 - MPI dominates the MHD run: with Open MPI, ray tracing takes ~1.0 s/cycle; with Intel MPI it takes ~0.15 s.
   Ray tracing passes photons with asynchronous point-to-point messages and counts finished
   rays with `MPI_Fetch_and_op` on rank 0. Changing Open MPI's `osc` component (`ucx`,
-  `rdma`) or switching to `pml=ob1` did not help (1.16 to 1.18 s/cycle).
+  `rdma`) or switching to `pml=ob1` did not help (1.16 to 1.18 s/cycle). The cause is that
+  rank-0 counter: with `<ray_tracing>/termination = iallreduce` (branch
+  `rayt-termination-iallreduce`), Open MPI runs at 0.279 s/cycle and Intel MPI is unchanged
+  (0.283). See `../bench/reports/rayt-termination-stellarai-amd.md`.
 - The compiler matters for CRMHD, where the cycle is compute-bound and ray tracing is cheap
   (~0.015 s): GCC and AOCC are ~25% faster than icpx in the integrator.
 - `--distribution=block:block` vs `block:cyclic` made no difference (within 0.3%).
