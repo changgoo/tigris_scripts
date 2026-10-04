@@ -20,20 +20,19 @@ rank per block, 4 nodes).
 
 | machine | CPU (cores/node) | default `--cc` | stack | MHD | CRMHD | jobs | notes |
 |---|---|---|---|---|---|---|---|
-| stellarai-amd | 2x AMD EPYC 9475F, Zen 5 (96) | `gcc-impi` | GCC 14 + Intel MPI 2021.18, `-march=znver5`, fast math, LTO, 512-bit vectors | 0.291 | 0.195 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](stellarai-amd/README.md) |
+| stellarai-amd | 2x AMD EPYC 9475F, Zen 5 (96) | `gcc-impi` | GCC 14 + Intel MPI 2021.18, `-march=znver5`, fast math with NaN checks, LTO, 512-bit vectors; GCC + Open MPI is as fast since iallreduce termination | 0.282 | 0.204 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](stellarai-amd/README.md) |
 | stellar | 4x Intel Xeon Platinum 8268, Cascade Lake (96) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xCASCADELAKE -ipo -fp-model=fast` | 0.749 | 0.431 | `tigress_ncr_{mhd,crmhd}_8pc_tc.slurm` | [README](stellar/README.md) |
 | tiger | 2x Intel Xeon Platinum 8480+, Sapphire Rapids (112; 96 used) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xSAPPHIRERAPIDS -ipo -fp-model=fast` | 0.529 | 0.343 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](tiger/README.md) |
 | anvil | | (legacy) | fixed modules in `build_tigress.sh` | | | | no `env.sh` yet |
 
-An 8 pc run costs 2.1-2.5x fewer node-hours on stellarai-amd than on Stellar (newer cores,
-and ray tracing is 3x faster there). On both machines Intel MPI is clearly faster than
-Open MPI for MHD, whose cycle is dominated by ray tracing, which is limited by MPI
-point-to-point latency and one-sided progress (4x on stellarai-amd, 1.25x on Stellar). On
-stellarai-amd the Open MPI gap comes from the rank-0 RMA termination counter and disappears
-with `<ray_tracing>/termination = iallreduce`
-([report](bench/reports/rayt-termination-stellarai-amd.md)). The
-best compiler differs: GCC on Zen 5, icpx on Cascade Lake, where GCC 13 is 2x slower in NCR
-photochemistry.
+An 8 pc run costs 2.1-2.7x fewer node-hours on stellarai-amd than on Stellar (newer cores,
+and ray tracing is 3x faster there). MHD cycles are dominated by ray tracing, which is limited
+by MPI point-to-point latency. With the old rma termination test (a rank-0 `MPI_Fetch_and_op`
+counter), Open MPI was 4x slower than Intel MPI on stellarai-amd and 1.25x on Stellar. Since
+`<ray_tracing>/termination = iallreduce` became the default (`ncr-cr-coupling` PR #348), the gap
+is gone on stellarai-amd ([report](bench/reports/rayt-termination-stellarai-amd.md)); Stellar and
+tiger have not been re-measured. The best compiler differs: GCC on Zen 5, icpx on Cascade Lake,
+where GCC 13 is 2x slower in NCR photochemistry.
 
 All three machines side by side: https://claude.ai/artifact/28UKFCgYPf9bFjSzwRyksr
 
@@ -63,8 +62,8 @@ catch this, because these branches only matter in rare bad cells. On Stellar, `f
   final flags. It refuses flags that remove NaN checks unless `ALLOW_FINITE_MATH=1`, which only
   `bench/flag_sweep.sh` sets for timing-only variants. The result is recorded as `nan_checks:`
   in the `.buildinfo` file.
-- **Benchmarks:** the timings in the table were measured before this change for stellarai-amd
-  (GCC/AOCC with plain `-ffast-math`). Re-run the sweep there with the new flags.
+- **Benchmarks:** stellarai-amd was re-measured with these flags on 2026-10-04 (GCC: no
+  measurable cost; AOCC: 15-20% slower photochemistry; icpx: loses the 14% CRMHD gain of `fast=2`).
 
 ## 1. Shell and modules
 

@@ -14,6 +14,9 @@ branch `rayt-termination-iallreduce` (off `ncr-cr-coupling`, commit 4f309c2):
   (trace, send, probe+recv, send-test, termination) and a count of idle polls, written to
   `TIGRESS_NCR.mesh_task_time.txt`.
 
+**Outcome:** iallreduce became the default (`ncr-cr-coupling` PR #348, commit 4eea9f8); the
+production executables are built from it. Set `termination = rma` to get the old behavior.
+
 The author asked for four Open MPI runs: baseline, iallreduce, `UCX_RNDV_THRESH=inf`, and
 both. Two Intel MPI runs were added for reference.
 
@@ -92,4 +95,6 @@ INPUT_OVERRIDE=$O/rayt_rma_timing.in        bash bench/submit.sh stellarai-amd m
 INPUT_OVERRIDE=$O/rayt_iallreduce_timing.in bash bench/submit.sh stellarai-amd mhd gcc-impi 200
 ```
 
-Run from `tigress_ncr/`. Result lines are in `../results/stellarai-amd.txt` (jobs 1009-1014).
+Run from `tigress_ncr/`. Result lines are in `../results/stellarai-amd.txt` (jobs 1009-1014);
+the run directories were deleted after the test. On `ncr-cr-coupling` after PR #348, the
+`rma` override reproduces the old default.

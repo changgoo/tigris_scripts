@@ -10,7 +10,8 @@
 #   load_toolchain <toolchain>   # loads modules, sets CXX_PRESET and TC_CXXFLAGS
 #
 # Toolchains (MPI-enabled HDF5 and AOCL-FFTW in every stack; there is no fftw module).
-# gcc-impi is the default: fastest for both MHD and CRMHD 8 pc runs (see README.md).
+# gcc-impi is the default. Since iallreduce ray-tracing termination (2026-10-04), gcc (Open MPI)
+# is as fast on MHD and 9% faster on CRMHD; see README.md before switching.
 #   gcc-impi  : GCC 14                + Intel MPI 2021.18
 #   aocc-impi : AOCC 5.2 clang++      + Intel MPI 2021.18  (I_MPI_CXX=clang++, gcc-built HDF5)
 #   icpx-impi : oneAPI 2026.0 icpx    + Intel MPI 2021.18
@@ -50,20 +51,18 @@ BENCH_CACHE=$SCRATCH_BASE/tigris-benchmark      # compute-node visible copy
 BENCH_RST_mhd=mhd-ncr-8pc/TIGRESS_NCR.00006.rst      # t=300
 BENCH_RST_crmhd=crmhd-ncr-8pc/TIGRESS_NCR.00003.rst  # t=150, CR<->NCR coupled
 
-# --- best flags per compiler: complete sets, winners of the flag sweep (2026-10-03) ----
-# flag_variants.txt, 3 runs each, Intel MPI. Fast math is worth 6-17% over plain -O3, and
-# -fno-math-errno/-fno-trapping-math alone recovers only part of it. The GCC/AOCC
-# variants with fast math + LTO tie within the ~2-3% run-to-run noise.
-#   GCC  : variant preset-v512   (MHD 0.292, CRMHD 0.195 s/cycle)
-#   AOCC : variant preset        (0.299, 0.198); -zopt miscompiles (MHD history wrong)
-#   icpx : variant fast2         (0.291, 0.220); default fp-model=fast is 14% slower on CRMHD,
-#          fp-model=precise 35-70% slower
+# --- production flags per compiler: complete sets --------------------------------------
+# Flag sweep (2026-10-03, flag_variants.txt, 3 runs each, Intel MPI): fast math is worth 6-17%
+# over plain -O3, and -fno-math-errno/-fno-trapping-math alone recovers only part of it. The
+# GCC/AOCC variants with fast math + LTO tie within the ~2-3% run-to-run noise. Winners:
+# GCC preset-v512, AOCC preset (-zopt miscompiles: MHD history wrong), icpx fast2.
 # NaN checks (2026-10-04): -ffast-math (GCC/AOCC) and -fp-model=fast=2 (icpx) assume finite
 # math, so every NaN test in the solver (C2P floors, CR-FOFC, CRAverage, the NCR bail-out)
 # compiles to false and x/x folds to 1. The production flags therefore add
 # -fno-finite-math-only (GCC/AOCC) and use fp-model=fast (icpx); build_tigress.sh refuses
-# flags that remove NaN checks (bench/nan_check.cpp). The timings above were measured
-# without these changes; re-benchmark before relying on them.
+# flags that remove NaN checks (bench/nan_check.cpp).
+# Re-measured with these flags and iallreduce termination (2026-10-04, MHD/CRMHD s/cycle,
+# Intel MPI): GCC 0.282/0.204 (Open MPI: 0.276/0.186), AOCC 0.307/0.215, icpx 0.325/0.260.
 FLAGS_GCC="-O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512"
 FLAGS_AOCC="-O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto -fuse-ld=lld"
 FLAGS_ICPX="-O3 -std=c++11 -march=znver5 -ipo -qopenmp-simd -fp-model=fast -Wno-tautological-constant-compare -Wno-array-bounds"

@@ -115,7 +115,12 @@ footer { color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--rul
 </section>
 
 <section>
-  <h2>Caveats and next run</h2>
+  <h2>Outcome</h2>
+  <p>iallreduce is now the default termination test on <code>ncr-cr-coupling</code> (PR #348, commit 4eea9f8), and the production executables are built from it. <code>termination = rma</code> restores the old behavior.</p>
+</section>
+
+<section>
+  <h2>Caveats</h2>
   <ul>
     <li>Each configuration ran once. The rma baseline (1.124) agrees with the three earlier Open MPI builds (1.16–1.20 s/cycle).</li>
     <li>CRMHD was not rerun; it traces rays rarely and showed little dependence on the MPI library.</li>
@@ -131,7 +136,7 @@ footer { color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--rul
     <dt>flags</dt><dd><code>-O3 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512</code></dd>
     <dt>parameters</dt><dd>The checkpoint lacks <code>termination</code> and <code>comm_timing</code>, and a command-line override of a missing key is an error. A partial input file read after the restart (<code>-r start.rst -i athinput.override</code>) adds them: <code>bench/overrides/rayt_{rma,iallreduce}_timing.in</code>, passed with <code>INPUT_OVERRIDE</code>.</dd>
     <dt>tools</dt><dd><code>tigris_scripts/tigress_ncr/bench/submit.sh</code>, <code>parse_rayt_comm.py</code>, <code>compare_hst.py</code></dd>
-    <dt>run dirs</dt><dd><code>/scratch/gpfs/EOST/changgoo/tigress_ncr/bench/mhd-gcc*-rtterm-10{09..13}</code></dd>
+    <dt>results</dt><dd><code>tigress_ncr/bench/results/stellarai-amd.txt</code>, jobs 1009–1014 (run directories deleted)</dd>
   </dl>
 </section>
 

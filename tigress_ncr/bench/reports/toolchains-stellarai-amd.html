@@ -1,0 +1,509 @@
+<title>TIGRESS-NCR on stellarai-amd</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: an engineering datasheet. A narrow reading column, figures and spec tables that
+   widen to the page, flags set as monospace tokens. */
+:root {
+  --bg: #f6f7f7;
+  --panel: #ffffff;
+  --ink: #15191b;
+  --ink-2: #4a5458;
+  --ink-3: #6f7a7e;
+  --rule: #d8dddf;
+  --rule-2: #e9eced;
+  --accent: #0f5f74;
+  --accent-soft: #e2eff2;
+  --code-bg: #eef1f2;
+  --good: #0ca30c;
+  --critical: #d03b3b;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s0: #a3a8a6;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131718; --panel: #1b2022; --ink: #eef2f3; --ink-2: #b9c3c6; --ink-3: #8c979a;
+    --rule: #333b3e; --rule-2: #262d2f; --accent: #6cc0d3; --accent-soft: #1d3339; --code-bg: #232a2c;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s0: #6d7270;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131718; --panel: #1b2022; --ink: #eef2f3; --ink-2: #b9c3c6; --ink-3: #8c979a;
+  --rule: #333b3e; --rule-2: #262d2f; --accent: #6cc0d3; --accent-soft: #1d3339; --code-bg: #232a2c;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s0: #6d7270;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15.5px; line-height: 1.6; }
+.page { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; }
+.prose { max-width: 68ch; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 4.6vw, 3.1rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.6rem; font-weight: 600; margin-block: 56px 14px; padding-top: 18px; border-top: 2px solid var(--ink); }
+h3 { font-size: 1.12rem; font-weight: 600; margin-block: 28px 8px; }
+p { margin-block: 0 12px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.lede { font-size: 1.12rem; color: var(--ink-2); max-width: 64ch; margin-top: 14px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 18px; font-family: var(--f-mono); font-size: 12.5px; color: var(--ink-3); }
+code, .tok { font-family: var(--f-mono); font-size: 0.86em; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+pre { font-family: var(--f-mono); font-size: 13px; background: var(--code-bg); border: 1px solid var(--rule); border-radius: 4px; padding: 12px 14px; overflow-x: auto; line-height: 1.5; margin: 8px 0 14px; }
+a { color: var(--accent); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 28px; }
+.tile { background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 14px 16px; min-width: 0; }
+.tile .k { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.tile .v { font-family: var(--f-display); font-size: 2.1rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 4px; }
+.tile .v small { font-size: 0.95rem; font-weight: 500; color: var(--ink-2); margin-left: 4px; }
+.tile .d { font-size: 13.5px; color: var(--ink-2); margin-top: 4px; }
+
+.reco { margin-top: 22px; background: var(--accent-soft); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 4px; padding: 16px 18px; }
+.reco h3 { margin: 0 0 6px; }
+.reco pre { background: var(--panel); }
+
+.tablewrap { overflow-x: auto; margin: 10px 0 16px; border: 1px solid var(--rule); border-radius: 4px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule-2); vertical-align: top; }
+th { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.k { color: var(--ink-2); white-space: nowrap; width: 1%; }
+.tok { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 3px; padding: 1px 6px; white-space: nowrap; display: inline-block; margin: 1px 0; }
+.chip { font-family: var(--f-mono); font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.chip.good { color: var(--good); }
+.chip.bad { color: var(--critical); }
+.chip.neutral { color: var(--ink-3); }
+
+figure { margin: 18px 0 8px; background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 16px 10px; min-width: 0; }
+figcaption { font-size: 13.5px; color: var(--ink-2); margin-top: 6px; max-width: 80ch; }
+.figtitle { font-family: var(--f-display); font-weight: 600; font-size: 1.05rem; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); margin: 8px 0 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.dotsw { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; }
+@media (max-width: 520px) { .panels { grid-template-columns: 1fr; } }
+.panel { min-width: 0; }
+.panel h4 { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); margin: 6px 0 2px; font-weight: 500; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: var(--f-body); fill: var(--ink-2); }
+svg .lbl { font-size: 12.5px; fill: var(--ink); }
+svg .lbl2 { font-size: 11px; fill: var(--ink-3); }
+svg .val { font-size: 12px; fill: var(--ink); font-variant-numeric: tabular-nums; }
+svg .tick { font-size: 11px; fill: var(--ink-3); font-variant-numeric: tabular-nums; }
+svg .grid { stroke: var(--rule-2); stroke-width: 1; }
+svg .axis { stroke: var(--rule); stroke-width: 1; }
+svg .hit { fill: transparent; cursor: default; }
+svg .seg:hover, svg .hitrow:hover + g .dot { opacity: 0.85; }
+details { margin: 4px 0 10px; }
+summary { cursor: pointer; font-size: 13px; color: var(--accent); }
+summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#tip { position: fixed; pointer-events: none; z-index: 10; background: var(--panel); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px; padding: 7px 10px; font-size: 12.5px; line-height: 1.45; box-shadow: 0 4px 14px rgba(0,0,0,0.12); max-width: 300px; }
+#tip b { font-weight: 600; }
+#tip .m { font-family: var(--f-mono); font-size: 11.5px; color: var(--ink-3); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 28px; }
+.two > * { min-width: 0; }
+ul { padding-left: 20px; margin: 0 0 12px; }
+li { margin-bottom: 4px; }
+.foot { margin-top: 56px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-3); }
+</style>
+
+<div class="page">
+<header>
+  <div class="eyebrow">Toolchain benchmark · 2026-10-02/03 · stacks re-measured 2026-10-04</div>
+  <h1>TIGRESS-NCR on stellarai-amd</h1>
+  <p class="lede">Which compiler, MPI library and compiler flags run the 8&nbsp;pc TIGRESS-NCR models fastest
+  on the AMD Zen&nbsp;5 nodes of stellarai-amd, and why. Six module stacks and nineteen flag variants,
+  measured on the production checkpoints. Each one restarts the same state and advances 200 cycles.
+  The stack comparison was re-measured on 2026-10-04 with the NaN-safe production flags and the new
+  default ray-tracing termination test.</p>
+  <div class="meta"><span>131 timed runs</span><span>384 MPI ranks · 4 nodes</span><span>source 4eea9f80c (ncr-cr-coupling); flag sweep on eee94bc4f</span><span>tigris_scripts: main</span></div>
+</header>
+
+<div class="tiles">
+  <div class="tile"><div class="k">MHD + NCR · best</div><div class="v">0.276<small>s / cycle</small></div><div class="d">GCC 14 + Open MPI; GCC + Intel MPI 0.282 (a tie within run-to-run spread).</div></div>
+  <div class="tile"><div class="k">CRMHD + NCR · best</div><div class="v">0.186<small>s / cycle</small></div><div class="d">GCC 14 + Open MPI; GCC + Intel MPI 0.204, icpx stacks 0.26.</div></div>
+  <div class="tile"><div class="k">Open MPI gap</div><div class="v">closed</div><div class="d">Was 4× on MHD. The cause was the rank-0 RMA termination counter; iallreduce is now the default.</div></div>
+  <div class="tile"><div class="k">Cost</div><div class="v">3.1<small>node-h / 10⁴ cycles</small></div><div class="d">MHD; CRMHD 2.1–2.3 node-h. For comparing with other machines.</div></div>
+</div>
+
+<div class="reco">
+  <h3>Recommendation</h3>
+  <p>Build with <b>GCC 14</b> and the NaN-safe flags below. <b>GCC + Open MPI</b> (<code>gcc</code>) is now the fastest
+  stack: tied on MHD and 9% faster on CRMHD than <b>GCC + Intel MPI</b> (<code>gcc-impi</code>).
+  <code>gcc-impi</code> is still the default in <code>stellarai-amd/env.sh</code> and the production scripts,
+  because production post-processing uses an mpi4py built against Intel MPI and Open MPI hasn't run a full
+  production job here yet. To use Open MPI, pass <code>--cc=gcc</code> to the build and <code>CC=gcc</code> to the job:</p>
+<pre>cd ~/tigris_scripts/tigress_ncr
+bash build_tigress.sh --machine=stellarai-amd --cc=gcc --physics=mhd   --worktree=ncr-cr-coupling
+bash build_tigress.sh --machine=stellarai-amd --cc=gcc --physics=crmhd --worktree=ncr-cr-coupling
+CC=gcc sbatch stellarai-amd/tigress_ncr_mhd_8pc.slurm</pre>
+  <p style="margin:0">Compiler flags (complete set, replacing configure.py's preset):<br>
+  <code>-O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512</code></p>
+</div>
+
+<h2>The machine</h2>
+<div class="two">
+<div>
+<h3>Compute node</h3>
+<div class="tablewrap"><table>
+<tr><td class="k">CPU</td><td>2 × AMD EPYC 9475F (Zen 5 “Turin”), 48 cores each, boost up to 4.8 GHz</td></tr>
+<tr><td class="k">Cores</td><td>96 per node, one thread per core (SMT off), governor <code>performance</code></td></tr>
+<tr><td class="k">Vector ISA</td><td>AVX-512 (F, BW, VL, VNNI, BF16, VBMI2, …) on a full 512-bit datapath; AVX2, FMA</td></tr>
+<tr><td class="k">Caches</td><td>L1d 48 KiB and L2 1 MiB per core; L3 512 MiB per node, as 16 CCDs × 32 MiB (6 cores share each)</td></tr>
+<tr><td class="k">Memory</td><td>376 GB per node (370 GB schedulable), 2 NUMA domains of ~188 GB, one per socket</td></tr>
+<tr><td class="k">Network</td><td>NVIDIA ConnectX-7, InfiniBand NDR 400 Gb/s</td></tr>
+<tr><td class="k">OS</td><td>RHEL 10.2, kernel 6.12</td></tr>
+</table></div>
+</div>
+<div>
+<h3>Cluster</h3>
+<div class="tablewrap"><table>
+<tr><td class="k">Partition</td><td><code>cpu</code>: 95 nodes (sai-n04, n05, n07, n08), 7-day limit. The <code>gpu</code> partition has 20 Intel + 8× B200 nodes (not used here)</td></tr>
+<tr><td class="k">Login node</td><td>Same CPU as the compute nodes, so builds target <code>znver5</code> there</td></tr>
+<tr><td class="k">Job limits</td><td>At most 5 queued jobs per user, about 2 running 4-node jobs (QOS)</td></tr>
+<tr><td class="k">Scratch</td><td><code>/scratch/gpfs/EOST/$USER</code> (5 TB); <code>/scratch/gpfs/$USER</code> does not exist</td></tr>
+<tr><td class="k">/projects</td><td>NFS, login nodes only. Benchmark checkpoints are staged to scratch</td></tr>
+<tr><td class="k">FFTW</td><td>No fftw module. Every stack links AOCL-FFTW 5.3 (AMD-optimized FFTW 3.3.10 API)</td></tr>
+</table></div>
+</div>
+</div>
+
+<h3>Module stacks tested</h3>
+<p class="prose">Every stack has an MPI-enabled HDF5 built for its compiler and MPI, which Athena++
+needs for <code>-mpi -hdf5</code>. <code>aocc-impi</code> drives AOCC through Intel MPI's wrapper
+(<code>I_MPI_CXX=clang++</code>) and uses the GCC-built HDF5, which is fine because HDF5 is a C library.</p>
+<div class="tablewrap"><table>
+<tr><th>Toolchain</th><th>Compiler</th><th>MPI</th><th>Modules</th></tr>
+<tr><td><code>gcc-impi</code> <span class="chip good">default</span></td><td>GCC 14.3</td><td>Intel MPI 2021.18</td><td><span class="tok">gcc/14</span> <span class="tok">intel-mpi/gcc/2021.18</span> <span class="tok">hdf5/gcc/intel-mpi/1.14.6</span> <span class="tok">aocl/gcc/ST/5.3.0</span></td></tr>
+<tr><td><code>aocc-impi</code></td><td>AOCC 5.2 (clang 17)</td><td>Intel MPI 2021.18</td><td><span class="tok">aocc/5.2.0</span> <span class="tok">intel-mpi/gcc/2021.18</span> <span class="tok">hdf5/gcc/intel-mpi/1.14.6</span> <span class="tok">aocl/aocc/ST/5.3.0</span></td></tr>
+<tr><td><code>icpx-impi</code></td><td>oneAPI icpx 2026.0</td><td>Intel MPI 2021.18</td><td><span class="tok">intel-oneapi/2026.0</span> <span class="tok">intel-mpi/oneapi/2021.18</span> <span class="tok">hdf5/oneapi-2026.0/intel-mpi/1.14.6</span> <span class="tok">aocl/gcc/ST/5.3.0</span></td></tr>
+<tr><td><code>aocc</code></td><td>AOCC 5.2</td><td>Open MPI 5.0.10 (UCX)</td><td><span class="tok">aocc/5.2.0</span> <span class="tok">openmpi/aocc-5.2.0/5.0.10</span> <span class="tok">hdf5/aocc-5.2.0/openmpi-5.0.10/1.14.6</span> <span class="tok">aocl/aocc/ST/5.3.0</span></td></tr>
+<tr><td><code>gcc</code></td><td>GCC 14.3</td><td>Open MPI 5.0.10 (UCX)</td><td><span class="tok">gcc/14</span> <span class="tok">openmpi/gcc/5.0.10</span> <span class="tok">hdf5/gcc/openmpi-5.0.10/1.14.6</span> <span class="tok">aocl/gcc/ST/5.3.0</span></td></tr>
+<tr><td><code>icpx</code></td><td>oneAPI icpx 2026.0</td><td>Open MPI 5.0.10 (UCX)</td><td><span class="tok">intel-oneapi/2026.0</span> <span class="tok">openmpi/oneapi-2026.0/5.0.10</span> <span class="tok">hdf5/oneapi-2026.0/openmpi-5.0.10/1.14.6</span> <span class="tok">aocl/gcc/ST/5.3.0</span></td></tr>
+</table></div>
+
+<h2>What was measured</h2>
+<div class="prose">
+<p>Both workloads are 8&nbsp;pc production checkpoints from Stellar: a 1024 × 1024 × 6144&nbsp;pc box on a
+128 × 128 × 768 mesh (12.6 million cells) with 32³ meshblocks, which gives 384 blocks. That is one MPI rank
+per block, no OpenMP, so exactly 4 full nodes.</p>
+<ul>
+<li><b>MHD + NCR</b>: <code>mhd-ncr-8pc/TIGRESS_NCR.00006.rst</code> at t = 300, cycle 646 619, with ray tracing, NCR photochemistry and FFT self-gravity.</li>
+<li><b>CRMHD + NCR</b>: <code>crmhd-ncr-8pc/TIGRESS_NCR.00003.rst</code> at t = 150, cycle 1 250 001, with cosmic-ray transport coupled to NCR (<code>cr/photchem_flag=1</code>) and dt = 1.2 × 10⁻⁴.</li>
+</ul>
+<p>Each run restarts the checkpoint unchanged and advances 200 cycles. The time per cycle comes from the
+code's own loop timers (<code>TIGRESS_NCR.loop_time.txt</code>, one line per 10 cycles), averaged over
+ranks, with the first partial window dropped. Start-up, restart reading and the final dump are excluded.
+The timers split each cycle into the time integrator (hydro/MHD/CR), ray tracing, self-gravity,
+photochemistry and the operator-split tasks.</p>
+<p>Repeated runs of one build agree to about 0.5–3%, so differences under about 2–3% are ties.</p>
+</div>
+
+<h2>With the new termination test, the compiler decides</h2>
+<figure id="fig1">
+  <div class="figtitle">Seconds per cycle and where they go, by module stack (production flags, 2026-10-04)</div>
+  <div class="legend" id="leg1"></div>
+  <div class="panels">
+    <div class="panel"><h4>MHD + NCR</h4><svg id="c1a" role="img" aria-label="Stacked bars of seconds per cycle by toolchain for MHD"></svg></div>
+    <div class="panel"><h4>CRMHD + NCR</h4><svg id="c1b" role="img" aria-label="Stacked bars of seconds per cycle by toolchain for CRMHD"></svg></div>
+  </div>
+  <figcaption>Median of 4 runs for the GCC stacks and 2 for the others, built from <code>ncr-cr-coupling</code>
+  4eea9f80c with each compiler's NaN-safe flags. The two panels use different scales. Every stack now traces rays
+  in about 0.15 s per cycle, so the MPI library no longer matters for MHD. CRMHD has a small time step and traces
+  rays rarely, so the integrator and photochemistry dominate. There, GCC leads, AOCC lost 15–20% in photochemistry
+  to <code>-fno-finite-math-only</code>, and icpx with <code>-fp-model=fast</code> trails GCC by about 40%.
+  Three of the four <code>gcc-impi</code> CRMHD runs took 0.204 s and one 0.187 s; the slow runs spent more time in
+  self-gravity and synchronization.</figcaption>
+  <details><summary>Show the data table</summary><div class="tablewrap" id="tab1"></div></details>
+</figure>
+
+<div class="prose">
+<div class="prose">
+<h3>Why Open MPI used to be 4× slower</h3>
+<p>Ray tracing passes photon packets between ranks with asynchronous point-to-point messages
+(<code>MPI_Iprobe</code>, <code>MPI_Isend</code>, <code>MPI_Testsome</code>). Until PR #348 it detected that
+every ray was done with <code>MPI_Fetch_and_op</code> on a one-sided window on rank 0, which every rank polls.
+With Open MPI 5.0.10 (UCX) that check alone took 2.5 s per ray trace, against 0.08 s with Intel MPI, so a cycle
+took 1.16–1.23 s. Changing Open MPI's one-sided and point-to-point components didn't help, and neither did rank
+placement (table below, 2026-10-02/03). The comm-loop timers showed the cause; replacing the counter with a
+nonblocking allreduce (<code>&lt;ray_tracing&gt;/termination = iallreduce</code>, now the default) made Open MPI as
+fast as Intel MPI and left Intel MPI unchanged. Details: <a href="https://claude.ai/artifact/TFxkynUuuBnsAyRy7th79S">ray-tracing termination test</a>.</p>
+</div>
+<div class="tablewrap" id="tab-mpi"></div>
+
+<h2>Compiler flags</h2>
+<div class="prose">
+<p><code>configure.py</code>'s <code>--cxx</code> presets add flags of their own. For example, <code>g++-simd</code>
+adds <code>-march=native</code>, and <code>icpx</code> adds <code>-xhost</code>, which builds a binary that
+<b>refuses to run on AMD</b>. So the presets are no longer trusted. Each toolchain in <code>env.sh</code>
+carries a complete flag set, and <code>build_tigress.sh</code> writes it over the Makefile's
+<code>CXXFLAGS</code>, for both compiling and linking. To pick those sets, 19 variants were built for both
+physics, all with Intel MPI so that only the compiler changes. The best few were then repeated
+until each had 3 runs. This sweep ran on 2026-10-02/03, before the NaN-check rule below; its fast-math
+variants used plain <code>-ffast-math</code> and icpx's winner was <code>-fp-model=fast=2</code>.</p>
+<p><b>NaN checks (2026-10-04).</b> Plain <code>-ffast-math</code> and icpx <code>-fp-model=fast=2</code> let the
+compiler assume that NaNs never occur, so every NaN test in the solver (C2P floors, CR-FOFC and CRAverage
+flags, the NCR bail-out) compiles to <code>false</code>. Production flags therefore add
+<code>-fno-finite-math-only</code> for GCC and AOCC and use <code>-fp-model=fast</code> for icpx, and
+<code>build_tigress.sh</code> refuses flags that remove NaN checks. For GCC this costs nothing measurable. AOCC
+loses 15–20% in photochemistry, and icpx loses the 14% CRMHD gain that <code>fast=2</code> gave.</p>
+</div>
+
+<figure id="fig2">
+  <div class="figtitle">Flag variants, 2026-10-02/03 (before the NaN rule): seconds per cycle (dot = median, line = min–max)</div>
+  <div class="legend" id="leg2"></div>
+  <div class="panels">
+    <div class="panel"><h4>MHD + NCR</h4><svg id="c2a" role="img" aria-label="Dot plot of flag variants for MHD"></svg></div>
+    <div class="panel"><h4>CRMHD + NCR</h4><svg id="c2b" role="img" aria-label="Dot plot of flag variants for CRMHD"></svg></div>
+  </div>
+  <figcaption>The axes don't start at zero; they span the variants' range. Variants with a single run
+  have no line. A ring marks the variant each compiler's production flags are based on. <code>preset-zopt</code> is rejected because it
+  produced wrong MHD results (see Correctness), and icpx <code>fast2</code>, the sweep's icpx winner, is not allowed because it removes NaN checks. Hover a row for the flags.</figcaption>
+  <details><summary>Show the data table</summary><div class="tablewrap" id="tab2"></div></details>
+</figure>
+
+<h3>What each flag does, and what it was worth here</h3>
+<div class="tablewrap"><table>
+<tr><th>Flag</th><th>What it does</th><th>Measured effect on stellarai-amd</th></tr>
+<tr><td><span class="tok">-O3</span> <span class="tok">-O2</span></td><td>Optimization level. <code>-O3</code> adds aggressive inlining, loop transformations and vectorization.</td><td><code>-O2</code> is 3–5% slower than <code>-O3</code> (GCC, with the rest of the preset kept).</td></tr>
+<tr><td><span class="tok">-march=znver5</span></td><td>Generates code for Zen 5 and tunes for it: AVX-512, FMA, BMI. Named explicitly instead of <code>-march=native</code>, so the build doesn't depend on the build host.</td><td>Baseline for every variant. icpx's <code>-xhost</code> can't be used: its binaries stop with “can only be run on Intel processors”.</td></tr>
+<tr><td><span class="tok">-ffast-math</span></td><td>Lets the compiler reorder floating-point arithmetic (reassociation), assume no NaN/Inf or signed zeros, and use reciprocals. That enables vectorized reductions and fused operations. Results change at round-off level, and <code>isnan()</code> checks may be optimized away.</td><td>The largest single gain: plain <code>-O3</code> is 8–12% slower with GCC and 2–13% slower with AOCC. icpx's default is already a fast mode. Production adds <code>-fno-finite-math-only</code> (next row).</td></tr>
+<tr><td><span class="tok">-fno-finite-math-only</span></td><td>Turns off the finite-math assumption inside <code>-ffast-math</code>, so <code>isnan()</code> and <code>x != x</code> tests work.</td><td><span class="chip good">required</span> GCC: no measurable cost (MHD 0.282, CRMHD 0.204 with Intel MPI). AOCC: photochemistry 0.032 → 0.041 s/cycle on CRMHD.</td></tr>
+<tr><td><span class="tok">-fno-math-errno</span> <span class="tok">-fno-trapping-math</span></td><td>The “safe” subset of fast math. Math functions don't set <code>errno</code>, and floating-point traps can be ignored. No reassociation and no finite-math assumption.</td><td>Recovers about half the gain; still 3–4% slower than full fast math (<code>safe-lto</code>).</td></tr>
+<tr><td><span class="tok">-fopenmp-simd</span> <span class="tok">-qopenmp-simd</span></td><td>Honors the <code>#pragma omp simd</code> hints in Athena++'s inner loops without linking the OpenMP runtime.</td><td>Part of every fast variant (Athena++ relies on these hints for vectorization).</td></tr>
+<tr><td><span class="tok">-flto=auto</span> <span class="tok">-flto</span> <span class="tok">-ipo</span></td><td>Link-time / interprocedural optimization. The compiler sees the whole program at link time, so it can inline and optimize across source files. <code>=auto</code> runs GCC's LTO in parallel.</td><td>Within noise for GCC (<code>fast</code> vs <code>fast-lto</code>). Kept because no variant without it was faster on both physics.</td></tr>
+<tr><td><span class="tok">-fwhole-program</span></td><td>Tells GCC that the LTO unit is the whole program, so all functions can be internalized and inlined more aggressively.</td><td>Within noise (<code>fast-lto</code> vs <code>fast-lto-wp</code>).</td></tr>
+<tr><td><span class="tok">-fprefetch-loop-arrays</span></td><td>Inserts software prefetches for arrays accessed in loops.</td><td>Within noise. Kept from the established GCC preset.</td></tr>
+<tr><td><span class="tok">-mprefer-vector-width=512</span></td><td>Asks the vectorizer to use 512-bit (zmm) registers instead of 256-bit ones. Zen 5 runs AVX-512 at full width, so there is no frequency penalty.</td><td>GCC: a tie, and the most consistent variant (chosen). AOCC: 1–3% slower on MHD. icpx: 6% slower on MHD.</td></tr>
+<tr><td><span class="tok">-funroll-loops</span></td><td>Unrolls loops to cut loop overhead, at the cost of larger code.</td><td>No gain for GCC. AOCC: best CRMHD median but 1% slower on MHD; a tie.</td></tr>
+<tr><td><span class="tok">-fuse-ld=lld</span></td><td>Uses LLVM's linker, which handles clang's LTO objects.</td><td>Needed for AOCC with <code>-flto</code>. clang warns that it is unused while compiling; that warning is harmless.</td></tr>
+<tr><td><span class="tok">-fp-model=fast=2</span></td><td>icpx's most aggressive floating-point mode. The default is <code>fast=1</code>.</td><td><span class="chip bad">not allowed</span> CRMHD 14% faster than icpx's default (photochemistry 0.034 vs 0.063 s/cycle), but it assumes finite math and removes the NaN checks. Production uses <code>-fp-model=fast</code>.</td></tr>
+<tr><td><span class="tok">-fp-model=precise</span></td><td>Strict IEEE semantics for icpx.</td><td>35% (MHD) to 50% (CRMHD) slower than <code>fast=2</code>.</td></tr>
+<tr><td><span class="tok">-zopt</span></td><td>AOCC's extra AMD-specific loop and memory optimizations.</td><td><span class="chip bad">rejected</span> MHD results were wrong: 20 history columns off and dt off by 36%.</td></tr>
+<tr><td><span class="tok">-std=c++11</span> <span class="tok">-Wno-…</span></td><td>Language standard used by the Athena++ presets; warning suppressions for icpx.</td><td>No performance effect.</td></tr>
+</table></div>
+
+<h3>Production flags per compiler</h3>
+<div class="tablewrap"><table>
+<tr><th>Compiler</th><th>Based on</th><th class="num">MHD s/cycle</th><th class="num">CRMHD s/cycle</th><th>Complete flags (<code>FLAGS_*</code> in env.sh)</th></tr>
+<tr><td>GCC 14</td><td><code>preset-v512</code> + NaN-safe</td><td class="num">0.282</td><td class="num">0.204</td><td><code>-O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512</code></td></tr>
+<tr><td>AOCC 5.2</td><td><code>preset</code> + NaN-safe</td><td class="num">0.307</td><td class="num">0.215</td><td><code>-O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto -fuse-ld=lld</code></td></tr>
+<tr><td>oneAPI icpx</td><td><code>preset</code> (fp-model=fast)</td><td class="num">0.325</td><td class="num">0.260</td><td><code>-O3 -std=c++11 -march=znver5 -ipo -qopenmp-simd -fp-model=fast -Wno-tautological-constant-compare -Wno-array-bounds</code></td></tr>
+</table></div>
+<p class="prose">Times are with Intel MPI (2026-10-04). The sweep's rule was the lowest worst case across the two physics,
+with ties under ~2% going to the simpler or more consistent set; the NaN rule then overrides the sweep where they conflict.</p>
+
+<h2>Correctness</h2>
+<div class="prose">
+<p>Every run of one physics ends at the same simulation time, so the final rows of the history file can be
+compared (<code>bench/compare_hst.py</code>). The comparison has to allow for one fact: <b>these runs are not
+bitwise reproducible, even with one executable</b>. Ray tracing, cosmic rays and feedback depend on MPI
+message order. So each build is compared against the spread between repeats of the reference build.</p>
+</div>
+<div class="tablewrap"><table>
+<tr><th>Physics</th><th>Repeats of one build</th><th>Other compilers and flags</th><th>Verdict</th></tr>
+<tr><td>MHD + NCR</td><td>0 of 105 columns differ by more than 10⁻³</td><td>0 columns, for every stack and variant, before and after 2026-10-04</td><td><span class="chip good">all pass</span> except <code>aocc-impi:preset-zopt</code></td></tr>
+<tr><td>MHD, AOCC <code>-zopt</code></td><td>—</td><td>20 columns above 10⁻³; dt 2.9 × 10⁻⁴ instead of 4.5 × 10⁻⁴</td><td><span class="chip bad">wrong results</span></td></tr>
+<tr><td>CRMHD + NCR</td><td>~11 of 118 columns above 10⁻³; at most 4 above 10⁻²</td><td>5–15 above 10⁻³; at most 6 above 10⁻², same dt (2026-10-04: 7–15 and 3–6)</td><td><span class="chip good">all pass</span>, within the repeat spread</td></tr>
+</table></div>
+<p class="prose">The CRMHD history has <b>three NaN columns in every run</b>, including the strict <code>-O3</code> and
+icpx <code>precise</code> builds, and the 2026-10-04 builds with NaN checks kept. They come from the code or the state (probably an average over an empty
+set), not from the compiler. They are worth a look in the source, separately from this benchmark.</p>
+
+<h2>Reproduce or extend</h2>
+<div class="prose">
+<p>Everything is on the <code>main</code> branch of tigris_scripts, in <code>tigress_ncr/</code>; this page's source is <code>bench/reports/toolchains-stellarai-amd.html</code>.
+<code>bench/BENCHMARK_SPEC.md</code> is the step-by-step procedure for another machine, and
+<code>bench/results/stellarai-amd.txt</code> holds every run.</p>
+</div>
+<pre># one run, or the whole stack matrix, or the flag sweep
+bench/submit.sh stellarai-amd mhd gcc-impi 200
+nohup bench/run_matrix.sh stellarai-amd 200 2 &gt; bench/logs/matrix.log 2&gt;&amp;1 &amp;
+nohup bench/flag_sweep.sh stellarai-amd 200 1 &gt; bench/logs/sweep.log 2&gt;&amp;1 &amp;
+python3 bench/summarize.py bench/results/stellarai-amd.txt</pre>
+
+<div class="foot">Checkpoints: /projects/EOSTRIKE/tigris-benchmark (staged to /scratch/gpfs/EOST/$USER/tigris-benchmark).
+Timers are rank means of the code's loop timers; “other” is the remainder of the cycle (new dt, particle bookkeeping, synchronization).</div>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const DATA = {"matrix":{"mhd":{"gcc-impi":{"n":4,"s":0.2817,"min":0.2746,"max":0.2888,"tint":0.0701,"grav":0.0161,"rayt":0.1498,"pchem":0.0208,"ops":0.0163,"other":0.0086},"aocc-impi":{"n":2,"s":0.3067,"min":0.3004,"max":0.3131,"tint":0.0754,"grav":0.0178,"rayt":0.1533,"pchem":0.028,"ops":0.021,"other":0.0112},"icpx-impi":{"n":2,"s":0.3245,"min":0.3119,"max":0.3371,"tint":0.0665,"grav":0.0133,"rayt":0.1699,"pchem":0.036,"ops":0.027,"other":0.0118},"gcc":{"n":4,"s":0.2756,"min":0.2736,"max":0.2921,"tint":0.0678,"grav":0.0193,"rayt":0.1449,"pchem":0.0204,"ops":0.0158,"other":0.0074},"aocc":{"n":2,"s":0.2936,"min":0.2929,"max":0.2943,"tint":0.073,"grav":0.0195,"rayt":0.1452,"pchem":0.0275,"ops":0.0205,"other":0.0079},"icpx":{"n":2,"s":0.3052,"min":0.3025,"max":0.3078,"tint":0.0649,"grav":0.0188,"rayt":0.1422,"pchem":0.0396,"ops":0.0281,"other":0.0116}},"crmhd":{"gcc-impi":{"n":4,"s":0.2035,"min":0.1865,"max":0.2037,"tint":0.1114,"grav":0.0243,"rayt":0.0152,"pchem":0.0299,"ops":0.0136,"other":0.0091},"aocc-impi":{"n":2,"s":0.215,"min":0.2038,"max":0.2261,"tint":0.1157,"grav":0.0205,"rayt":0.0153,"pchem":0.0407,"ops":0.0157,"other":0.0071},"icpx-impi":{"n":2,"s":0.2602,"min":0.2597,"max":0.2607,"tint":0.1409,"grav":0.0191,"rayt":0.015,"pchem":0.0606,"ops":0.0198,"other":0.0048},"gcc":{"n":4,"s":0.1862,"min":0.1852,"max":0.1935,"tint":0.1064,"grav":0.0197,"rayt":0.0146,"pchem":0.0292,"ops":0.0128,"other":0.0035},"aocc":{"n":2,"s":0.2308,"min":0.2307,"max":0.231,"tint":0.1152,"grav":0.0325,"rayt":0.0149,"pchem":0.0411,"ops":0.0161,"other":0.011},"icpx":{"n":2,"s":0.2628,"min":0.2626,"max":0.263,"tint":0.1395,"grav":0.0335,"rayt":0.0144,"pchem":0.0464,"ops":0.0177,"other":0.0113}}},"sweep":{"mhd":{"gcc-impi:preset":{"n":3,"s":0.2917,"min":0.2917,"max":0.2917,"tint":0.0692,"grav":0.0129,"rayt":0.1528,"pchem":0.0264,"ops":0.0214,"other":0.009},"gcc-impi:O3":{"n":1,"s":0.313,"min":0.313,"max":0.313,"tint":0.0795,"grav":0.0143,"rayt":0.1643,"pchem":0.0266,"ops":0.0202,"other":0.0081},"gcc-impi:safe-lto":{"n":1,"s":0.3012,"min":0.3012,"max":0.3012,"tint":0.069,"grav":0.0145,"rayt":0.1647,"pchem":0.0255,"ops":0.0192,"other":0.0083},"gcc-impi:fast":{"n":3,"s":0.2947,"min":0.2906,"max":0.2964,"tint":0.0765,"grav":0.0148,"rayt":0.1553,"pchem":0.0216,"ops":0.0176,"other":0.0089},"gcc-impi:fast-lto":{"n":1,"s":0.3009,"min":0.3009,"max":0.3009,"tint":0.0694,"grav":0.013,"rayt":0.1626,"pchem":0.0265,"ops":0.0209,"other":0.0085},"gcc-impi:fast-lto-wp":{"n":3,"s":0.2916,"min":0.2913,"max":0.3043,"tint":0.0692,"grav":0.0127,"rayt":0.1528,"pchem":0.0265,"ops":0.0212,"other":0.0092},"gcc-impi:preset-v512":{"n":3,"s":0.2921,"min":0.2891,"max":0.2926,"tint":0.0695,"grav":0.013,"rayt":0.1522,"pchem":0.0267,"ops":0.0215,"other":0.0092},"gcc-impi:preset-unroll":{"n":1,"s":0.2931,"min":0.2931,"max":0.2931,"tint":0.0711,"grav":0.0125,"rayt":0.1539,"pchem":0.0265,"ops":0.0209,"other":0.0082},"gcc-impi:preset-O2":{"n":1,"s":0.3004,"min":0.3004,"max":0.3004,"tint":0.0728,"grav":0.0153,"rayt":0.1552,"pchem":0.027,"ops":0.0215,"other":0.0086},"aocc-impi:preset":{"n":3,"s":0.2988,"min":0.2979,"max":0.3054,"tint":0.075,"grav":0.0143,"rayt":0.1621,"pchem":0.0225,"ops":0.0171,"other":0.0078},"aocc-impi:O3":{"n":1,"s":0.3059,"min":0.3059,"max":0.3059,"tint":0.0819,"grav":0.0159,"rayt":0.1517,"pchem":0.0273,"ops":0.0207,"other":0.0084},"aocc-impi:safe-lto":{"n":1,"s":0.303,"min":0.303,"max":0.303,"tint":0.0709,"grav":0.0154,"rayt":0.1572,"pchem":0.0286,"ops":0.0216,"other":0.0093},"aocc-impi:preset-v512":{"n":3,"s":0.3078,"min":0.3029,"max":0.3122,"tint":0.0764,"grav":0.018,"rayt":0.1704,"pchem":0.0228,"ops":0.0175,"other":0.0027},"aocc-impi:preset-zopt":{"n":1,"s":0.2924,"min":0.2924,"max":0.2924,"tint":0.075,"grav":0.0145,"rayt":0.1564,"pchem":0.0225,"ops":0.0171,"other":0.0069},"aocc-impi:preset-unroll":{"n":3,"s":0.3022,"min":0.298,"max":0.3085,"tint":0.0754,"grav":0.0151,"rayt":0.1613,"pchem":0.0225,"ops":0.0171,"other":0.0108},"icpx-impi:preset":{"n":1,"s":0.3035,"min":0.3035,"max":0.3035,"tint":0.0666,"grav":0.013,"rayt":0.1573,"pchem":0.0342,"ops":0.0231,"other":0.0093},"icpx-impi:fast2":{"n":3,"s":0.2909,"min":0.289,"max":0.2911,"tint":0.0669,"grav":0.0134,"rayt":0.1641,"pchem":0.0215,"ops":0.0171,"other":0.0079},"icpx-impi:precise":{"n":1,"s":0.3897,"min":0.3897,"max":0.3897,"tint":0.0702,"grav":0.0175,"rayt":0.1544,"pchem":0.0747,"ops":0.0564,"other":0.0165},"icpx-impi:preset-v512":{"n":1,"s":0.3225,"min":0.3225,"max":0.3225,"tint":0.0669,"grav":0.0138,"rayt":0.1567,"pchem":0.0419,"ops":0.0327,"other":0.0105}},"crmhd":{"gcc-impi:preset":{"n":3,"s":0.1998,"min":0.1969,"max":0.2098,"tint":0.1097,"grav":0.0149,"rayt":0.0139,"pchem":0.0398,"ops":0.0157,"other":0.0058},"gcc-impi:O3":{"n":1,"s":0.2168,"min":0.2168,"max":0.2168,"tint":0.1266,"grav":0.0172,"rayt":0.0153,"pchem":0.0384,"ops":0.0153,"other":0.004},"gcc-impi:safe-lto":{"n":1,"s":0.199,"min":0.199,"max":0.199,"tint":0.111,"grav":0.0154,"rayt":0.0174,"pchem":0.0369,"ops":0.0146,"other":0.0037},"gcc-impi:fast":{"n":3,"s":0.1934,"min":0.1932,"max":0.1935,"tint":0.1169,"grav":0.0138,"rayt":0.0141,"pchem":0.0307,"ops":0.0139,"other":0.004},"gcc-impi:fast-lto":{"n":1,"s":0.1952,"min":0.1952,"max":0.1952,"tint":0.1087,"grav":0.0137,"rayt":0.0139,"pchem":0.0392,"ops":0.0151,"other":0.0046},"gcc-impi:fast-lto-wp":{"n":3,"s":0.1997,"min":0.1944,"max":0.2126,"tint":0.1097,"grav":0.0149,"rayt":0.0139,"pchem":0.0397,"ops":0.0154,"other":0.0061},"gcc-impi:preset-v512":{"n":3,"s":0.1947,"min":0.1941,"max":0.1951,"tint":0.1089,"grav":0.013,"rayt":0.0141,"pchem":0.0393,"ops":0.0153,"other":0.0041},"gcc-impi:preset-unroll":{"n":1,"s":0.1974,"min":0.1974,"max":0.1974,"tint":0.1123,"grav":0.0138,"rayt":0.0137,"pchem":0.0392,"ops":0.0152,"other":0.0032},"gcc-impi:preset-O2":{"n":1,"s":0.2028,"min":0.2028,"max":0.2028,"tint":0.1138,"grav":0.0147,"rayt":0.0145,"pchem":0.0396,"ops":0.0159,"other":0.0043},"aocc-impi:preset":{"n":3,"s":0.1975,"min":0.1933,"max":0.2058,"tint":0.1139,"grav":0.0175,"rayt":0.0148,"pchem":0.0324,"ops":0.0138,"other":0.0051},"aocc-impi:O3":{"n":1,"s":0.224,"min":0.224,"max":0.224,"tint":0.1317,"grav":0.0189,"rayt":0.0139,"pchem":0.0389,"ops":0.0156,"other":0.005},"aocc-impi:safe-lto":{"n":1,"s":0.221,"min":0.221,"max":0.221,"tint":0.1134,"grav":0.0237,"rayt":0.0139,"pchem":0.0426,"ops":0.0168,"other":0.0106},"aocc-impi:preset-v512":{"n":3,"s":0.1933,"min":0.1925,"max":0.1964,"tint":0.113,"grav":0.0165,"rayt":0.0148,"pchem":0.032,"ops":0.0135,"other":0.0035},"aocc-impi:preset-zopt":{"n":1,"s":0.2064,"min":0.2064,"max":0.2064,"tint":0.1153,"grav":0.0214,"rayt":0.0145,"pchem":0.0328,"ops":0.014,"other":0.0084},"aocc-impi:preset-unroll":{"n":3,"s":0.1928,"min":0.192,"max":0.1963,"tint":0.1128,"grav":0.0159,"rayt":0.0147,"pchem":0.032,"ops":0.0137,"other":0.0037},"icpx-impi:preset":{"n":1,"s":0.2789,"min":0.2789,"max":0.2789,"tint":0.1413,"grav":0.0216,"rayt":0.0165,"pchem":0.0642,"ops":0.0215,"other":0.0138},"icpx-impi:fast2":{"n":3,"s":0.2199,"min":0.2195,"max":0.235,"tint":0.1378,"grav":0.0156,"rayt":0.015,"pchem":0.0339,"ops":0.0143,"other":0.0033},"icpx-impi:precise":{"n":1,"s":0.3309,"min":0.3309,"max":0.3309,"tint":0.1428,"grav":0.0179,"rayt":0.0145,"pchem":0.117,"ops":0.0324,"other":0.0063},"icpx-impi:preset-v512":{"n":1,"s":0.258,"min":0.258,"max":0.258,"tint":0.1383,"grav":0.0157,"rayt":0.0144,"pchem":0.0634,"ops":0.0211,"other":0.0051}}},"mpi":[{"opts":"OMPI_MCA_osc=ucx","s":1.1821,"rayt":1.044},{"opts":"OMPI_MCA_osc=rdma OMPI_MCA_osc_rdma_btls=uct,sm","s":1.1804,"rayt":1.04},{"opts":"OMPI_MCA_btl=self,sm,uct OMPI_MCA_osc=rdma OMPI_MCA_pml=ob1","s":1.1567,"rayt":1.017},{"opts":"gcc-impi --distribution=block:block","s":0.2918,"rayt":0.154},{"opts":"gcc-impi --distribution=block:cyclic","s":0.2925,"rayt":0.153}],"final":{"mhd":{"n":1,"s":0.2912,"min":0.2912,"max":0.2912,"tint":0.069,"grav":0.0123,"rayt":0.1534,"pchem":0.0264,"ops":0.0212,"other":0.0089},"crmhd":{"n":1,"s":0.1981,"min":0.1981,"max":0.1981,"tint":0.1095,"grav":0.0146,"rayt":0.0139,"pchem":0.0394,"ops":0.0157,"other":0.005}},"nruns":131,"old_matrix":{"mhd":{"gcc-impi":{"n":3,"s":0.2903,"min":0.2895,"max":0.291,"tint":0.069,"grav":0.012,"rayt":0.1524,"pchem":0.027,"ops":0.021,"other":0.0089},"icpx-impi":{"n":3,"s":0.3052,"min":0.3048,"max":0.3165,"tint":0.067,"grav":0.013,"rayt":0.158,"pchem":0.034,"ops":0.024,"other":0.0092},"aocc":{"n":2,"s":1.1805,"min":1.1606,"max":1.2004,"tint":0.073,"grav":0.0185,"rayt":1.0423,"pchem":0.0221,"ops":0.0169,"other":0.0077},"gcc":{"n":2,"s":1.1932,"min":1.1817,"max":1.2048,"tint":0.0672,"grav":0.0169,"rayt":1.0533,"pchem":0.0261,"ops":0.0207,"other":0.0091},"icpx":{"n":2,"s":1.2328,"min":1.2161,"max":1.2495,"tint":0.065,"grav":0.019,"rayt":1.0621,"pchem":0.0428,"ops":0.0308,"other":0.0131},"aocc-impi":{"n":3,"s":0.2988,"min":0.2979,"max":0.3054,"tint":0.075,"grav":0.0143,"rayt":0.1621,"pchem":0.0225,"ops":0.0171,"other":0.0078}},"crmhd":{"gcc-impi":{"n":2,"s":0.1943,"min":0.1942,"max":0.1943,"tint":0.1089,"grav":0.0131,"rayt":0.0139,"pchem":0.0392,"ops":0.0152,"other":0.004},"icpx-impi":{"n":2,"s":0.2558,"min":0.2558,"max":0.2558,"tint":0.1387,"grav":0.0151,"rayt":0.0143,"pchem":0.0628,"ops":0.0208,"other":0.0041},"aocc":{"n":2,"s":0.1981,"min":0.1965,"max":0.1997,"tint":0.1113,"grav":0.0196,"rayt":0.0193,"pchem":0.0319,"ops":0.0131,"other":0.0029},"gcc":{"n":2,"s":0.1987,"min":0.1984,"max":0.1991,"tint":0.1062,"grav":0.0171,"rayt":0.0176,"pchem":0.0391,"ops":0.015,"other":0.0037},"icpx":{"n":2,"s":0.2586,"min":0.256,"max":0.2611,"tint":0.1354,"grav":0.0206,"rayt":0.0184,"pchem":0.0592,"ops":0.0195,"other":0.0055},"aocc-impi":{"n":3,"s":0.1975,"min":0.1933,"max":0.2058,"tint":0.1139,"grav":0.0175,"rayt":0.0148,"pchem":0.0324,"ops":0.0138,"other":0.0051}}}};
+const TIMERS = [
+  {k:'tint', name:'Time integrator', c:'--s1'},
+  {k:'rayt', name:'Ray tracing', c:'--s2'},
+  {k:'grav', name:'Self-gravity (FFT)', c:'--s3'},
+  {k:'pchem', name:'Photochemistry', c:'--s4'},
+  {k:'ops', name:'Operator-split tasks', c:'--s5'},
+  {k:'other', name:'Other', c:'--s0'},
+];
+const TCNAME = {'gcc-impi':'GCC + Intel MPI','aocc-impi':'AOCC + Intel MPI','icpx-impi':'icpx + Intel MPI',
+  'aocc':'AOCC + Open MPI','gcc':'GCC + Open MPI','icpx':'icpx + Open MPI'};
+const NS = 'http://www.w3.org/2000/svg';
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function el(tag, attrs, parent, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const tip = document.getElementById('tip');
+function showTip(ev, html) { tip.innerHTML = html; tip.hidden = false; moveTip(ev); }
+function moveTip(ev) {
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+function hideTip() { tip.hidden = true; }
+function niceTicks(max, n) {
+  const raw = max / n, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw);
+  const t = []; for (let v = 0; v <= max + 1e-9; v += step) t.push(+v.toFixed(6));
+  return t;
+}
+function legend(id, items, dot) {
+  const L = document.getElementById(id); L.innerHTML = '';
+  items.forEach(it => {
+    const s = document.createElement('span');
+    s.innerHTML = `<i class="${dot ? 'dotsw' : 'sw'}" style="background:var(${it.c})"></i>${it.name}`;
+    L.appendChild(s);
+  });
+}
+
+/* Figure 1: stacked horizontal bars */
+function stacked(svgId, phys) {
+  const svg = document.getElementById(svgId); svg.innerHTML = '';
+  const rows = Object.entries(DATA.matrix[phys]).map(([tc, d]) => ({tc, ...d})).sort((a, b) => a.s - b.s);
+  const W = 460, left = 128, right = 52, rowH = 30, top = 6, H = top + rows.length * rowH + 28;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const max = Math.max(...rows.map(r => r.s));
+  const ticks = niceTicks(max, 4), xmax = ticks[ticks.length - 1];
+  const x = v => left + (W - left - right) * v / xmax;
+  ticks.forEach(t => {
+    el('line', {x1: x(t), x2: x(t), y1: top, y2: H - 22, class: 'grid'}, svg);
+    el('text', {x: x(t), y: H - 6, 'text-anchor': 'middle', class: 'tick'}, svg, t.toFixed(2));
+  });
+  rows.forEach((r, i) => {
+    const y = top + i * rowH + 6, bh = rowH - 12;
+    el('text', {x: left - 8, y: y + bh / 2 + 1, 'text-anchor': 'end', 'dominant-baseline': 'middle', class: 'lbl'}, svg, TCNAME[r.tc]);
+    let acc = 0;
+    const segs = TIMERS.filter(t => r[t.k] > 0);
+    segs.forEach((t, j) => {
+      const x0 = x(acc), x1 = x(acc + r[t.k]); acc += r[t.k];
+      const last = j === segs.length - 1;
+      const w = Math.max(x1 - x0 - (last ? 0 : 2), 0.5);
+      const rect = el('rect', {x: x0, y, width: w, height: bh, fill: css(t.c), class: 'seg', rx: last ? 3 : 0}, svg);
+      const pct = (100 * r[t.k] / r.s).toFixed(0);
+      const html = `<b>${TCNAME[r.tc]}</b><br>${t.name}: ${r[t.k].toFixed(3)} s (${pct}%)<br><span class="m">total ${r.s.toFixed(3)} s/cycle · n=${r.n}</span>`;
+      rect.addEventListener('mousemove', ev => showTip(ev, html));
+      rect.addEventListener('mouseleave', hideTip);
+    });
+    el('text', {x: x(r.s) + 6, y: y + bh / 2 + 1, 'dominant-baseline': 'middle', class: 'val'}, svg, r.s.toFixed(3));
+  });
+  el('line', {x1: left, x2: left, y1: top, y2: H - 22, class: 'axis'}, svg);
+}
+
+/* Figure 2: dot plot of flag variants */
+const COMP = [
+  {p:'gcc-impi', name:'GCC 14', c:'--s1', chosen:'preset-v512',
+   order:['preset-v512','preset','fast','fast-lto','fast-lto-wp','preset-unroll','preset-O2','safe-lto','O3']},
+  {p:'aocc-impi', name:'AOCC 5.2', c:'--s2', chosen:'preset',
+   order:['preset','preset-unroll','preset-v512','safe-lto','O3','preset-zopt']},
+  {p:'icpx-impi', name:'oneAPI icpx', c:'--s3', chosen:'preset',
+   order:['fast2','preset','preset-v512','precise']},
+];
+const FLAGS = {
+ 'gcc-impi':{'preset':'-O3 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays','O3':'-O3 -march=znver5','safe-lto':'-O3 -march=znver5 -fno-math-errno -fno-trapping-math -fopenmp-simd -flto=auto','fast':'-O3 -march=znver5 -ffast-math -fopenmp-simd','fast-lto':'fast + -flto=auto','fast-lto-wp':'fast + -flto=auto -fwhole-program','preset-v512':'preset + -mprefer-vector-width=512','preset-unroll':'preset + -funroll-loops','preset-O2':'preset with -O2'},
+ 'aocc-impi':{'preset':'-O3 -march=znver5 -ffast-math -fopenmp-simd -flto -fuse-ld=lld','O3':'-O3 -march=znver5','safe-lto':'-O3 -march=znver5 -fno-math-errno -fno-trapping-math -fopenmp-simd -flto','preset-v512':'preset + -mprefer-vector-width=512','preset-zopt':'preset + -zopt','preset-unroll':'preset + -funroll-loops'},
+ 'icpx-impi':{'preset':'-O3 -march=znver5 -ipo -qopenmp-simd (fp-model=fast)','fast2':'preset + -fp-model=fast=2','precise':'preset + -fp-model=precise','preset-v512':'preset + -mprefer-vector-width=512'},
+};
+function dots(svgId, phys) {
+  const svg = document.getElementById(svgId); svg.innerHTML = '';
+  const S = DATA.sweep[phys];
+  const rows = [];
+  COMP.forEach((c, ci) => {
+    c.order.forEach(v => { const d = S[c.p + ':' + v]; if (d) rows.push({c, v, d, ci}); });
+  });
+  const W = 460, left = 112, right = 70, rowH = 21, gap = 12, top = 6;
+  const groups = COMP.length;
+  const H = top + rows.length * rowH + (groups - 1) * gap + 30;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const lo = Math.min(...rows.map(r => r.d.min)), hi = Math.max(...rows.map(r => r.d.max));
+  const pad = (hi - lo) * 0.06, x0 = lo - pad, x1 = hi + pad;
+  const x = v => left + (W - left - right) * (v - x0) / (x1 - x0);
+  const span = x1 - x0, raw = span / 4, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw);
+  const plotBottom = H - 22;
+  for (let t = Math.ceil(x0 / step) * step; t <= x1; t += step) {
+    el('line', {x1: x(t), x2: x(t), y1: top, y2: plotBottom, class: 'grid'}, svg);
+    el('text', {x: x(t), y: H - 6, 'text-anchor': 'middle', class: 'tick'}, svg, t.toFixed(2));
+  }
+  let y = top, prev = -1;
+  rows.forEach(r => {
+    if (prev !== -1 && r.ci !== prev) y += gap;
+    prev = r.ci;
+    const cy = y + rowH / 2, col = css(r.c.c), d = r.d;
+    const rejected = r.v === 'preset-zopt', chosen = r.v === r.c.chosen;
+    const g = el('g', {}, svg);
+    const hit = el('rect', {x: 0, y, width: W, height: rowH, class: 'hit'}, g);
+    el('text', {x: left - 8, y: cy + 1, 'text-anchor': 'end', 'dominant-baseline': 'middle', class: chosen ? 'lbl' : 'lbl2', 'font-weight': chosen ? 600 : 400}, g, r.v);
+    if (d.n > 1) el('line', {x1: x(d.min), x2: x(d.max), y1: cy, y2: cy, stroke: col, 'stroke-width': 2, 'stroke-linecap': 'round'}, g);
+    if (chosen) el('circle', {cx: x(d.s), cy, r: 8, fill: 'none', stroke: col, 'stroke-width': 2}, g);
+    el('circle', {cx: x(d.s), cy, r: 4.5, fill: rejected ? css('--panel') : col, stroke: rejected ? css('--critical') : css('--panel'), 'stroke-width': rejected ? 2 : 1.5}, g);
+    el('text', {x: x(Math.max(d.max, d.s)) + 12, y: cy + 1, 'dominant-baseline': 'middle', class: rejected ? 'tick' : 'val'}, g,
+       rejected ? 'wrong results' : d.s.toFixed(3));
+    const html = `<b>${r.c.name} · ${r.v}</b>${chosen ? ' (chosen)' : ''}${rejected ? ' (rejected)' : ''}<br>median ${d.s.toFixed(4)} s/cycle · n=${d.n}${d.n > 1 ? ` · ${d.min.toFixed(4)}–${d.max.toFixed(4)}` : ''}<br><span class="m">${FLAGS[r.c.p][r.v] || ''}</span>`;
+    hit.addEventListener('mousemove', ev => showTip(ev, html));
+    hit.addEventListener('mouseleave', hideTip);
+    y += rowH;
+  });
+  el('line', {x1: left, x2: left, y1: top, y2: plotBottom, class: 'axis'}, svg);
+}
+
+function tables() {
+  const t1 = ['<table><tr><th>Toolchain</th><th>Physics</th><th class="num">n</th><th class="num">s/cycle</th>' +
+    TIMERS.map(t => `<th class="num">${t.name}</th>`).join('') + '</tr>'];
+  ['mhd', 'crmhd'].forEach(p => Object.entries(DATA.matrix[p]).sort((a, b) => a[1].s - b[1].s).forEach(([tc, d]) => {
+    t1.push(`<tr><td>${TCNAME[tc]}</td><td>${p.toUpperCase()}</td><td class="num">${d.n}</td><td class="num">${d.s.toFixed(4)}</td>` +
+      TIMERS.map(t => `<td class="num">${d[t.k].toFixed(4)}</td>`).join('') + '</tr>');
+  }));
+  document.getElementById('tab1').innerHTML = t1.join('') + '</table>';
+  const t2 = ['<table><tr><th>Compiler</th><th>Variant</th><th class="num">MHD median</th><th class="num">n</th><th class="num">CRMHD median</th><th class="num">n</th><th>Flags</th></tr>'];
+  COMP.forEach(c => c.order.forEach(v => {
+    const a = DATA.sweep.mhd[c.p + ':' + v], b = DATA.sweep.crmhd[c.p + ':' + v];
+    if (!a && !b) return;
+    t2.push(`<tr><td>${c.name}</td><td><code>${v}</code></td><td class="num">${a ? a.s.toFixed(4) : '—'}</td><td class="num">${a ? a.n : ''}</td><td class="num">${b ? b.s.toFixed(4) : '—'}</td><td class="num">${b ? b.n : ''}</td><td><code>${FLAGS[c.p][v]}</code></td></tr>`);
+  }));
+  document.getElementById('tab2').innerHTML = t2.join('') + '</table>';
+  const base = DATA.old_matrix.mhd.aocc;
+  const t3 = ['<table><tr><th>Setting (MHD)</th><th class="num">s/cycle</th><th class="num">Ray tracing</th></tr>',
+    `<tr><td>AOCC + Open MPI, rma termination (median of ${base.n})</td><td class="num">${base.s.toFixed(3)}</td><td class="num">${base.rayt.toFixed(3)}</td></tr>`];
+  DATA.mpi.forEach(m => t3.push(`<tr><td><code>${m.opts}</code></td><td class="num">${m.s.toFixed(3)}</td><td class="num">${m.rayt.toFixed(3)}</td></tr>`));
+  const im = DATA.old_matrix.mhd['gcc-impi'];
+  t3.push(`<tr><td>GCC + Intel MPI, rma termination (median of ${im.n})</td><td class="num">${im.s.toFixed(3)}</td><td class="num">${im.rayt.toFixed(3)}</td></tr>`);
+  const nm = DATA.matrix.mhd;
+  t3.push(`<tr><td><b>GCC + Open MPI, iallreduce termination, 2026-10-04 (median of ${nm.gcc.n})</b></td><td class="num">${nm.gcc.s.toFixed(3)}</td><td class="num">${nm.gcc.rayt.toFixed(3)}</td></tr>`);
+  t3.push(`<tr><td><b>GCC + Intel MPI, iallreduce termination, 2026-10-04 (median of ${nm['gcc-impi'].n})</b></td><td class="num">${nm['gcc-impi'].s.toFixed(3)}</td><td class="num">${nm['gcc-impi'].rayt.toFixed(3)}</td></tr>`);
+  document.getElementById('tab-mpi').innerHTML = t3.join('') + '</table>';
+}
+
+function render() {
+  legend('leg1', TIMERS);
+  legend('leg2', COMP, true);
+  stacked('c1a', 'mhd'); stacked('c1b', 'crmhd');
+  dots('c2a', 'mhd'); dots('c2b', 'crmhd');
+}
+tables();
+render();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
+new MutationObserver(render).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+</script>
+

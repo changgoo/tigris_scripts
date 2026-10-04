@@ -30,7 +30,7 @@ Compiler flags come from env.sh, not from configure.py: each toolchain's complet
 the winners of the flag sweep below. configure.py's `icpx` preset would add `-xhost`, which
 on AMD builds a binary that refuses to start ("can only be run on Intel(R) processors").
 
-## Benchmark (2026-10-02/03)
+## Benchmark (2026-10-02/03; stacks re-measured 2026-10-04)
 
 Full report with machine specs, charts and an explanation of every flag:
 https://claude.ai/artifact/H1B2iqL3a4F2cjiDQdvvtd
@@ -44,46 +44,57 @@ repeats: every stack and flag variant passes, except AOCC `-zopt`, which gives w
 results. Raw results are in `../bench/results/stellarai-amd.txt`;
 `python3 ../bench/summarize.py ../bench/results/stellarai-amd.txt` prints the full table.
 
-| toolchain   | MHD s/cycle | MHD ray tracing | CRMHD s/cycle | CRMHD integrator |
-|-------------|-------------|-----------------|---------------|------------------|
-| **gcc-impi**| **0.291**   | 0.153           | **0.194**     | 0.109            |
-| icpx-impi   | 0.305       | 0.158           | 0.256         | 0.139            |
-| aocc        | 1.161       | 1.023           | 0.197         | 0.111            |
-| gcc         | 1.205       | 1.065           | 0.198         | 0.106            |
-| icpx        | 1.216       | 1.046           | 0.256         | 0.135            |
+Stack matrix, 2026-10-04: `ncr-cr-coupling` 4eea9f80c (iallreduce termination, PR #348), production
+flags with NaN checks kept. Median of 4 runs for the GCC stacks and 2 for the others.
+
+| toolchain    | MHD s/cycle | MHD ray tracing | CRMHD s/cycle | CRMHD integrator | CRMHD photochem |
+|--------------|-------------|-----------------|---------------|------------------|-----------------|
+| **gcc**      | **0.276**   | 0.145           | **0.186**     | 0.106            | 0.029           |
+| gcc-impi     | 0.282       | 0.150           | 0.204         | 0.111            | 0.030           |
+| aocc         | 0.294       | 0.145           | 0.231         | 0.115            | 0.041           |
+| icpx         | 0.305       | 0.142           | 0.263         | 0.140            | 0.046           |
+| aocc-impi    | 0.307       | 0.153           | 0.215         | 0.116            | 0.041           |
+| icpx-impi    | 0.325       | 0.170           | 0.260         | 0.141            | 0.061           |
+
+Before 2026-10-04 (rma termination, plain `-ffast-math` and icpx `fast=2`): gcc-impi 0.291/0.194,
+icpx-impi 0.305/0.256, and the Open MPI stacks 1.16-1.22 s/cycle on MHD.
 
 MHD: `mhd-ncr-8pc/TIGRESS_NCR.00006.rst` (t=300). CRMHD: `crmhd-ncr-8pc/TIGRESS_NCR.00003.rst`
 (t=150, CR-NCR coupled, dt=1.2e-4).
 
-- MPI dominates the MHD run: with Open MPI, ray tracing takes ~1.0 s/cycle; with Intel MPI it takes ~0.15 s.
-  Ray tracing passes photons with asynchronous point-to-point messages and counts finished
-  rays with `MPI_Fetch_and_op` on rank 0. Changing Open MPI's `osc` component (`ucx`,
-  `rdma`) or switching to `pml=ob1` did not help (1.16 to 1.18 s/cycle). The cause is that
-  rank-0 counter: with `<ray_tracing>/termination = iallreduce` (branch
-  `rayt-termination-iallreduce`), Open MPI runs at 0.279 s/cycle and Intel MPI is unchanged
-  (0.283). See `../bench/reports/rayt-termination-stellarai-amd.md`.
+- The MPI library no longer matters for MHD. With the old rma termination test, Open MPI took
+  ~1.0 s/cycle in ray tracing against ~0.15 s with Intel MPI; changing Open MPI's `osc`
+  component (`ucx`, `rdma`) or switching to `pml=ob1` did not help (1.16 to 1.18 s/cycle). The
+  cause was the rank-0 `MPI_Fetch_and_op` counter. With `<ray_tracing>/termination = iallreduce`,
+  the default since PR #348, every stack traces rays in ~0.15 s/cycle
+  (`../bench/reports/rayt-termination-stellarai-amd.md`).
 - The compiler matters for CRMHD, where the cycle is compute-bound and ray tracing is cheap
-  (~0.015 s): GCC and AOCC are ~25% faster than icpx in the integrator.
+  (~0.015 s). GCC leads. `-fno-finite-math-only` costs AOCC 15-20% in photochemistry
+  (0.032 -> 0.041 s/cycle), and icpx with `-fp-model=fast` is ~40% slower than GCC.
+- gcc-impi CRMHD runs were bimodal (three at 0.204, one at 0.187 s/cycle); the slow runs spent
+  more time in self-gravity and synchronization. gcc (Open MPI) ran 0.185-0.194.
 - `--distribution=block:block` vs `block:cyclic` made no difference (within 0.3%).
 
 ### Compiler-flag sweep (Intel MPI, `flag_variants.txt`, 3 runs for the top variants)
 
-| compiler | chosen variant | MHD | CRMHD | notes |
+| compiler | sweep winner | MHD | CRMHD | notes |
 |---|---|---|---|---|
 | GCC 14 | `preset-v512` | 0.292 | 0.195 | fast-math + LTO variants all tie within noise; plain `-O3` is 8-12% slower |
 | AOCC 5.2 | `preset` | 0.299 | 0.198 | `-zopt` miscompiles (rejected); plain `-O3` is 2-13% slower |
 | icpx 2026.0 | `fast2` | 0.291 | 0.220 | `-fp-model=fast=2` is 14% faster than the default on CRMHD; `precise` 35-50% slower |
 
-Recommendation: use **gcc-impi** with `FLAGS_GCC`. It is the default of `build_tigress.sh` and
-of the production scripts. The final build reran at 0.291 (MHD) and 0.198 (CRMHD) s/cycle.
+Production flags differ from the sweep winners: since 2026-10-04, `FLAGS_GCC` and `FLAGS_AOCC`
+add `-fno-finite-math-only`, and `FLAGS_ICPX` uses `-fp-model=fast` instead of `fast=2`. Plain
+`-ffast-math` and `fast=2` assume finite math, which compiles every NaN check in the solver to
+false (see `../README.md`, "Floating-point model"). The re-measured cost: none for GCC, 15-20% of
+photochemistry for AOCC, and the 14% CRMHD gain of `fast=2` for icpx. Executables built here
+before 2026-10-04 have no working NaN checks; rebuild them before further production use.
 
-Since 2026-10-04, `FLAGS_GCC` and `FLAGS_AOCC` add `-fno-finite-math-only`, and `FLAGS_ICPX`
-uses `-fp-model=fast` instead of `fast=2`. Plain `-ffast-math` and `fast=2` assume finite
-math, which compiles every NaN check in the solver to false (see `../README.md`,
-"Floating-point model"). The timings above were measured before this change, so re-run the
-GCC sweep (`ONLY=gcc-impi bench/flag_sweep.sh stellarai-amd 200 3`) to confirm them.
-Executables built here before 2026-10-04 with these flags have no working NaN checks. Rebuild
-them before further production use.
+Recommendation: build with GCC (`FLAGS_GCC`). GCC + Open MPI (`gcc`) is now the fastest stack,
+tied with gcc-impi on MHD and 9% faster on CRMHD. `gcc-impi` stays the default of
+`build_tigress.sh` and of the production scripts for now: production post-processing runs an
+mpi4py linked against Intel MPI 2021.18 (`~/.conda/envs/pyathena`), and Open MPI hasn't run a
+full production job here yet. To use Open MPI, build with `--cc=gcc` and submit with `CC=gcc`.
 
 ## Build
 
