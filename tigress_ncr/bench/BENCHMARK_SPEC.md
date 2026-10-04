@@ -427,7 +427,7 @@ any run is SUSPECT. Runs that advanced a different NCYC are reported as not comp
 |---|---|---|---|---|---|---|---|---|
 | stellarai-amd | 2x EPYC 9475F (Zen 5), 96 c, NDR 400 IB | 4 | gcc-impi + FLAGS_GCC (`preset-v512`) | 0.291 | 0.195 | 3.24 | 2.17 | eee94bc4f |
 | stellar | 4x Xeon Platinum 8268 (Cascade Lake), 96 c, IB 100 Gb/s | 4 | icpx-impi + FLAGS_ICPX (`-fp-model=fast`; `fast2` was 0.737/0.411 but removes NaN checks) | 0.749 | 0.431 | 8.32 | 4.79 | eee94bc4f |
-| tiger | 2x Xeon Platinum 8480+ (Sapphire Rapids), 112 c (96 used), IB NDR200 | 4 | icpx-impi + FLAGS_ICPX (`fast2`) | 0.510 | 0.328 | 5.67 | 3.64 | eee94bc4f |
+| tiger | 2x Xeon Platinum 8480+ (Sapphire Rapids), 112 c (96 used), IB NDR200 | 4 | icpx-impi + FLAGS_ICPX (`-fp-model=fast`; `fast2` was 0.510/0.328 but removes NaN checks) | 0.529 | 0.343 | 5.88 | 3.81 | eee94bc4f |
 
 Report for stellarai-amd: https://claude.ai/artifact/H1B2iqL3a4F2cjiDQdvvtd
 Report for stellar: https://claude.ai/artifact/3re4pmVb3w7LYwZw5S3GL6

@@ -88,7 +88,7 @@ history check.
 
 | compiler | variant | MHD | CRMHD | notes |
 |---|---|---|---|---|
-| icpx 2024.2 | **`fast2`** (`-fp-model=fast=2`) | **0.512** | **0.328** | photochemistry 25% faster than `preset` (0.529, 0.343) |
+| icpx 2024.2 | `fast2` (`-fp-model=fast=2`) | 0.512 | 0.328 | photochemistry 25% faster than `preset`, but it removes NaN checks: benchmark-only |
 | | `fast2-v512` (+`-qopt-zmm-usage=high`) | 0.519 | 0.326 | tie |
 | | `march` (`-march=sapphirerapids`) | 0.499 | 0.357 | single runs; integrator 7% slower in CRMHD |
 | | `preset-v512` | 0.534 | 0.354 | |
@@ -109,16 +109,22 @@ columns by more than 1e-2. No build is flagged.
 
 ### Recommendation
 
-**icpx-impi** with `FLAGS_ICPX` (the `fast2` variant), the same choice as on Stellar. It is the
-default of `build_tigress.sh --machine=tiger` and of the production jobs. `fast2-v512` and
-oneAPI 2026.0 tie within noise, so the plainer flags and the 2024.2 stack (with its matching
-HDF5 module) are kept. The final build, rebuilt from `env.sh`, reran at 0.508 (MHD) and
-0.326 (CRMHD) s/cycle, so the median of 4 is **0.510 and 0.328**, or 5.67 and 3.64 node-hours
-per 10^4 cycles. Compared with the legacy tiger stack (icpx + Open MPI, default `fp-model`:
-0.690 and 0.351), that is 26% less on MHD and 7% less on CRMHD.
+**icpx-impi** with `FLAGS_ICPX` set to **`-fp-model=fast`** (icpx's default, the `preset`
+variant), the same choice as on Stellar. It is the default of `build_tigress.sh --machine=tiger`
+and of the production jobs. It runs at **0.529 (MHD) and 0.343 (CRMHD)** s/cycle, or 5.88 and
+3.81 node-hours per 10^4 cycles. Compared with the legacy tiger stack (icpx + Open MPI, default
+`fp-model`: 0.690 and 0.351), that is 23% less on MHD and 2% less on CRMHD.
 
-Per node-hour, an 8 pc run on tiger costs 31% (MHD) and 20% (CRMHD) less than on Stellar
-(8.19, 4.57), and 1.7x more than on stellarai-amd (3.24, 2.17).
+The sweep winner `fast2` (`-fp-model=fast=2`; final build 0.510 and 0.328) is **not used for
+production**: it lets the compiler assume finite math, so every NaN test in the solver (C2P
+floors, CR-FOFC/CRAverage NaN flags, the CR implicit-update revert, the NCR bail-out) compiles
+to false. These rare-event safety nets are invisible to the history check above, and `fast2`
+gains only 4% here. `fast2-v512` and oneAPI 2026.0 `fast2` are out for the same reason.
+See `../README.md`, "Floating-point model"; `build_tigress.sh` refuses such flags outside the
+flag sweep.
+
+Per node-hour, an 8 pc run on tiger costs 29% (MHD) and 20% (CRMHD) less than on Stellar
+(8.32, 4.79), and 1.8x more than on stellarai-amd (3.24, 2.17).
 
 ## Build
 
