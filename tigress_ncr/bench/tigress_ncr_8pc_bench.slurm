@@ -23,6 +23,8 @@
 # env VARIANT    : flag variant; runs tigris_ncr_PHYSICS-fft-TOOLCHAIN-VARIANT.exe
 # env SRUN_OPTS  : extra launcher options, e.g. "--distribution=block:block"
 # env OMPI_MCA_*, I_MPI_*, UCX_* : MPI tuning; recorded in the result line
+# env INPUT_OVERRIDE : partial input file read after the restart (-i); for parameters
+#                  the checkpoint lacks, which a command-line override cannot add
 # env KEEP_RST   : 1 keeps the ~3-4 GB TIGRESS_NCR.final.rst written at exit
 # env NCR_DIR    : tigress_ncr scripts directory [default: $HOME/tigris_scripts/tigress_ncr]
 # env SRCDIR     : source worktree for the data tables [default: $HOME/tigris/.worktrees/ncr-cr-coupling]
@@ -67,6 +69,13 @@ cp "$MACHDIR/$EXE" .
 [ -f "$MACHDIR/${EXE%.exe}.buildinfo" ] && cp "$MACHDIR/${EXE%.exe}.buildinfo" .
 cp "$TBLDIR/tigress_coolftn_ncr.txt" "$TBLDIR/Z014_GenevaV00.txt" .
 ln -sf "$RSTFILE" start.rst
+# A partial input file read after the restart (-r ... -i ...) adds parameters the
+# checkpoint lacks; a command-line override of a parameter the restart lacks is an error.
+INFLAG=""
+if [ -n "${INPUT_OVERRIDE:-}" ]; then
+    cp "$INPUT_OVERRIDE" athinput.override && INFLAG="-i athinput.override"
+    echo "INPUT_OVERRIDE = $INPUT_OVERRIDE:"; cat athinput.override
+fi
 
 params="time/nlim=$NLIM time/ncycle_out=10 time/ncycle_out_timing=10 job/output_timing=true $EXTRA"
 echo "RUNDIR  = $RUNDIR"
@@ -76,7 +85,7 @@ echo "params  = $params"
 echo "launch  = $MPI_LAUNCH ${SRUN_OPTS:-}"
 
 T0=$(date +%s)
-$MPI_LAUNCH $SRUN_OPTS "./$EXE" -r start.rst -t 00:25:00 $params 1> out.txt 2> err.txt
+$MPI_LAUNCH $SRUN_OPTS "./$EXE" -r start.rst $INFLAG -t 00:25:00 $params 1> out.txt 2> err.txt
 EXITCODE=$?
 T1=$(date +%s)
 echo "EXITCODE = $EXITCODE"
@@ -84,7 +93,7 @@ echo "EXITCODE = $EXITCODE"
 python3 "$BENCHDIR/parse_loop_time.py" TIGRESS_NCR.loop_time.txt \
     machine="$MACHINE" physics="$PHYSICS" tc="$TC" variant="${VARIANT:-default}" job="$SLURM_JOB_ID" \
     nranks="$SLURM_NTASKS" nodes="$SLURM_JOB_NUM_NODES" rc="$EXITCODE" \
-    job_wall="$((T1 - T0))" opts="${SRUN_OPTS:-default} ${BENCH_MPIENV:-}" | tee bench-summary.txt
+    job_wall="$((T1 - T0))" opts="${SRUN_OPTS:-default} ${BENCH_MPIENV:-}${INPUT_OVERRIDE:+ input=$(basename "$INPUT_OVERRIDE")}" | tee bench-summary.txt
 mkdir -p "$BENCHDIR/results"
 cat bench-summary.txt >> "$BENCHDIR/results/$MACHINE.txt"
 
