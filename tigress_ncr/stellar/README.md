@@ -73,7 +73,8 @@ check.
 
 | compiler | variant | MHD | CRMHD | notes |
 |---|---|---|---|---|
-| icpx 2024.2 | **`fast2`** (`-fp-model=fast=2`) | **0.740** | **0.416** | NCR photochemistry 16% faster than the default `fp-model=fast` (0.749, 0.431) |
+| icpx 2024.2 | `fast2` (`-fp-model=fast=2`) | 0.740 | 0.416 | NCR photochemistry 16% faster than `fp-model=fast`, but it removes NaN checks: benchmark-only (see below) |
+| | **`fp-model=fast`** (icpx default) | **0.749** | **0.431** | **production**; keeps NaN checks |
 | | `march` (`-march=cascadelake` for `-xCASCADELAKE`) | 0.748 | 0.445 | |
 | | `precise` | 0.763 | 0.479 | only 2-11% slower (35-70% on Zen 5) |
 | | `-qopt-zmm-usage=high` | 0.793 | 0.447 | full 512-bit vectors are slower |
@@ -83,12 +84,23 @@ check.
 | | `fast` (no LTO) / `preset-O2` | 0.854 / 0.865 | 0.550 / 0.550 | |
 | | `safe-lto` / `O3` (no fast math) | 0.965 / 1.019 | 0.621 / 0.667 | photochemistry 60% slower |
 
-Recommendation: **icpx-impi** with `FLAGS_ICPX` (the `fast2` variant). It is the fastest stack
-for both physics. It is the default of `build_tigress.sh --machine=stellar` and of the
-`*_8pc_tc.slurm` jobs. The final build, rebuilt from `env.sh`, reran at 0.734 (MHD) and
-0.407 (CRMHD) s/cycle, so the median of 4 is **0.737 and 0.411**, or 8.2 and 4.6 node-hours
-per 10^4 cycles. Compared with the old production build (icpx + Open MPI, default
-`fp-model`, 0.870 and 0.420), that is 15% less on MHD and 2% less on CRMHD.
+Recommendation: **icpx-impi** with `FLAGS_ICPX` set to **`-fp-model=fast`**. This is the
+default of `build_tigress.sh --machine=stellar` and of the `*_8pc_tc.slurm` jobs. It runs at
+**0.749 (MHD) and 0.431 (CRMHD)** s/cycle in the sweep, or 8.3 and 4.8 node-hours per 10^4
+cycles. Compared with the old production build (icpx + Open MPI, default `fp-model`, 0.870
+and 0.420), that is 14% less on MHD and the same on CRMHD.
+
+The sweep winner `fast2` (`-fp-model=fast=2`, final build 0.737 and 0.411) was the default
+from 2026-10-03 to 2026-10-04. It is **not used for production**, for these reasons:
+- It lets the compiler assume finite math, so every NaN test in the solver compiles to
+  false, and `x/x` folds to 1. That disables the C2P floors' NaN branch, CR-FOFC/CRAverage
+  NaN flags, the CR implicit-update revert and the NCR bail-out.
+- These are rare-event safety nets, so the history-based correctness check above cannot see
+  the difference.
+- It gains only 1% (MHD) and 3.5% (CRMHD) (see `../README.md`, "Floating-point
+  model").
+
+`build_tigress.sh` now refuses such flags outside the flag sweep (`bench/nan_check.cpp`).
 
 The rows of `../bench/results/stellar.txt` labelled `icpx:preset`/`icpx-impi:preset` with job
 IDs up to 2952058 are the matrix runs. They were built with the flags in use before the sweep

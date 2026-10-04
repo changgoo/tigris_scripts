@@ -58,9 +58,15 @@ BENCH_RST_crmhd=crmhd-ncr-8pc/TIGRESS_NCR.00003.rst  # t=150, CR<->NCR coupled
 #   AOCC : variant preset        (0.299, 0.198); -zopt miscompiles (MHD history wrong)
 #   icpx : variant fast2         (0.291, 0.220); default fp-model=fast is 14% slower on CRMHD,
 #          fp-model=precise 35-70% slower
-FLAGS_GCC="-O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512"
-FLAGS_AOCC="-O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto -fuse-ld=lld"
-FLAGS_ICPX="-O3 -std=c++11 -march=znver5 -ipo -qopenmp-simd -fp-model=fast=2 -Wno-tautological-constant-compare -Wno-array-bounds"
+# NaN checks (2026-10-04): -ffast-math (GCC/AOCC) and -fp-model=fast=2 (icpx) assume finite
+# math, so every NaN test in the solver (C2P floors, CR-FOFC, CRAverage, the NCR bail-out)
+# compiles to false and x/x folds to 1. The production flags therefore add
+# -fno-finite-math-only (GCC/AOCC) and use fp-model=fast (icpx); build_tigress.sh refuses
+# flags that remove NaN checks (bench/nan_check.cpp). The timings above were measured
+# without these changes; re-benchmark before relying on them.
+FLAGS_GCC="-O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512"
+FLAGS_AOCC="-O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto -fuse-ld=lld"
+FLAGS_ICPX="-O3 -std=c++11 -march=znver5 -ipo -qopenmp-simd -fp-model=fast -Wno-tautological-constant-compare -Wno-array-bounds"
 
 load_toolchain() {
     local tc=${1:-$DEFAULT_TOOLCHAIN}

@@ -53,17 +53,24 @@ BENCH_CACHE=$SCRATCH_BASE/tigris-benchmark      # compute-node visible copy
 BENCH_RST_mhd=mhd-ncr-8pc/TIGRESS_NCR.00006.rst      # t=300
 BENCH_RST_crmhd=crmhd-ncr-8pc/TIGRESS_NCR.00003.rst  # t=150, CR<->NCR coupled
 
-# --- best flags per compiler: complete sets, winners of the flag sweep (2026-10-03) ----
+# --- flags per compiler: complete sets, from the flag sweep (2026-10-03), restricted to
+# flags that keep NaN checks (2026-10-04; see the note above FLAGS_ICPX and README.md).
 # flag_variants.txt, Intel MPI, 3 runs for the top variants. s/cycle as MHD, CRMHD.
-#   icpx : variant fast2  (0.740, 0.416): -fp-model=fast=2 makes NCR photochemistry 16%
-#          faster than the default fp-model=fast (0.749, 0.431); precise costs 2-11%;
+#   icpx : default fp-model=fast (0.749, 0.431). The sweep winner fast2 (0.740, 0.416;
+#          -fp-model=fast=2 makes NCR photochemistry 16% faster) removes NaN checks and is
+#          benchmark-only; precise costs 2-11%;
 #          -qopt-zmm-usage=high is 4-7% slower; -march=cascadelake instead of
 #          -xCASCADELAKE ties; without -ipo the link fails (omp declare simd variants).
 #   GCC  : variant preset (0.822, 0.512): the fast-math + LTO variants tie within noise;
 #          -mprefer-vector-width=512 is 3-6% slower (unlike Zen 5); without -ffast-math the
-#          photochemistry is 60% slower (plain -O3: 1.02, 0.67).
-FLAGS_GCC="-O3 -std=c++11 -march=cascadelake -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays"
-FLAGS_ICPX="-O3 -std=c++11 -ipo -xCASCADELAKE -qopenmp-simd -fp-model=fast=2 -Wno-tautological-constant-compare -Wno-array-bounds"
+#          photochemistry is 60% slower (plain -O3: 1.02, 0.67). -fno-finite-math-only
+#          keeps the NaN checks that -ffast-math would remove (cost not benchmarked yet).
+FLAGS_GCC="-O3 -std=c++11 -march=cascadelake -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays"
+# fp-model=fast, not the sweep winner fast=2: fast=2 assumes no NaNs, so every NaN check in
+# the solver (std::isnan, x != x, !(x >= 0); e.g. the C2P floors, CR-FOFC, CRAverage, the
+# NCR bail-out) compiles to false, and x/x folds to 1. The cost is ~3.5% on CRMHD
+# (0.431 vs 0.416 s/cycle). Checked 2026-10-04 with a small isnan test under icpx 2024.2.
+FLAGS_ICPX="-O3 -std=c++11 -ipo -xCASCADELAKE -qopenmp-simd -fp-model=fast -Wno-tautological-constant-compare -Wno-array-bounds"
 
 load_toolchain() {
     local tc=${1:-$DEFAULT_TOOLCHAIN}
