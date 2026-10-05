@@ -133,15 +133,15 @@ li { margin-bottom: 4px; }
 
 <div class="reco">
   <h3>Recommendation</h3>
-  <p>Build with <b>GCC 14</b> and the NaN-safe flags below. <b>GCC + Open MPI</b> (<code>gcc</code>) is now the fastest
-  stack: tied on MHD and 9% faster on CRMHD than <b>GCC + Intel MPI</b> (<code>gcc-impi</code>).
-  <code>gcc-impi</code> is still the default in <code>stellarai-amd/env.sh</code> and the production scripts,
-  because production post-processing uses an mpi4py built against Intel MPI and Open MPI hasn't run a full
-  production job here yet. To use Open MPI, pass <code>--cc=gcc</code> to the build and <code>CC=gcc</code> to the job:</p>
+  <p>Build with <b>GCC 14 + Open MPI 5.0.10</b> (<code>gcc</code>), the default in <code>stellarai-amd/env.sh</code>
+  and the production scripts since 2026-10-05. It's the fastest stack: tied with GCC + Intel MPI (<code>gcc-impi</code>)
+  on MHD and 9% faster on CRMHD. <code>build_tigress.sh</code> picks it, with its benchmarked flags, when you don't
+  pass <code>--cc</code>; <code>CC=gcc-impi</code> is a good fallback.</p>
 <pre>cd ~/tigris_scripts/tigress_ncr
-bash build_tigress.sh --machine=stellarai-amd --cc=gcc --physics=mhd   --worktree=ncr-cr-coupling
-bash build_tigress.sh --machine=stellarai-amd --cc=gcc --physics=crmhd --worktree=ncr-cr-coupling
-CC=gcc sbatch stellarai-amd/tigress_ncr_mhd_8pc.slurm</pre>
+bash build_tigress.sh --machine=stellarai-amd --physics=mhd   --worktree=ncr-cr-coupling
+bash build_tigress.sh --machine=stellarai-amd --physics=crmhd --worktree=ncr-cr-coupling</pre>
+  <p>The production jobs' snapshot step loads the <code>gcc-impi</code> modules, because pyathena's mpi4py is linked
+  against Intel MPI and aborts in <code>MPI_Init</code> under Open MPI.</p>
   <p style="margin:0">Compiler flags (complete set, replacing configure.py's preset):<br>
   <code>-O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512</code></p>
 </div>
@@ -179,11 +179,11 @@ needs for <code>-mpi -hdf5</code>. <code>aocc-impi</code> drives AOCC through In
 (<code>I_MPI_CXX=clang++</code>) and uses the GCC-built HDF5, which is fine because HDF5 is a C library.</p>
 <div class="tablewrap"><table>
 <tr><th>Toolchain</th><th>Compiler</th><th>MPI</th><th>Modules</th></tr>
-<tr><td><code>gcc-impi</code> <span class="chip good">default</span></td><td>GCC 14.3</td><td>Intel MPI 2021.18</td><td><span class="tok">gcc/14</span> <span class="tok">intel-mpi/gcc/2021.18</span> <span class="tok">hdf5/gcc/intel-mpi/1.14.6</span> <span class="tok">aocl/gcc/ST/5.3.0</span></td></tr>
+<tr><td><code>gcc-impi</code></td><td>GCC 14.3</td><td>Intel MPI 2021.18</td><td><span class="tok">gcc/14</span> <span class="tok">intel-mpi/gcc/2021.18</span> <span class="tok">hdf5/gcc/intel-mpi/1.14.6</span> <span class="tok">aocl/gcc/ST/5.3.0</span></td></tr>
 <tr><td><code>aocc-impi</code></td><td>AOCC 5.2 (clang 17)</td><td>Intel MPI 2021.18</td><td><span class="tok">aocc/5.2.0</span> <span class="tok">intel-mpi/gcc/2021.18</span> <span class="tok">hdf5/gcc/intel-mpi/1.14.6</span> <span class="tok">aocl/aocc/ST/5.3.0</span></td></tr>
 <tr><td><code>icpx-impi</code></td><td>oneAPI icpx 2026.0</td><td>Intel MPI 2021.18</td><td><span class="tok">intel-oneapi/2026.0</span> <span class="tok">intel-mpi/oneapi/2021.18</span> <span class="tok">hdf5/oneapi-2026.0/intel-mpi/1.14.6</span> <span class="tok">aocl/gcc/ST/5.3.0</span></td></tr>
 <tr><td><code>aocc</code></td><td>AOCC 5.2</td><td>Open MPI 5.0.10 (UCX)</td><td><span class="tok">aocc/5.2.0</span> <span class="tok">openmpi/aocc-5.2.0/5.0.10</span> <span class="tok">hdf5/aocc-5.2.0/openmpi-5.0.10/1.14.6</span> <span class="tok">aocl/aocc/ST/5.3.0</span></td></tr>
-<tr><td><code>gcc</code></td><td>GCC 14.3</td><td>Open MPI 5.0.10 (UCX)</td><td><span class="tok">gcc/14</span> <span class="tok">openmpi/gcc/5.0.10</span> <span class="tok">hdf5/gcc/openmpi-5.0.10/1.14.6</span> <span class="tok">aocl/gcc/ST/5.3.0</span></td></tr>
+<tr><td><code>gcc</code> <span class="chip good">default</span></td><td>GCC 14.3</td><td>Open MPI 5.0.10 (UCX)</td><td><span class="tok">gcc/14</span> <span class="tok">openmpi/gcc/5.0.10</span> <span class="tok">hdf5/gcc/openmpi-5.0.10/1.14.6</span> <span class="tok">aocl/gcc/ST/5.3.0</span></td></tr>
 <tr><td><code>icpx</code></td><td>oneAPI icpx 2026.0</td><td>Open MPI 5.0.10 (UCX)</td><td><span class="tok">intel-oneapi/2026.0</span> <span class="tok">openmpi/oneapi-2026.0/5.0.10</span> <span class="tok">hdf5/oneapi-2026.0/openmpi-5.0.10/1.14.6</span> <span class="tok">aocl/gcc/ST/5.3.0</span></td></tr>
 </table></div>
 

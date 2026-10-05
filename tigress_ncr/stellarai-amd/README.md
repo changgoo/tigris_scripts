@@ -90,17 +90,17 @@ false (see `../README.md`, "Floating-point model"). The re-measured cost: none f
 photochemistry for AOCC, and the 14% CRMHD gain of `fast=2` for icpx. Executables built here
 before 2026-10-04 have no working NaN checks; rebuild them before further production use.
 
-Recommendation: build with GCC (`FLAGS_GCC`). GCC + Open MPI (`gcc`) is now the fastest stack,
-tied with gcc-impi on MHD and 9% faster on CRMHD. `gcc-impi` stays the default of
-`build_tigress.sh` and of the production scripts for now: production post-processing runs an
-mpi4py linked against Intel MPI 2021.18 (`~/.conda/envs/pyathena`), and Open MPI hasn't run a
-full production job here yet. To use Open MPI, build with `--cc=gcc` and submit with `CC=gcc`.
+Recommendation: **gcc** (GCC 14 + Open MPI) with `FLAGS_GCC`, the default of `build_tigress.sh`
+and of the production scripts since 2026-10-05. It is the fastest stack, tied with gcc-impi on
+MHD and 9% faster on CRMHD. `CC=gcc-impi` remains a good fallback. The snapshot step at the end
+of the production jobs loads the gcc-impi stack, because pyathena's mpi4py is linked against
+Intel MPI 2021.18 and aborts in `MPI_Init` under the Open MPI modules (tested 2026-10-05).
 
 ## Build
 
 ```bash
 cd $HOME/tigris_scripts/tigress_ncr
-bash ./build_tigress.sh --machine=stellarai-amd --physics=mhd   --worktree=ncr-cr-coupling   # gcc-impi
+bash ./build_tigress.sh --machine=stellarai-amd --physics=mhd   --worktree=ncr-cr-coupling   # gcc
 bash ./build_tigress.sh --machine=stellarai-amd --physics=crmhd --worktree=ncr-cr-coupling
 bash ./build_tigress.sh --machine=stellarai-amd --cc=all --physics=mhd --worktree=ncr-cr-coupling  # every toolchain
 ```
@@ -128,9 +128,9 @@ The snapshot step at the end needs the `pyathena` conda env, `~/pyathena_master`
 
 ```bash
 cd $HOME/tigris_scripts/tigress_ncr
-bench/submit.sh stellarai-amd mhd gcc-impi 200
+bench/submit.sh stellarai-amd mhd gcc 200
 OMPI_MCA_osc=ucx bench/submit.sh stellarai-amd mhd aocc 200      # MPI env vars are recorded
-nohup bench/run_matrix.sh stellarai-amd 200 1 > bench/logs/matrix.log 2>&1 &   # everything
+nohup bench/run_matrix.sh stellarai-amd 200 2 > bench/logs/matrix.log 2>&1 &   # everything
 ```
 
 The QOS allows at most 5 queued jobs per user; `run_matrix.sh` stays under that limit.

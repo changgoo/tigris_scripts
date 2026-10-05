@@ -10,8 +10,8 @@
 #   load_toolchain <toolchain>   # loads modules, sets CXX_PRESET and TC_CXXFLAGS
 #
 # Toolchains (MPI-enabled HDF5 and AOCL-FFTW in every stack; there is no fftw module).
-# gcc-impi is the default. Since iallreduce ray-tracing termination (2026-10-04), gcc (Open MPI)
-# is as fast on MHD and 9% faster on CRMHD; see README.md before switching.
+# gcc is the default: since the iallreduce ray-tracing termination (2026-10-04) it is the
+# fastest stack, tied with gcc-impi on MHD and 9% faster on CRMHD (see README.md).
 #   gcc-impi  : GCC 14                + Intel MPI 2021.18
 #   aocc-impi : AOCC 5.2 clang++      + Intel MPI 2021.18  (I_MPI_CXX=clang++, gcc-built HDF5)
 #   icpx-impi : oneAPI 2026.0 icpx    + Intel MPI 2021.18
@@ -42,8 +42,8 @@ MAKE_JOBS=16
 MPI_LAUNCH="srun --cpu-bind=cores"
 
 # --- toolchains ---------------------------------------------------------------------
-TOOLCHAINS="gcc-impi aocc-impi icpx-impi aocc gcc icpx"
-DEFAULT_TOOLCHAIN=gcc-impi
+TOOLCHAINS="gcc gcc-impi aocc-impi icpx-impi aocc icpx"
+DEFAULT_TOOLCHAIN=gcc
 
 # --- benchmark checkpoints (8 pc, 384 meshblocks) ------------------------------------
 BENCH_DATA=/projects/EOSTRIKE/tigris-benchmark   # shared by Princeton clusters (login nodes)

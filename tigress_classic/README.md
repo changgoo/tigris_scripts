@@ -22,7 +22,7 @@ README):
 |---------------|----------------------------|-----------------------------------|
 | stellar       | `icpx-impi`                | oneAPI 2024.2 icpx + Intel MPI    |
 | tiger         | `icpx-impi`                | oneAPI 2024.2 icpx + Intel MPI    |
-| stellarai-amd | `gcc-impi`                 | GCC 14 + Intel MPI                |
+| stellarai-amd | `gcc`                      | GCC 14 + Open MPI                 |
 
 ```sh
 ./build_tigress.sh --machine=stellar --physics=crmhd   # -> stellar/tigris-master_crmhd-fft-icpx-impi.exe

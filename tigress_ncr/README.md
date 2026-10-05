@@ -20,12 +20,12 @@ rank per block, 4 nodes).
 
 | machine | CPU (cores/node) | default `--cc` | stack | MHD | CRMHD | jobs | notes |
 |---|---|---|---|---|---|---|---|
-| stellarai-amd | 2x AMD EPYC 9475F, Zen 5 (96) | `gcc-impi` | GCC 14 + Intel MPI 2021.18, `-march=znver5`, fast math with NaN checks, LTO, 512-bit vectors; GCC + Open MPI is as fast since iallreduce termination | 0.282 | 0.204 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](stellarai-amd/README.md) |
+| stellarai-amd | 2x AMD EPYC 9475F, Zen 5 (96) | `gcc` | GCC 14 + Open MPI 5.0.10, `-march=znver5`, fast math with NaN checks, LTO, 512-bit vectors | 0.276 | 0.186 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](stellarai-amd/README.md) |
 | stellar | 4x Intel Xeon Platinum 8268, Cascade Lake (96) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xCASCADELAKE -ipo -fp-model=fast` | 0.749 | 0.431 | `tigress_ncr_{mhd,crmhd}_8pc_tc.slurm` | [README](stellar/README.md) |
 | tiger | 2x Intel Xeon Platinum 8480+, Sapphire Rapids (112; 96 used) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xSAPPHIRERAPIDS -ipo -fp-model=fast` | 0.529 | 0.343 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](tiger/README.md) |
 | anvil | | (legacy) | fixed modules in `build_tigress.sh` | | | | no `env.sh` yet |
 
-An 8 pc run costs 2.1-2.7x fewer node-hours on stellarai-amd than on Stellar (newer cores,
+An 8 pc run costs 2.3-2.7x fewer node-hours on stellarai-amd than on Stellar (newer cores,
 and ray tracing is 3x faster there). MHD cycles are dominated by ray tracing, which is limited
 by MPI point-to-point latency. With the old rma termination test (a rank-0 `MPI_Fetch_and_op`
 counter), Open MPI was 4x slower than Intel MPI on stellarai-amd and 1.25x on Stellar. Since

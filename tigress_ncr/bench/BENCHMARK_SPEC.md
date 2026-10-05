@@ -425,7 +425,7 @@ any run is SUSPECT. Runs that advanced a different NCYC are reported as not comp
 
 | machine | CPU | nodes | best toolchain | mhd s/cycle | crmhd s/cycle | mhd node-h/1e4 | crmhd node-h/1e4 | commit |
 |---|---|---|---|---|---|---|---|---|
-| stellarai-amd | 2x EPYC 9475F (Zen 5), 96 c, NDR 400 IB | 4 | gcc-impi + FLAGS_GCC (`preset-v512`) | 0.291 | 0.195 | 3.24 | 2.17 | eee94bc4f |
+| stellarai-amd | 2x EPYC 9475F (Zen 5), 96 c, NDR 400 IB | 4 | gcc (Open MPI) + FLAGS_GCC (`preset-v512` + `-fno-finite-math-only`; iallreduce termination; gcc-impi 0.282/0.204) | 0.276 | 0.186 | 3.07 | 2.07 | 4eea9f80c |
 | stellar | 4x Xeon Platinum 8268 (Cascade Lake), 96 c, IB 100 Gb/s | 4 | icpx-impi + FLAGS_ICPX (`-fp-model=fast`; `fast2` was 0.737/0.411 but removes NaN checks) | 0.749 | 0.431 | 8.32 | 4.79 | eee94bc4f |
 | tiger | 2x Xeon Platinum 8480+ (Sapphire Rapids), 112 c (96 used), IB NDR200 | 4 | icpx-impi + FLAGS_ICPX (`-fp-model=fast`; `fast2` was 0.510/0.328 but removes NaN checks) | 0.529 | 0.343 | 5.88 | 3.81 | eee94bc4f |
 

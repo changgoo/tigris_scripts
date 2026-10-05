@@ -19,8 +19,9 @@
 #   -> 4*4*24 = 384 blocks -> 384 ranks (1 block/rank) = 4 full nodes.
 #
 # Toolchain: built by build_tigress.sh --machine=stellarai-amd --cc=<toolchain>; the
-# matching modules come from env.sh. gcc-impi (GCC 14 + Intel MPI) was fastest in
-# tigress_ncr_8pc_bench.slurm; Open MPI builds are ~4x slower in ray tracing here.
+# matching modules come from env.sh. gcc (GCC 14 + Open MPI) is the default: fastest in
+# tigress_ncr_8pc_bench.slurm for both MHD and CRMHD since the iallreduce ray-tracing
+# termination (2026-10-04; gcc-impi ties on MHD and is 9% slower on CRMHD).
 #
 # Long production run: chains itself via restart when it stops on the walltime
 # soft limit (athena exit code 3).
@@ -30,10 +31,10 @@
 #     -r  : restart from $PID.final.rst in the run directory, or, if there is none,
 #           from the newest $PID.NNNNN.rst there (e.g. a checkpoint copied from Stellar)
 #     TAG : suffix of the run-directory name
-#   env CC      : toolchain [default: gcc-impi]
+#   env CC      : toolchain [default: gcc]
 #   env RUNBASE : parent of the run directory [default: /scratch/gpfs/EOST/$USER/tigress_ncr]
 
-CC=${CC:-gcc-impi}
+CC=${CC:-gcc}
 STARTFLAG=$1
 TAG=$2
 
@@ -51,7 +52,7 @@ source "$SLURMDIR/env.sh"
 load_toolchain "$CC" || exit 1
 
 # Executable (under $SLURMDIR) and input file
-EXE=tigris_ncr_${physics}-${grav}-${CC}.exe  # e.g. tigris_ncr_mhd-fft-gcc-impi.exe
+EXE=tigris_ncr_${physics}-${grav}-${CC}.exe  # e.g. tigris_ncr_mhd-fft-gcc.exe
 EXEPATH=${SLURMDIR}/$EXE
 INPUT=${SCRIPTDIR}/athinput.${prob}
 
@@ -150,7 +151,9 @@ fi
 cd "$RUNDIR"
 pythonscript=$HOME/TIGRESS-CR/python/plot_slices_ncr.py
 if [ -d "$HOME/.conda/envs/pyathena" ] && [ -f "$pythonscript" ]; then
-    module purge; module load anaconda3/2024.6 openmpi/gcc/5.0.10; conda activate pyathena
+    # pyathena's mpi4py is linked against Intel MPI 2021.18; it fails in MPI_Init under the
+    # Open MPI modules, so load the gcc-impi stack for this step whatever $CC was.
+    load_toolchain gcc-impi; module load anaconda3/2024.6; conda activate pyathena
     export PYTHONPATH="$HOME/pyathena_master:$PYTHONPATH"
     srun python -m mpi4py "$pythonscript" "$(pwd)"
 else
