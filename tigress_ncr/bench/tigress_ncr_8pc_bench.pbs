@@ -1,0 +1,137 @@
+#!/bin/bash
+#PBS -N ncr8-bench
+#PBS -j oe
+#
+# TIGRESS-NCR toolchain benchmark, PBS bundle job (see BENCHMARK_SPEC.md). Submit it with
+# bench/pbs_submit.sh, which writes the task list and adds queue, model, node count and
+# walltime from <machine>/env.sh.
+#
+# The job's nodes are split into lanes of NODES_PER_RUN nodes. Each lane takes the next
+# unclaimed task (an atomic mkdir in the task directory) and runs it, until none are
+# left, so one PBS job runs a whole matrix with LANES runs at a time.
+#
+# Workloads (first field of a task):
+#   rst   : restart the 8 pc production checkpoint (BENCH_RST_<physics>, 384 blocks of 32^3)
+#           and advance NCYC cycles; the cross-machine benchmark of BENCHMARK_SPEC.md §1.
+#           Results: results/<MACHINE>.txt
+#   fresh : fresh start of athinput.tigress_ncr at 8 pc in a taller box, 128x128x1024
+#           (z = +-4096 pc), 32^3 blocks -> 512 ranks, rseed=1 so every run starts from
+#           the same state; NCYC cycles from t=0. Large dumps (hdf5, parbin, rst, zprof)
+#           only happen at t=0; the hst/phase_hst cadence is production's. CRMHD solves
+#           gravity once per dt_hyperbolic (solve_grav_hyperbolic_dt=true).
+#           Results: results/<MACHINE>-fresh.txt
+# Both report seconds per cycle from TIGRESS_NCR.loop_time.txt (parse_loop_time.py);
+# job=<pbs id>.<task index>.
+#
+# qsub -v TASKDIR=<dir>; pbs_submit.sh writes there job.env (sourced) and tasks.txt.
+# job.env sets:
+#   MACHINE, NCR_DIR, NODES_PER_RUN
+#   BENCH_MPIENV : MPI tuning variables to export in every run, recorded in opts
+#   LAUNCH_OPTS  : extra mpiexec options, appended after --cpu-bind (a later --cpu-bind wins)
+#   KEEP_RST=1   : keep the 3-4 GB TIGRESS_NCR.final.rst
+# tasks.txt lines: <rst|fresh> <physics> <toolchain> <variant|default> <ncyc> [overrides...]
+# env SRCDIR     : source tree for the data tables [default: $HOME/tigris/.worktrees/production-diagnostics]
+
+type module > /dev/null 2>&1 || source /opt/cray/pe/modules/3.2.11.7/init/bash
+source "$TASKDIR/job.env" || exit 1
+NCR_DIR=${NCR_DIR:-$HOME/tigris_scripts/tigress_ncr}
+BENCHDIR=$NCR_DIR/bench
+MACHDIR=$NCR_DIR/$MACHINE
+source "$MACHDIR/env.sh" || exit 1
+SRCDIR=${SRCDIR:-$HOME/tigris/.worktrees/production-diagnostics}
+TBLDIR=$SRCDIR/inputs/tables
+JOBID=${PBS_JOBID%%.*}
+NPR=${NODES_PER_RUN:-2}
+export OMP_NUM_THREADS=1 FI_PROVIDER=cxi
+for kv in $BENCH_MPIENV; do export "$kv"; done
+
+FRESH_MESH="mesh/nx1=128 mesh/nx2=128 mesh/nx3=1024 mesh/x3min=-4096 mesh/x3max=4096"
+FRESH_NR=$(( (128 / 32) * (128 / 32) * (1024 / 32) ))
+FRESH_PARAMS="job/problem_id=TIGRESS_NCR $FRESH_MESH perturbation/rseed=1 \
+    ray_tracing/rayt_sparse=true ray_tracing/dist_xy_max=2048 ray_tracing/eps_extinct=1.e-8 \
+    photchem_ncr/coolftn_file=tigress_coolftn_ncr.txt feedback/pop_synth_file=Z014_GenevaV00.txt \
+    output2/dt=1e6 output3/dt=1e6 output4/dt=1e6 output6/dt=1e6 output7/dt=1e6"
+# CRMHD: CR coupling as in production, and gravity solved once per dt_hyperbolic (the
+# CR-limited dt is ~8x shorter); recorded in opts as grav=hyp.
+FRESH_CRMHD="cr/photchem_flag=1 gravity/solve_grav_hyperbolic_dt=true"
+
+mapfile -t NODES < <(sort -u "$PBS_NODEFILE")
+LANES=$(( ${#NODES[@]} / NPR ))
+mapfile -t TASKS < <(grep -vE '^\s*(#|$)' "$TASKDIR/tasks.txt")
+echo "$(date) job $JOBID: ${#NODES[@]} nodes, $LANES lanes, ${#TASKS[@]} tasks"
+echo "nodes: ${NODES[*]}"
+lscpu | grep -E 'Thread\(s\) per core'
+
+run_task() {   # run_task <index> <lane> <hosts>
+    local k=$1 lane=$2 hosts=$3
+    local WORKLOAD PHYSICS TC VARIANT NCYC EXTRA
+    read -r WORKLOAD PHYSICS TC VARIANT NCYC EXTRA <<< "${TASKS[$k]}"
+    [ "$VARIANT" == "default" ] && VARIANT=""
+    load_toolchain "$TC" > /dev/null 2>&1 || { echo "task $k: bad toolchain $TC"; return; }
+    local EXE=tigris_ncr_${PHYSICS}-fft-${TC}${VARIANT:+-$VARIANT}.exe
+    local NAME=${PHYSICS}-${TC}${VARIANT:+-$VARIANT}-${JOBID}.${k}
+    [ -x "$MACHDIR/$EXE" ] || { echo "task $k: missing $MACHDIR/$EXE"; return; }
+
+    local NR START RESULTS RUNDIR params
+    params="time/ncycle_out=10 time/ncycle_out_timing=10 job/output_timing=true"
+    if [ "$WORKLOAD" == "fresh" ]; then
+        NR=$FRESH_NR
+        RUNDIR=$SCRATCH_BASE/tigress_ncr/bench/fresh-$NAME
+        RESULTS=$BENCHDIR/results/$MACHINE-fresh.txt
+        START="-i athinput.tigress_ncr"
+        params="$FRESH_PARAMS $([ "$PHYSICS" == crmhd ] && echo "$FRESH_CRMHD") time/nlim=$NCYC $params"
+        mkdir -p "$RUNDIR" && cp "$NCR_DIR/athinput.tigress_ncr" "$RUNDIR/"
+    else
+        local RSTVAR=BENCH_RST_$PHYSICS NCYC0
+        local RSTFILE=$BENCH_CACHE/${!RSTVAR}
+        [ -f "$RSTFILE" ] || { echo "task $k: missing $RSTFILE"; return; }
+        read -r NR _ _ NCYC0 < <(python3 "$BENCHDIR/rst_info.py" "$RSTFILE")
+        RUNDIR=$SCRATCH_BASE/tigress_ncr/bench/$NAME
+        RESULTS=$BENCHDIR/results/$MACHINE.txt
+        START="-r start.rst"
+        params="time/nlim=$((NCYC0 + NCYC)) $params"
+        mkdir -p "$RUNDIR" && ln -sf "$RSTFILE" "$RUNDIR/start.rst"
+    fi
+    params="$params $EXTRA"
+    local PPN=$(( NR / NPR ))
+    cd "$RUNDIR" || return
+    cp "$MACHDIR/$EXE" .
+    [ -f "$MACHDIR/${EXE%.exe}.buildinfo" ] && cp "$MACHDIR/${EXE%.exe}.buildinfo" .
+    cp "$TBLDIR/tigress_coolftn_ncr.txt" "$TBLDIR/Z014_GenevaV00.txt" .
+    local launch="$MPI_LAUNCH --hosts $hosts -n $NR --ppn $PPN --cpu-bind $(cpu_bind "$PPN") ${LAUNCH_OPTS:-}"
+    {
+        echo "task $k lane $lane workload $WORKLOAD"
+        echo "EXE=$EXE START=$START"
+        echo "params=$params"
+        echo "launch=$launch"
+        module -t list 2>&1 | tr '\n' ' '; echo
+    } > bench-job.txt
+    local T0 T1 EXITCODE
+    T0=$(date +%s)
+    $launch "./$EXE" $START -t 00:25:00 $params 1> out.txt 2> err.txt
+    EXITCODE=$?
+    T1=$(date +%s)
+    python3 "$BENCHDIR/parse_loop_time.py" TIGRESS_NCR.loop_time.txt \
+        machine="$MACHINE" workload="$WORKLOAD" physics="$PHYSICS" tc="$TC" variant="${VARIANT:-default}" \
+        job="$JOBID.$k" nranks="$NR" nodes="$NPR" rc="$EXITCODE" job_wall="$((T1 - T0))" \
+        opts="${LAUNCH_OPTS:-default} ${BENCH_MPIENV:-}$([[ "$params" == *solve_grav_hyperbolic_dt=true* ]] && echo " grav=hyp")" > bench-summary.txt
+    cat bench-summary.txt >> "$RESULTS"
+    echo "$(date +%T) lane $lane task $k: $WORKLOAD $PHYSICS $TC${VARIANT:+-$VARIANT} rc=$EXITCODE wall=$((T1 - T0))s $(grep -o 's_cycle=[^ ]*' bench-summary.txt)"
+    # keep only what the analysis needs: logs, timing, history
+    [ "${KEEP_RST:-0}" == "1" ] || rm -f TIGRESS_NCR.final.rst
+    [ "$WORKLOAD" == "fresh" ] && rm -f TIGRESS_NCR.*.athdf TIGRESS_NCR.*.xdmf TIGRESS_NCR.*.rst TIGRESS_NCR.*.parbin
+    rm -f "./$EXE"
+}
+
+mkdir -p "$BENCHDIR/results"
+for lane in $(seq 0 $((LANES - 1))); do
+    (
+        hosts=$(IFS=,; echo "${NODES[*]:$((lane * NPR)):$NPR}")
+        for k in "${!TASKS[@]}"; do
+            mkdir "$TASKDIR/claim.$k" 2>/dev/null || continue
+            run_task "$k" "$lane" "$hosts"
+        done
+    ) &
+done
+wait
+echo "$(date) job $JOBID done"
