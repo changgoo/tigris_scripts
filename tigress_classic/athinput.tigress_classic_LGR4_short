@@ -1,0 +1,206 @@
+<comment>
+problem   = TIGRESS classic, LGR4 8 pc, |z| < 1536 pc (shear-boundary diagnostics)
+reference =
+configure = --prob=tigress_classic -fft --grav=blockfft -mpi -hdf5 --nghost=4
+<job>
+problem_id    = TIGRESS # problem ID: basename of output filenames
+output_timing = true
+<output1>
+file_type      = hst              # History data dump
+data_format    = %.16e            # full precision for the budgets
+dt             = 0.01             # time increment between outputs
+dcycle         = 0
+<output2>
+file_type      = hdf5   # Binary data dump
+variable       = prim   # variables to be output
+dt             = 1      # time increment between outputs
+dcycle         = 0
+ghost_zones    = false
+<output3>
+file_type      = parbin # Binary data dump
+dt             = 1      # time increment between outputs
+dcycle         = 0
+ghost_zones    = false
+<output4>
+file_type      = rst    # Restart data dump
+dt             = 10     # time increment between outputs
+dcycle         = 0
+<output5>
+file_type      = phase_hst        # History data dump
+dt             = 0.01             # time increment between outputs
+dcycle         = 0
+<output6>
+file_type      = zprof  # zprof data dump
+dt             = 1      # time increment between outputs
+dcycle         = 0
+<output7>
+file_type      = hdf5   # Binary data dump
+variable       = uov    # variables to be output
+dt             = 10     # time increment between outputs
+dcycle         = 0
+ghost_zones    = false
+<time>
+cfl_number        = 0.3   # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim              = -1    # cycle limit
+tlim              = 100   # time limit
+integrator        = rk2   # time integration algorithm
+xorder            = 2     # order of spatial reconstruction
+ncycle_out        = 10    # interval for stdout summary info
+dt_diagnostics    = -1
+ncycle_out_timing = 100
+ops_task          = true
+cr_integrator     = rk1
+<mesh>
+nx1            = 128            # Number of zones in X1-direction
+x1min          = -512           # minimum value of X1
+x1max          = 512            # maximum value of X1
+ix1_bc         = shear_periodic # inner-X1 boundary flag
+ox1_bc         = shear_periodic # outer-X1 boundary flag
+nx2            = 128            # Number of zones in X2-direction
+x2min          = -512           # minimum value of X2
+x2max          = 512            # maximum value of X2
+ix2_bc         = periodic       # inner-X2 boundary flag
+ox2_bc         = periodic       # outer-X2 boundary flag
+nx3            = 384            # Number of zones in X3-direction
+x3min          = -1536          # minimum value of X3
+x3max          = 1536           # maximum value of X3
+ix3_bc         = user           # inner-X3 boundary flag
+ox3_bc         = user           # outer-X3 boundary flag
+refinement     = none
+mhd_outflow_bc = diode
+cr_outflow_bc  = lngrad_out
+<meshblock>
+nx1 = 32
+nx2 = 32
+nx3 = 32
+<hydro>
+gamma             = 1.666666666667       # gamma = C_p/C_v
+iso_sound_speed   = 1.00                 # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
+neighbor_flooring = true
+fofc              = true
+prolonged_fofc    = true
+fofc_shear        = false
+fofc_full         = false
+dfloor            = 1.e-6
+tsqfloor          = 1.e-2
+pfloor            = 1.e-6
+ct_method         = uct_hlld
+# shear-periodic boundary: no fix, diagnostics only (test branch shear-sync-test)
+shear_flux_limiter      = false  # mass limiter on the averaged shear-face flux
+shear_flux_limiter_eps  = 0.1    # its target: rho >= max(dfloor, eps*rho_base)
+shear_flux_sync         = false  # synchronised check-and-fix (shear-sync-test)
+shear_flux_sync_fv      = 2.0    # |v-v_K|, c_s <= fv x the largest of the six neighbours
+shear_flux_sync_scalars = true   # rebuild the scalar flux composition when needed
+shear_flux_sync_history = 2      # stages a failing cell keeps the first-order flux
+shear_flux_counters     = true   # boundary/control diagnostics in the history
+<gravity>
+grav_bc                  = disk
+output_gasonly_potential = true
+solve_grav_hyperbolic_dt = false
+<orbital_advection>
+OAorder    = 0    # 0: w/o OA, 1: w/ OA (1st), 2: w/ OA (2nd)
+qshear     = 1    # shear rate
+Omega0     = 0.06 # angular velocity of the system
+shboxcoord = 1    # 1=xy (default); 2=xz
+<cooling>
+cooling        = op_split            # [none, enroll, op_split]
+solver         = rk2                 # [forward_euler]
+coolftn        = tigress             # tigress or plf
+coolftn_file   = tigress_coolftn.txt
+cfl_cool       = 2.0                 # min dt_hydro/dt_cool
+cfl_cool_sub   = 0.1                 # dt_sub/dt_cool (must be less than 1)
+T_floor        = 10                  # temperature floor
+T_max          = 5e9                 # temperature ceiling
+ceiling        = true
+T_PE           = 15000               # temperature below which PE heating is applied, if plf
+Gamma          = 2e-26               # heating rate in ergs / sec, if plf
+heat_ratio     = 1.0                 # Gamma/Gamma0, if tigress
+<particle1>
+type           = complex
+gravity        = true
+output         = true
+output_pm      = false
+feedback       = true    # turn on feedback from particles
+accretion      = 1
+mass_return    = true
+lp_coefficient = 2.0
+csmin          = 0.1
+fgas           = 0.90
+r_return       = 200     # negative for no return; 0 to entire volume
+t_return       = 2.5
+dt_return      = 1
+t_duration     = 10
+return_to_warm = true
+type_ia_sn     = false
+A_Ia           = 4.4e-2
+B_Ia           = 0.0
+<particle2>
+type      = none
+gravity   = false
+output    = false
+output_pm = false
+feedback  = true  # turn on feedback from particles
+rseed     = 10
+<feedback>
+ischeme        = Classic            # injection scheme
+pop_synth      = SB99               # population synthesis scheme
+M_inj          = 1000               # Total injected mass (gas+star) in Msun
+E_inj          = 1.0                # Energy injected in units of 10^51 ergs
+M_ej           = 10                 # Ejecta mass (star) in Msun
+fe_CR          = 0.1                # energy fraction in CR
+tdec_scr       = 0.04               # decay time of CR scalar in Myr
+tdec_rt        = 10                 # Decay time for Mass return scalar
+iSN            = 1                  # turn on supernovae
+iFUV           = 1
+pop_synth_file = Z014_GenevaV00.txt
+rfb_res        = 3.0                # feedback radius in grid cells
+fkin           = 0.28               # kinetic energy fraction
+mratio_thresh  = 0.1                # mass ratio threshold for energy inejction mode
+iredist        = false              # redistribute if momentum feedback?
+write_rprof    = false
+vmax           = 5000               # maximum velocity by the feedback injection
+fbinary        = 0.7
+<cr>
+vmax                 = 2e9
+fofc                 = true
+fofc_shear           = false
+fofc_full            = false
+neighbor_flooring    = true
+vflx                 = false
+taucell              = 1
+vs_flag              = 1
+src_flag             = 1
+losses_flag          = 1
+perp_diff_flag       = 1
+self_consistent_flag = 1
+valfven_flag         = 1
+obs_spectrum_flag    = 1
+postprocess_flag     = 0
+coll_ion_flag        = 1
+sigma_eff_flag       = 0
+ecfloor              = 1e-18
+sigma                = 1e-25
+max_opacity          = 10000000000
+perp_to_par_diff     = 10
+obs_spectrum_slope   = -4.7
+cr_ops_task          = false
+<problem>
+Sigma_gas     = 50
+sz1           = 10
+Sigma_star    = 50
+Sigma_SFR0    = 5e-2
+z_star        = 500
+rho_dm        = 0.005
+R0            = 4
+beta0         = 1
+beta_r        = 0.0
+turb_flag     = 1
+v1d           = 10
+dedt          = 1.0   # a place holder (will be updated based on v1d)
+ext_grav      = force
+<perturbation>
+nlow    = 1   # cut-off wavenumber at low-k
+nhigh   = 8   # cut-off wavenumber at high-k
+expo    = 2.0 # power-law exponent
+f_shear = 0.5 # the ratio of the shear component
+rseed   = 1   # if non-negative, seed will be set by hand (slow PS generation)
