@@ -428,8 +428,10 @@ any run is SUSPECT. Runs that advanced a different NCYC are reported as not comp
 | stellarai-amd | 2x EPYC 9475F (Zen 5), 96 c, NDR 400 IB | 4 | gcc (Open MPI) + FLAGS_GCC (`preset-v512` + `-fno-finite-math-only`; iallreduce termination; gcc-impi 0.282/0.204) | 0.276 | 0.186 | 3.07 | 2.07 | 4eea9f80c |
 | stellar | 4x Xeon Platinum 8268 (Cascade Lake), 96 c, IB 100 Gb/s | 4 | icpx-impi + FLAGS_ICPX (`-fp-model=fast`; `fast2` was 0.737/0.411 but removes NaN checks) | 0.749 | 0.431 | 8.32 | 4.79 | eee94bc4f |
 | tiger | 2x Xeon Platinum 8480+ (Sapphire Rapids), 112 c (96 used), IB NDR200 | 4 | icpx-impi + FLAGS_ICPX (`-fp-model=fast`; `fast2` was 0.510/0.328 but removes NaN checks) | 0.529 | 0.343 | 5.88 | 3.81 | eee94bc4f |
+| athena (NASA, Turin) | 2x EPYC 9745 (Zen 5c), 256 c, Slingshot 11 | 2 | gcc (GCC 14.2 + cray-mpich 8.1.33) + FLAGS_GCC (`preset`); 384 ranks as 2 x 192; CRMHD with sparse gravity 0.271 | 0.472 | 0.349 | 2.62 | 1.94 | 23071491f |
 
 Report for stellarai-amd: https://claude.ai/artifact/H1B2iqL3a4F2cjiDQdvvtd
 Report for stellar: https://claude.ai/artifact/3re4pmVb3w7LYwZw5S3GL6
 Report for tiger: https://claude.ai/artifact/UMhHdYzbKcQkKxd4hsjkW2
+Athena write-up: `../athena/README.md` (PBS: `bench/pbs_submit.sh`, `tigress_ncr_8pc_bench.pbs`)
 Combined report (all three machines): https://claude.ai/artifact/28UKFCgYPf9bFjSzwRyksr

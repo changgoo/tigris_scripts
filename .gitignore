@@ -6,3 +6,4 @@ __pycache__
 *.dat
 *.buildinfo
 tigress_ncr/bench/logs/
+.claude/settings.local.json

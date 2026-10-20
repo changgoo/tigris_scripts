@@ -1,9 +1,11 @@
 #!/bin/bash
 # Bundle TIGRESS-NCR benchmark runs into ONE PBS job (PBS machines, e.g. athena).
 #
-#   bench/pbs_submit.sh MACHINE [--submit] [--workload=rst|fresh] [--lanes=N] [--ncyc=N] [--repeats=N] [--per-run=MIN] TASK...
+#   bench/pbs_submit.sh MACHINE [--submit] [--workload=rst|fresh] [--lanes=N] [--ncyc=N] [--repeats=N] [--per-run=MIN]
+#                       [--nodes-per-run=N] TASK...
 #
-# TASK = <physics>:<toolchain>[:<variant>][:<overrides with commas>], e.g. mhd:gcc, crmhd:aocc:preset-v512
+# TASK = [<workload>/]<physics>:<toolchain>[:<variant>][:<overrides with commas>],
+#        e.g. mhd:gcc, crmhd:aocc:preset-v512, rst/crmhd:gcc::gravity/solve_grav_hyperbolic_dt=true
 # Shorthands: "matrix" = every toolchain in env.sh x {mhd, crmhd};
 #             "sweep"  = every line of <machine>/flag_variants.txt x {mhd, crmhd}.
 #
@@ -12,7 +14,7 @@
 # Without --submit it only prints the plan (task list, nodes, walltime, SBU estimate) and
 # the qsub command: the user confirms before anything is submitted.
 # The job (tigress_ncr_8pc_bench.pbs) splits its nodes into LANES lanes of
-# ceil(ranks/CORES_PER_NODE) nodes and runs LANES tasks at a time. Walltime = ceil(tasks/lanes) x
+# 2 nodes (--nodes-per-run: more, for scaling probes; ranks per node = ranks / nodes) and runs LANES tasks at a time. Walltime = ceil(tasks/lanes) x
 # per-run minutes + 5. PBS charges the wall time actually used.
 # MPI tuning variables (MPICH_*, FI_*) set in the calling shell are passed to every run and
 # recorded in opts; so is LAUNCH_OPTS (extra mpiexec options). ONLY=<regex> filters tasks.
@@ -29,6 +31,7 @@ for a in "$@"; do
         --ncyc=*) NCYC=${a#*=} ;;
         --repeats=*) REPEATS=${a#*=} ;;
         --per-run=*) PER_RUN=${a#*=} ;;
+        --nodes-per-run=*) NPR_OPT=${a#*=} ;;
         *) SPECS+=("$a") ;;
     esac
 done
@@ -38,7 +41,7 @@ NCR_DIR="$(dirname "$BENCHDIR")"
 MPIENV=$(env | grep -E '^(MPICH_|FI_)' | grep -v '^MPICH_DIR=' | sort | tr '\n' ' ' || true)
 source "$NCR_DIR/$MACHINE/env.sh"
 case "$WORKLOAD" in rst) NR=384 ;; fresh) NR=512 ;; *) echo "unknown workload $WORKLOAD"; exit 1 ;; esac
-NPR=$(( (NR + CORES_PER_NODE - 1) / CORES_PER_NODE ))
+NPR=${NPR_OPT:-$(( (512 + CORES_PER_NODE - 1) / CORES_PER_NODE ))}   # default: lanes fit the larger workload (fresh, 512 ranks)
 
 TASKS=()
 for rep in $(seq "$REPEATS"); do
@@ -50,6 +53,9 @@ for rep in $(seq "$REPEATS"); do
                 while read -r tc var _; do
                     for p in mhd crmhd; do TASKS+=("$WORKLOAD $p $tc $var $NCYC"); done
                 done < <(grep -vE '^\s*(#|$)' "$NCR_DIR/$MACHINE/flag_variants.txt") ;;
+            */*)   # <workload>/<physics>:<toolchain>[:...] overrides --workload for one task
+                IFS=: read -r p tc var ovr <<< "${s#*/}"
+                TASKS+=("${s%%/*} $p $tc ${var:-default} $NCYC ${ovr//,/ }") ;;
             *)
                 IFS=: read -r p tc var ovr <<< "$s"
                 TASKS+=("$WORKLOAD $p $tc ${var:-default} $NCYC ${ovr//,/ }") ;;
@@ -68,7 +74,7 @@ for t in "${TASKS[@]}"; do
 done
 for p in mhd crmhd; do
     v=BENCH_RST_$p
-    [ "$WORKLOAD" == rst ] && printf '%s\n' "${TASKS[@]}" | grep -q "^rst $p " && { [ -f "$BENCH_CACHE/${!v}" ] || { echo "missing checkpoint $BENCH_CACHE/${!v}"; missing=1; }; }
+    printf '%s\n' "${TASKS[@]}" | grep -q "^rst $p " && { [ -f "$BENCH_CACHE/${!v}" ] || { echo "missing checkpoint $BENCH_CACHE/${!v}"; missing=1; }; }
 done
 
 NT=${#TASKS[@]}
@@ -88,7 +94,7 @@ echo "MPI env: ${MPIENV:-none}  LAUNCH_OPTS: ${LAUNCH_OPTS:-none}"
 [ $missing == 0 ] || { echo "not submitting: missing files"; exit 1; }
 
 QSUB=(qsub -q "$PBS_QUEUE" -W group_list="$PBS_GROUP"
-      -l "select=$NODES:ncpus=$CORES_PER_NODE:mpiprocs=$(( NR / NPR )):model=$PBS_MODEL"
+      -l "select=$NODES:ncpus=$CORES_PER_NODE:mpiprocs=$(( (NR + NPR - 1) / NPR )):model=$PBS_MODEL"
       -l place=scatter:excl -l walltime="$WALL" -o "$BENCHDIR/logs/")
 if [ $SUBMIT != 1 ]; then
     echo "dry run; to submit: $0 $MACHINE --submit ${*/--submit/}"

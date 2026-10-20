@@ -30,6 +30,7 @@
 #   LAUNCH_OPTS  : extra mpiexec options, appended after --cpu-bind (a later --cpu-bind wins)
 #   KEEP_RST=1   : keep the 3-4 GB TIGRESS_NCR.final.rst
 # tasks.txt lines: <rst|fresh> <physics> <toolchain> <variant|default> <ncyc> [overrides...]
+#   an override ENV:NAME=VALUE exports NAME=VALUE for that task only
 # env SRCDIR     : source tree for the data tables [default: $HOME/tigris/.worktrees/production-diagnostics]
 
 type module > /dev/null 2>&1 || source /opt/cray/pe/modules/3.2.11.7/init/bash
@@ -67,6 +68,13 @@ run_task() {   # run_task <index> <lane> <hosts>
     local WORKLOAD PHYSICS TC VARIANT NCYC EXTRA
     read -r WORKLOAD PHYSICS TC VARIANT NCYC EXTRA <<< "${TASKS[$k]}"
     [ "$VARIANT" == "default" ] && VARIANT=""
+    # ENV:NAME=VALUE tokens set an environment variable for this task only (MPI tuning
+    # probes); they are recorded in opts. run_task runs in its own subshell.
+    local tok TASKENV="" rest=""
+    for tok in $EXTRA; do
+        if [[ $tok == ENV:* ]]; then export "${tok#ENV:}"; TASKENV+=" ${tok#ENV:}"; else rest+=" $tok"; fi
+    done
+    EXTRA=$rest
     load_toolchain "$TC" > /dev/null 2>&1 || { echo "task $k: bad toolchain $TC"; return; }
     local EXE=tigris_ncr_${PHYSICS}-fft-${TC}${VARIANT:+-$VARIANT}.exe
     local NAME=${PHYSICS}-${TC}${VARIANT:+-$VARIANT}-${JOBID}.${k}
@@ -93,7 +101,8 @@ run_task() {   # run_task <index> <lane> <hosts>
         mkdir -p "$RUNDIR" && ln -sf "$RSTFILE" "$RUNDIR/start.rst"
     fi
     params="$params $EXTRA"
-    local PPN=$(( NR / NPR ))
+    local PPN=$(( NR / NPR )) NODETAG=""
+    (( NPR > (NR + CORES_PER_NODE - 1) / CORES_PER_NODE )) && NODETAG=" nodes=$NPR"   # more nodes than needed
     cd "$RUNDIR" || return
     cp "$MACHDIR/$EXE" .
     [ -f "$MACHDIR/${EXE%.exe}.buildinfo" ] && cp "$MACHDIR/${EXE%.exe}.buildinfo" .
@@ -114,7 +123,7 @@ run_task() {   # run_task <index> <lane> <hosts>
     python3 "$BENCHDIR/parse_loop_time.py" TIGRESS_NCR.loop_time.txt \
         machine="$MACHINE" workload="$WORKLOAD" physics="$PHYSICS" tc="$TC" variant="${VARIANT:-default}" \
         job="$JOBID.$k" nranks="$NR" nodes="$NPR" rc="$EXITCODE" job_wall="$((T1 - T0))" \
-        opts="${LAUNCH_OPTS:-default} ${BENCH_MPIENV:-}$([[ "$params" == *solve_grav_hyperbolic_dt=true* ]] && echo " grav=hyp")" > bench-summary.txt
+        opts="${LAUNCH_OPTS:-default} ${BENCH_MPIENV:-}${TASKENV}${NODETAG}$([[ "$params" == *solve_grav_hyperbolic_dt=true* ]] && echo " grav=hyp")" > bench-summary.txt
     cat bench-summary.txt >> "$RESULTS"
     echo "$(date +%T) lane $lane task $k: $WORKLOAD $PHYSICS $TC${VARIANT:+-$VARIANT} rc=$EXITCODE wall=$((T1 - T0))s $(grep -o 's_cycle=[^ ]*' bench-summary.txt)"
     # keep only what the analysis needs: logs, timing, history
@@ -129,7 +138,7 @@ for lane in $(seq 0 $((LANES - 1))); do
         hosts=$(IFS=,; echo "${NODES[*]:$((lane * NPR)):$NPR}")
         for k in "${!TASKS[@]}"; do
             mkdir "$TASKDIR/claim.$k" 2>/dev/null || continue
-            run_task "$k" "$lane" "$hosts"
+            ( run_task "$k" "$lane" "$hosts" )
         done
     ) &
 done

@@ -17,6 +17,11 @@
 #   cce        : PrgEnv-cray  CCE 20 (clang 20)   + cray-mpich 8.1.33
 #   icpx       : PrgEnv-intel oneAPI 2025.3 icpx  + cray-mpich 8.1.33
 #   gcc-mpich9 : PrgEnv-gnu   GCC 14.2          + cray-mpich 9.0.1
+# gcc is the default: fastest in the fresh-start matrix (2026-10-20, production-diagnostics
+# 23071491f, 512 ranks on 2 nodes, 3 repeats; MHD/CRMHD s/cycle): gcc 0.436/0.433,
+# gcc-mpich9 0.433/0.433 (tie; gcc needs no module swap), aocc 0.473/0.464,
+# icpx 0.465/0.510. CCE is REJECTED: it miscompiles (MHD dt off from cycle 10, CRMHD
+# 35-39 history columns off) and is 3-6x slower, all in NCR photochemistry.
 #
 # Notes
 # - The compiler is the Cray wrapper CC (MPI_CXX), not mpicxx: CC adds the include and
@@ -29,6 +34,13 @@
 #   MPI_LAUNCH is the PALS mpiexec by absolute path.
 # - Environment Modules 3.2: change a version with "module swap", and never run module
 #   commands inside $(...) or a pipe (they would run in a subshell).
+# - Self-gravity (FFT, grav_bc=disk) is 3.5x slower than on stellarai-amd even at the
+#   same layout (4 nodes x 96 ranks: grav 0.069 vs 0.020 s/cycle). It is not the FFT
+#   library (MKL's FFTW3 interface instead of cray-fftw: same time, 2026-10-20) and none
+#   of MPICH_ALLTOALLV_THROTTLE=32, MPICH_SMP_SINGLE_COPY_MODE=CMA, MPICH_OFI_NIC_POLICY=NUMA,
+#   FI_CXI_RX_MATCH_MODE=hybrid, MPICH_SHARED_MEM_COLL_OPT=0 changes it: the fftMPI
+#   remaps (point-to-point + Alltoallv) are slow on this network. Open; needs a profile.
+#   For CRMHD, gravity/solve_grav_hyperbolic_dt=true removes most of it (22-36% faster).
 # - Non-default cray-* versions are found at run time only through CRAY_LD_LIBRARY_PATH,
 #   which load_toolchain prepends to LD_LIBRARY_PATH.
 
@@ -64,7 +76,13 @@ BENCH_CACHE=$BENCH_DATA                     # /nobackup is visible from compute 
 BENCH_RST_mhd=mhd-ncr-8pc/TIGRESS_NCR.00006.rst      # t=300
 BENCH_RST_crmhd=crmhd-ncr-8pc/TIGRESS_NCR.00003.rst  # t=150, CR<->NCR coupled
 
-# --- production flags per compiler: complete sets (start values; flag sweep pending) ---
+# --- production flags per compiler: complete sets --------------------------------------
+# Flag sweep (2026-10-20, flag_variants.txt, fresh start, CRMHD with sparse gravity):
+# GCC preset (= FLAGS_GCC), preset-v512 and fast-lto tie within 1%; fast math + LTO is
+# worth 7% (MHD) / 15% (CRMHD) over plain -O3; safe-lto (no fast math) is 4% / 9% slower.
+# AOCC and icpx variants are 6% and 6-29% behind GCC. Winners kept: FLAGS_GCC preset,
+# FLAGS_AOCC preset, FLAGS_ICPX preset (fast2 is 6% faster but removes NaN checks).
+# CCE flags are untuned: the toolchain is rejected (see above).
 FLAGS_GCC="-O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays"
 FLAGS_AOCC="-O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto -fuse-ld=lld"
 FLAGS_CCE="-O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto"
@@ -72,6 +90,7 @@ FLAGS_ICPX="-O3 -std=c++11 -march=znver5 -mtune=znver5 -ipo -qopenmp-simd -fp-mo
 
 load_toolchain() {
     local tc=${1:-$DEFAULT_TOOLCHAIN}
+    local fftw_mod=cray-fftw
     module purge
     case "$tc" in
         gcc)
@@ -95,7 +114,7 @@ load_toolchain() {
             echo "load_toolchain: unknown toolchain '$tc' ($TOOLCHAINS)" >&2
             return 1 ;;
     esac
-    module load craype-x86-turin cray-hdf5-parallel cray-fftw cray-pals
+    module load craype-x86-turin cray-hdf5-parallel $fftw_mod cray-pals
     MPI_CXX=CC
     HDF5DIR=$HDF5_DIR
     [ -n "$CRAY_LD_LIBRARY_PATH" ] && export LD_LIBRARY_PATH=$CRAY_LD_LIBRARY_PATH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
