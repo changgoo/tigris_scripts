@@ -1,0 +1,38 @@
+# Compiler-flag sweep for athena (Turin, EPYC 9745 Zen 5c).
+# One variant per line:  <toolchain> <variant> <complete compiler flags>
+# The flags REPLACE configure.py's preset flags entirely (build_tigress.sh --cxxflags).
+# All variants use cray-mpich 8.1.33 (the toolchains' common MPI) so that differences come
+# from the compiler alone. Winners per compiler go to FLAGS_* in env.sh.
+# Variants that drop NaN checks (fast2, plain -ffast-math without -fno-finite-math-only)
+# are timing-only (ALLOW_FINITE_MATH=1) and must not become FLAGS_*.
+
+# GCC 14.2
+gcc  preset        -O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays
+gcc  O3            -O3 -std=c++11 -march=znver5
+gcc  safe-lto      -O3 -std=c++11 -march=znver5 -fno-math-errno -fno-trapping-math -fopenmp-simd -flto=auto
+gcc  fast          -O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd
+gcc  fast-lto      -O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto
+gcc  preset-v512   -O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -mprefer-vector-width=512
+gcc  preset-unroll -O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays -funroll-loops
+gcc  preset-O2     -O2 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays
+gcc  finite        -O3 -std=c++11 -march=znver5 -ffast-math -fopenmp-simd -flto=auto -fwhole-program -fprefetch-loop-arrays
+
+# AOCC 5.0 (clang 17)
+aocc preset        -O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto -fuse-ld=lld
+aocc O3            -O3 -std=c++11 -march=znver5
+aocc safe-lto      -O3 -std=c++11 -march=znver5 -fno-math-errno -fno-trapping-math -fopenmp-simd -flto -fuse-ld=lld
+aocc preset-v512   -O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto -fuse-ld=lld -mprefer-vector-width=512
+aocc preset-unroll -O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto -fuse-ld=lld -funroll-loops
+
+# CCE 20 (Cray clang 20)
+cce  preset        -O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto
+cce  O3            -O3 -std=c++11 -march=znver5
+cce  safe-lto      -O3 -std=c++11 -march=znver5 -fno-math-errno -fno-trapping-math -fopenmp-simd -flto
+cce  preset-nolto  -O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd
+cce  preset-v512   -O3 -std=c++11 -march=znver5 -ffast-math -fno-finite-math-only -fopenmp-simd -flto -mprefer-vector-width=512
+
+# oneAPI 2025.3 icpx (default fp-model=fast)
+icpx preset        -O3 -std=c++11 -march=znver5 -mtune=znver5 -ipo -qopenmp-simd -fp-model=fast -Wno-tautological-constant-compare -Wno-array-bounds
+icpx fast2         -O3 -std=c++11 -march=znver5 -mtune=znver5 -ipo -qopenmp-simd -fp-model=fast=2 -Wno-tautological-constant-compare -Wno-array-bounds
+icpx precise       -O3 -std=c++11 -march=znver5 -mtune=znver5 -ipo -qopenmp-simd -fp-model=precise -Wno-tautological-constant-compare -Wno-array-bounds
+icpx preset-v512   -O3 -std=c++11 -march=znver5 -mtune=znver5 -ipo -qopenmp-simd -fp-model=fast -mprefer-vector-width=512 -Wno-tautological-constant-compare -Wno-array-bounds

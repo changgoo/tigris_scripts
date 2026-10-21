@@ -14,6 +14,7 @@
 #                    $SRCDIR (created if missing), so builds do not share a source tree.
 # env ONLY         : regex on "<toolchain> <variant>" to restrict the sweep
 # env SKIP_BUILD=1 : only submit (executables already built)
+# env BUILD_ONLY=1 : only build (PBS machines submit with pbs_submit.sh ... sweep)
 # env SRCDIR       : reference worktree [default: $HOME/tigris/.worktrees/ncr-cr-coupling]
 MACHINE=${1:?usage: $0 MACHINE [NCYC] [REPEATS]}
 NCYC=${2:-200}
@@ -68,6 +69,7 @@ if [ "${SKIP_BUILD:-0}" != "1" ]; then
     done
     wait
 fi
+[ "${BUILD_ONLY:-0}" == "1" ] && { echo "$(date) builds done"; exit 0; }
 
 MAXJ=${SLURM_MAX_JOBS:-5}
 IDS=()

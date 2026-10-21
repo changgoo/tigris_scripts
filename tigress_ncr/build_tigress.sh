@@ -50,7 +50,7 @@ SRCDIR_OVERRIDE=""
 usage() {
     echo -e "${RED}Usage: $0 --machine=<machine> [options]${NC}"
     echo -e "${YELLOW}Options:${NC}"
-    echo -e "  --machine=<name>    Target machine (stellar|stellarai-amd|tiger|anvil) [default: stellar]"
+    echo -e "  --machine=<name>    Target machine (stellar|stellarai-amd|tiger|anvil|athena) [default: stellar]"
     echo -e "  --physics=<name>    Physics option (mhd|crmhd|*_duale|*_duals) [default: mhd]"
     echo -e "  --grav=<name>       Gravity solver (fft|none) [default: fft]"
     echo -e "  --build=<0|1|2>     0=normal, 1=debug, 2=no clean [default: 0]"
@@ -236,6 +236,8 @@ fi
 # CXXFLAGS is used for compiling and linking (LTO/IPO); the HDF5 include path is re-added.
 if [ -n "$FULL_CXXFLAGS" ]; then
     sed -i "s|^CXXFLAGS := .*|CXXFLAGS := ${FULL_CXXFLAGS} -I${HDF5_INC}|" Makefile
+    # MPI_CXX (env.sh): the MPI compiler wrapper when it is not mpicxx (Cray PE: CC)
+    [ -n "$MPI_CXX" ] && sed -i "s|^CXX := mpicxx|CXX := ${MPI_CXX}|" Makefile
     echo -e "${GREEN}CXXFLAGS := ${FULL_CXXFLAGS} -I${HDF5_INC}${NC}"
 
     # NaN semantics of the final flags. The solver's safety nets are NaN tests (C2P floors,
@@ -246,7 +248,7 @@ if [ -n "$FULL_CXXFLAGS" ]; then
     NAN_CHECK_STATUS="not run"
     if [ -f "$NAN_CHECK_SRC" ]; then
         mkdir -p obj
-        if mpicxx ${FULL_CXXFLAGS} "$NAN_CHECK_SRC" -o obj/nan_check > obj/nan_check.log 2>&1; then
+        if ${MPI_CXX:-mpicxx} ${FULL_CXXFLAGS} "$NAN_CHECK_SRC" -o obj/nan_check > obj/nan_check.log 2>&1; then
             if NAN_OUT=$(./obj/nan_check 0 2>&1); then
                 NAN_CHECK_STATUS="kept"
             elif echo "$NAN_OUT" | grep -q "nan_checks="; then
@@ -291,7 +293,7 @@ echo -e  "${GREEN}Executable copied to $EXE${NC}"
     echo "configure: $PHY_OPTIONS ${CFLAG_OPTIONS[*]}"
     echo "flags:     ${FULL_CXXFLAGS:+$([ -n "$CXXFLAGS_OVERRIDE" ] && echo "--cxxflags override" || echo "TC_CXXFLAGS from env.sh")}"
     echo "nan_checks: ${NAN_CHECK_STATUS:-n/a (no env.sh flags)}"
-    echo "CXX:       $(sed -n 's/^CXX := //p' "$SRCDIR/Makefile") -> $( (mpicxx --showme 2>/dev/null || mpicxx -show 2>/dev/null) | awk '{print $1}')"
+    echo "CXX:       $(sed -n 's/^CXX := //p' "$SRCDIR/Makefile") -> $(if [ -n "$MPI_CXX" ]; then $MPI_CXX --version 2>/dev/null | head -1; else (mpicxx --showme 2>/dev/null || mpicxx -show 2>/dev/null) | awk '{print $1}'; fi)"
     sed -n 's/^CXXFLAGS := /CXXFLAGS:  /p; s/^LDFLAGS := /LDFLAGS:   /p' "$SRCDIR/Makefile"
     echo "modules:   $(module -t list 2>&1 | grep -v ':$' | tr '\n' ' ')"
 } > "${EXE%.exe}.buildinfo"
