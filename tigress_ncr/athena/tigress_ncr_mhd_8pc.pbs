@@ -48,9 +48,12 @@
 #     SRCDIR       : source tree the exe was built from, for the data tables
 #                    [default: $HOME/tigris/.worktrees/production-diagnostics]
 #     ONCE_PARAMS  : extra command-line parameters for THIS segment only (not passed on to
-#                    resubmissions), e.g. a new output dt and next_time on the first restart
-#                    from a checkpoint; parameters the checkpoint lacks go in
-#                    $RUNDIR/athinput.restart_add instead
+#                    resubmissions), e.g. "output1/file_number=0 output5/file_number=0" so
+#                    that a restart into a new run directory writes the hst/phase_hst
+#                    headers. Parameters the checkpoint lacks go in
+#                    $RUNDIR/athinput.restart_add, which every restart reads. A new output
+#                    dt needs no next_time: Athena rolls next_time back by the old dt and
+#                    forward by the new one (ParameterInput::ForwardNextTime).
 
 CC=${CC:-gcc}
 STARTFLAG=${STARTFLAG:-}
