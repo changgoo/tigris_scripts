@@ -15,6 +15,9 @@ tlim=71:30:00
 module purge
 module load PrgEnv-cray cray-pals cray-libpals craype-x86-turin perftools-base cray-hdf5-parallel cray-fftw
 module switch PrgEnv-cray PrgEnv-gnu
+# libfabric's default MR cache monitor (userfaultfd) caps each NIC at ~230K
+# medium messages/s; memhooks makes FFT gravity ~4x faster (tigress_ncr/athena/README.md)
+export FI_MR_CACHE_MONITOR=memhooks
 
 # ---------------------------------------------------------------------------
 # Paths
