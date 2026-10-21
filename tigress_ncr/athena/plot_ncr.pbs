@@ -1,0 +1,43 @@
+#!/bin/bash
+#PBS -N plot-ncr
+#PBS -q normal
+#PBS -W group_list=s2800
+#PBS -l select=1:ncpus=256:mpiprocs=32:model=tur_ath
+#PBS -l place=scatter:excl
+#PBS -l walltime=02:00:00
+#PBS -j oe
+#
+# Post-processing of a TIGRESS-NCR run directory on one Athena node: summary snapshot and
+# slice frames for every primary HDF5 snapshot ($HOME/TIGRESS-CR/python/plot_slices_ncr.py,
+# cached under RUNDIR, frames written once), their MP4 movies (RUNDIR/movies), and basic
+# history plots (RUNDIR/history.png, ../plot_history_ncr.py).
+#
+# Python, mpi4py and its MPICH come from the ~/myenv venv and pyathena from ~/pyathena_tigris
+# (the same stack as tigress_classic/nasa_athena/tigress_classic-plot.normal.pbs); no Cray
+# modules are needed. Each rank holds one snapshot (1.4 GB of HDF5 at 8 pc, 11 GB at 4 pc,
+# several times that in memory); NP=32 at 8 pc and NP=4 at 4 pc worked on a 768 GB node
+# (2026-10-21: 17 snapshots in 1.5 min, 3 snapshots in 14 min).
+#
+#   qsub -v RUNDIR=<run dir>[,NP=32][,NUMS="101 102"][,HIST_RUNDIRS="<dir> <dir>"] plot_ncr.pbs
+#     NUMS         : snapshot numbers [default: all]
+#     HIST_RUNDIRS : run directories overlaid in the history plot [default: RUNDIR]
+#     PLOT_ARGS    : extra plot_slices_ncr.py options (e.g. --projections, --no-movies)
+# tigress_ncr_mhd_8pc.pbs submits this after every segment unless NO_PLOT=1.
+
+RUNDIR=${RUNDIR:?set RUNDIR}
+NP=${NP:-32}
+VENV=$HOME/myenv
+PLOTSCRIPT=$HOME/TIGRESS-CR/python/plot_slices_ncr.py
+HISTSCRIPT=$HOME/tigris_scripts/tigress_ncr/plot_history_ncr.py
+export PYTHONPATH="$HOME/pyathena_tigris:$HOME/TIGRESS-CR/python${PYTHONPATH:+:$PYTHONPATH}"
+export OMP_NUM_THREADS=1 MPLBACKEND=Agg
+cd "$RUNDIR" || exit 1
+echo "$(date) plot_ncr: RUNDIR=$RUNDIR NP=$NP NUMS=${NUMS:-all}"
+
+# The frames go first: a failure there must not block the history plot.
+"$VENV/bin/mpiexec" -n "$NP" "$VENV/bin/python" -m mpi4py "$PLOTSCRIPT" "$RUNDIR" \
+    ${NUMS:-} ${PLOT_ARGS:-}
+echo "$(date) plot_slices_ncr.py exit code $?"
+
+"$VENV/bin/python" "$HISTSCRIPT" ${HIST_RUNDIRS:-$RUNDIR} --out "$RUNDIR/history.png"
+echo "$(date) plot_history_ncr.py exit code $?"

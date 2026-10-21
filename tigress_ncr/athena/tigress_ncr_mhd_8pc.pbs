@@ -43,6 +43,7 @@
 #     RUNBASE      : parent of the run directory [default: /nobackup/$USER/tigress_ncr]
 #     SPARSE_GRAV  : 1 = gravity once per dt_hyperbolic [default: 0]
 #     NO_CHAIN     : 1 = do not resubmit on the walltime limit (short test jobs)
+#     NO_PLOT      : 1 = do not submit plot_ncr.pbs (frames, movies, history) after the segment
 #     RES          : 8 or 4 (pc) [default: 8]
 #     EXE_SUFFIX   : run tigris_ncr_mhd-fft-<CC>-<EXE_SUFFIX>.exe (build_tigress.sh --exe_suffix)
 #     SRCDIR       : source tree the exe was built from, for the data tables
@@ -85,8 +86,8 @@ INPUT=${SCRIPTDIR}/athinput.${prob}
 
 # --- resolution override: refine the 16 pc input over the SAME box -------------
 case "$RES" in
-    8) HIRES="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768";  NPROCS=384;  NODES_REQ=2 ;;
-    4) HIRES="mesh/nx1=256 mesh/nx2=256 mesh/nx3=1536"; NPROCS=3072; NODES_REQ=16 ;;
+    8) HIRES="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768";  NPROCS=384;  NODES_REQ=2;  PLOT_NP=32 ;;
+    4) HIRES="mesh/nx1=256 mesh/nx2=256 mesh/nx3=1536"; NPROCS=3072; NODES_REQ=16; PLOT_NP=4 ;;
     *) echo "ERROR: RES must be 8 or 4, not '$RES'"; exit 1 ;;
 esac
 NODES=$(sort -u "$PBS_NODEFILE" | wc -l)
@@ -201,5 +202,12 @@ if [[ $EXITCODE -eq 3 && "${NO_CHAIN:-0}" != "1" ]]; then
     echo "Resubmitting"
     cd "$PBSDIR"
     qsub -N "$RUNNAME" -l "select=$NODES_REQ:ncpus=$CORES_PER_NODE:mpiprocs=$((NPROCS / NODES_REQ)):model=$PBS_MODEL" \
-        -v "STARTFLAG=-r,TAG=$TAG,CC=$CC,RUNBASE=$RUNBASE,SPARSE_GRAV=$SPARSE_GRAV,RES=$RES,EXE_SUFFIX=$EXE_SUFFIX,SRCDIR=$SRCDIR" "$SCRIPT"
+        -v "STARTFLAG=-r,TAG=$TAG,CC=$CC,RUNBASE=$RUNBASE,SPARSE_GRAV=$SPARSE_GRAV,RES=$RES,EXE_SUFFIX=$EXE_SUFFIX,SRCDIR=$SRCDIR,NO_PLOT=${NO_PLOT:-0}" "$SCRIPT"
+fi
+
+# Post-processing (snapshot frames, movies, history plots) on one separate node, so the
+# next segment does not wait for it; a failed plot does not affect the run.
+if [[ "${NO_PLOT:-0}" != "1" ]]; then
+    cd "$PBSDIR"
+    qsub -N "plot-$RUNNAME" -v "RUNDIR=$RUNDIR,NP=$PLOT_NP" plot_ncr.pbs
 fi
