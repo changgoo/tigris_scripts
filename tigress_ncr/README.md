@@ -23,7 +23,7 @@ rank per block, 4 nodes).
 | stellarai-amd | 2x AMD EPYC 9475F, Zen 5 (96) | `gcc` | GCC 14 + Open MPI 5.0.10, `-march=znver5`, fast math with NaN checks, LTO, 512-bit vectors | 0.276 | 0.186 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](stellarai-amd/README.md) |
 | stellar | 4x Intel Xeon Platinum 8268, Cascade Lake (96) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xCASCADELAKE -ipo -fp-model=fast` | 0.749 | 0.431 | `tigress_ncr_{mhd,crmhd}_8pc_tc.slurm` | [README](stellar/README.md) |
 | tiger | 2x Intel Xeon Platinum 8480+, Sapphire Rapids (112; 96 used) | `icpx-impi` | oneAPI 2024.2 icpx + Intel MPI 2021.13, `-xSAPPHIRERAPIDS -ipo -fp-model=fast` | 0.529 | 0.343 | `tigress_ncr_{mhd,crmhd}_8pc.slurm` | [README](tiger/README.md) |
-| athena (NASA) | 2x AMD EPYC 9745, Zen 5c (256; 384 ranks as 2 x 192) | `gcc` | GCC 14.2 + cray-mpich 8.1.33, `-march=znver5`, fast math with NaN checks, LTO | 0.472 | 0.349 | `tigress_ncr_{mhd,crmhd}_8pc.pbs` | [README](athena/README.md) |
+| athena (NASA) | 2x AMD EPYC 9745, Zen 5c (256; 384 ranks as 2 x 192) | `gcc` | GCC 14.2 + cray-mpich 8.1.33, `-march=znver5`, fast math with NaN checks, LTO; `FI_MR_CACHE_MONITOR=memhooks` | 0.400 | 0.278 | `tigress_ncr_{mhd,crmhd}_8pc.pbs` | [README](athena/README.md) |
 | anvil | | (legacy) | fixed modules in `build_tigress.sh` | | | | no `env.sh` yet |
 
 An 8 pc run costs 2.3-2.7x fewer node-hours on stellarai-amd than on Stellar (newer cores,
@@ -34,6 +34,12 @@ counter), Open MPI was 4x slower than Intel MPI on stellarai-amd and 1.25x on St
 is gone on stellarai-amd ([report](bench/reports/rayt-termination-stellarai-amd.md)); Stellar and
 tiger have not been re-measured. The best compiler differs: GCC on Zen 5, icpx on Cascade Lake,
 where GCC 13 is 2x slower in NCR photochemistry.
+
+Per node-hour, Athena on 2 nodes is now the cheapest machine: 2.22 (MHD) and 1.54 (CRMHD)
+node-h per 10^4 cycles, against 3.07 and 2.07 on stellarai-amd. That needs
+`FI_MR_CACHE_MONITOR=memhooks`, which `athena/env.sh` sets: libfabric's default monitor capped
+Athena's NICs at ~230K medium messages/s and made the FFT-gravity remaps 4x slower
+([athena/README.md](athena/README.md)).
 
 All three machines side by side: https://claude.ai/artifact/28UKFCgYPf9bFjSzwRyksr
 

@@ -30,8 +30,9 @@
 #
 # Gravity: SPARSE_GRAV=1 solves self-gravity once per dt_hyperbolic instead of every
 # cycle (gravity/solve_grav_hyperbolic_dt=true). The CR-limited dt is much shorter than
-# the MHD one, so this cut the CRMHD cycle time by 22% (restart) to 36% (fresh start) on
-# Athena. It is off by default, as in the runs so far.
+# the MHD one. Before the FI_MR_CACHE_MONITOR=memhooks fix in env.sh this cut the CRMHD
+# cycle time by 22-36% on Athena; with it the gravity solve is cheap and the gain is 6%
+# (restart, 0.278 -> 0.260 s/cycle). It is off by default, as in the runs so far.
 #
 # Long production run: chains itself via restart when it stops on the walltime soft
 # limit (athena exit code 3).

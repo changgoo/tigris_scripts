@@ -420,6 +420,13 @@ any run is SUSPECT. Runs that advanced a different NCYC are reported as not comp
 - Tiger has no SSH key for GitHub; fetch over HTTPS (works without a prompt there).
 - icpx needs `-ipo` for this code. Without it, the `omp declare simd` vector variants of
   functions defined in another file are never emitted, and the link fails.
+- On Slingshot (cxi), check libfabric's memory-registration cache monitor before tuning MPI.
+  On Athena the OS libfabric's default, `userfaultfd`, capped each NIC at ~230K messages/s for
+  4-64 KB messages: large-message bandwidth was at line rate, but the FFT-gravity remaps were
+  4x slower than elsewhere. `FI_MR_CACHE_MONITOR=memhooks` fixed it. A quick test is
+  `bench/osu_net.pbs`: `osu_mbw_mr` should reach line rate at a few KB, and a message rate
+  that stays flat from 1 to 64 KB is the symptom. Another is a run with
+  `gravity/profile_gravity=true` (`bench/parse_grav_profile.py`).
 
 ## 6. Cross-machine results (median s/cycle, 200 cycles, 384 ranks)
 
@@ -428,7 +435,7 @@ any run is SUSPECT. Runs that advanced a different NCYC are reported as not comp
 | stellarai-amd | 2x EPYC 9475F (Zen 5), 96 c, NDR 400 IB | 4 | gcc (Open MPI) + FLAGS_GCC (`preset-v512` + `-fno-finite-math-only`; iallreduce termination; gcc-impi 0.282/0.204) | 0.276 | 0.186 | 3.07 | 2.07 | 4eea9f80c |
 | stellar | 4x Xeon Platinum 8268 (Cascade Lake), 96 c, IB 100 Gb/s | 4 | icpx-impi + FLAGS_ICPX (`-fp-model=fast`; `fast2` was 0.737/0.411 but removes NaN checks) | 0.749 | 0.431 | 8.32 | 4.79 | eee94bc4f |
 | tiger | 2x Xeon Platinum 8480+ (Sapphire Rapids), 112 c (96 used), IB NDR200 | 4 | icpx-impi + FLAGS_ICPX (`-fp-model=fast`; `fast2` was 0.510/0.328 but removes NaN checks) | 0.529 | 0.343 | 5.88 | 3.81 | eee94bc4f |
-| athena (NASA, Turin) | 2x EPYC 9745 (Zen 5c), 256 c, Slingshot 11 | 2 | gcc (GCC 14.2 + cray-mpich 8.1.33) + FLAGS_GCC (`preset`); 384 ranks as 2 x 192; CRMHD with sparse gravity 0.271 | 0.472 | 0.349 | 2.62 | 1.94 | 23071491f |
+| athena (NASA, Turin) | 2x EPYC 9745 (Zen 5c), 256 c, Slingshot 11 | 2 | gcc (GCC 14.2 + cray-mpich 8.1.33) + FLAGS_GCC (`preset`) + `FI_MR_CACHE_MONITOR=memhooks` (default monitor: 0.472/0.349); 384 ranks as 2 x 192; CRMHD with sparse gravity 0.260 | 0.400 | 0.278 | 2.22 | 1.54 | 23071491f |
 
 Report for stellarai-amd: https://claude.ai/artifact/H1B2iqL3a4F2cjiDQdvvtd
 Report for stellar: https://claude.ai/artifact/3re4pmVb3w7LYwZw5S3GL6
