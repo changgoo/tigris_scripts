@@ -28,6 +28,12 @@
 # Long production run: chains itself via restart when it stops on the walltime soft
 # limit (athena exit code 3).
 #
+# RES=4 runs the 4 pc mesh instead (256x256x1536, 3072 ranks on 16 nodes x 192); submit it
+# with the matching node count, e.g.
+#   qsub -N mhd-ncr-4pc -l select=16:ncpus=256:mpiprocs=192:model=tur_ath -v RES=4,... \
+#        tigress_ncr_mhd_8pc.pbs
+# (resubmissions request the right nodes themselves).
+#
 # Usage (PBS passes options through -v, not positional arguments):
 #   qsub [-v STARTFLAG=-r,TAG=...,CC=gcc,RUNBASE=...,SPARSE_GRAV=1] tigress_ncr_mhd_8pc.pbs
 #     STARTFLAG=-r : restart from $PID.final.rst in the run directory, or, if there is
@@ -37,18 +43,29 @@
 #     RUNBASE      : parent of the run directory [default: /nobackup/$USER/tigress_ncr]
 #     SPARSE_GRAV  : 1 = gravity once per dt_hyperbolic [default: 0]
 #     NO_CHAIN     : 1 = do not resubmit on the walltime limit (short test jobs)
+#     RES          : 8 or 4 (pc) [default: 8]
+#     EXE_SUFFIX   : run tigris_ncr_mhd-fft-<CC>-<EXE_SUFFIX>.exe (build_tigress.sh --exe_suffix)
+#     SRCDIR       : source tree the exe was built from, for the data tables
+#                    [default: $HOME/tigris/.worktrees/production-diagnostics]
+#     ONCE_PARAMS  : extra command-line parameters for THIS segment only (not passed on to
+#                    resubmissions), e.g. a new output dt and next_time on the first restart
+#                    from a checkpoint; parameters the checkpoint lacks go in
+#                    $RUNDIR/athinput.restart_add instead
 
 CC=${CC:-gcc}
 STARTFLAG=${STARTFLAG:-}
 TAG=${TAG:-}
 SPARSE_GRAV=${SPARSE_GRAV:-0}
+RES=${RES:-8}
+EXE_SUFFIX=${EXE_SUFFIX:-}
+ONCE_PARAMS=${ONCE_PARAMS:-}
 
 # Problem definition and paths
 physics=mhd
 grav=fft
 prob=tigress_ncr
 PID=TIGRESS_NCR
-SRCDIR=$HOME/tigris/.worktrees/production-diagnostics  # worktree the exe was built from
+SRCDIR=${SRCDIR:-$HOME/tigris/.worktrees/production-diagnostics}  # tree the exe was built from
 SCRIPTDIR=$HOME/tigris_scripts/$prob         # holds athinput.$prob
 PBSDIR=$SCRIPTDIR/athena                     # holds the exe, env.sh and this script
 SCRIPT=${prob}_${physics}_8pc.pbs
@@ -59,13 +76,16 @@ load_toolchain "$CC" || exit 1
 export OMP_NUM_THREADS=1 FI_PROVIDER=cxi
 
 # Executable (under $PBSDIR) and input file
-EXE=tigris_ncr_${physics}-${grav}-${CC}.exe  # e.g. tigris_ncr_mhd-fft-gcc.exe
+EXE=tigris_ncr_${physics}-${grav}-${CC}${EXE_SUFFIX:+-$EXE_SUFFIX}.exe  # e.g. tigris_ncr_mhd-fft-gcc.exe
 EXEPATH=${PBSDIR}/$EXE
 INPUT=${SCRIPTDIR}/athinput.${prob}
 
-# --- 8 pc override: refine the 16 pc input to 8 pc over the SAME box -----------
-HIRES="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768"
-NPROCS=384
+# --- resolution override: refine the 16 pc input over the SAME box -------------
+case "$RES" in
+    8) HIRES="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768";  NPROCS=384;  NODES_REQ=2 ;;
+    4) HIRES="mesh/nx1=256 mesh/nx2=256 mesh/nx3=1536"; NPROCS=3072; NODES_REQ=16 ;;
+    *) echo "ERROR: RES must be 8 or 4, not '$RES'"; exit 1 ;;
+esac
 NODES=$(sort -u "$PBS_NODEFILE" | wc -l)
 PPN=$((NPROCS / NODES))
 # ------------------------------------------------------------------------------
@@ -146,7 +166,7 @@ TLIM=$(printf '%02d:%02d:%02d' $((TSEC / 3600)) $((TSEC % 3600 / 60)) $((TSEC % 
 if [[ $STARTFLAG != "-r" ]]; then
     echo "Starting fresh"
     cp "$INPUT" .
-    $LAUNCH "./$EXE" -i "$(basename "$INPUT")" -t "$TLIM" $params \
+    $LAUNCH "./$EXE" -i "$(basename "$INPUT")" -t "$TLIM" $params $ONCE_PARAMS \
         1> "$RUNDIR/out.txt" 2> "$RUNDIR/err.txt"
 elif [ -n "$RSTINPUT" ] && [ -f "$RSTINPUT" ]; then
     echo "Restarting from $RSTINPUT"
@@ -161,7 +181,8 @@ elif [ -n "$RSTINPUT" ] && [ -f "$RSTINPUT" ]; then
     fi
     RSTPAR=""
     [ "$SPARSE_GRAV" == "1" ] && RSTPAR="gravity/solve_grav_hyperbolic_dt=true"
-    $LAUNCH "./$EXE" -r "$RSTINPUT" $ADDARG -t "$TLIM" $RSTPAR \
+    [ -n "$ONCE_PARAMS" ] && echo "This segment only: $ONCE_PARAMS"
+    $LAUNCH "./$EXE" -r "$RSTINPUT" $ADDARG -t "$TLIM" $RSTPAR $ONCE_PARAMS \
         1> "$RUNDIR/out.r${rstnum}.txt" 2> "$RUNDIR/err.r${rstnum}.txt"
 else
     echo "ERROR: STARTFLAG=-r given but no restart file in $RUNDIR"
@@ -176,5 +197,6 @@ set +o pipefail
 if [[ $EXITCODE -eq 3 && "${NO_CHAIN:-0}" != "1" ]]; then
     echo "Resubmitting"
     cd "$PBSDIR"
-    qsub -v "STARTFLAG=-r,TAG=$TAG,CC=$CC,RUNBASE=$RUNBASE,SPARSE_GRAV=$SPARSE_GRAV" "$SCRIPT"
+    qsub -N "$RUNNAME" -l "select=$NODES_REQ:ncpus=$CORES_PER_NODE:mpiprocs=$((NPROCS / NODES_REQ)):model=$PBS_MODEL" \
+        -v "STARTFLAG=-r,TAG=$TAG,CC=$CC,RUNBASE=$RUNBASE,SPARSE_GRAV=$SPARSE_GRAV,RES=$RES,EXE_SUFFIX=$EXE_SUFFIX,SRCDIR=$SRCDIR" "$SCRIPT"
 fi
