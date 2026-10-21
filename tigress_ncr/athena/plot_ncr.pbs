@@ -10,7 +10,8 @@
 # Post-processing of a TIGRESS-NCR run directory on one Athena node: summary snapshot and
 # slice frames for every primary HDF5 snapshot ($HOME/TIGRESS-CR/python/plot_slices_ncr.py,
 # cached under RUNDIR, frames written once), their MP4 movies (RUNDIR/movies), and basic
-# history plots (RUNDIR/history.png, ../plot_history_ncr.py).
+# history plots (RUNDIR/history.png, and RUNDIR/bad_cells.png for the floors, first-order
+# flux corrections and velocity ceiling; ../plot_history_ncr.py).
 #
 # Python, mpi4py and its MPICH come from the ~/myenv venv and pyathena from ~/pyathena_tigris
 # (the same stack as tigress_classic/nasa_athena/tigress_classic-plot.normal.pbs); no Cray

@@ -8,7 +8,9 @@ Myr in code units). Panels: gas surface density, star formation rate surface den
 (young-star mass within 10 and 40 Myr), kinetic and magnetic energy per area, mass and
 volume fractions of the gas phases, the escaped LyC fraction and the FUV fraction handed
 to the plane-parallel approximation.
-Several run directories are overlaid on one time axis.
+A second figure (bad_cells.png beside --out, or --bad-out) shows the density and pressure
+floors and first-order flux corrections per cell update, and the mass and energy the floors
+and the velocity ceiling change (cumulative). Several run directories are overlaid on one time axis.
 """
 import argparse
 import glob
@@ -42,6 +44,21 @@ def safe_ratio(num, den):
     return np.divide(num, den, out=np.full_like(den, np.nan), where=den > 0)
 
 
+def read_runtime(rundir):
+    """{block: {key: value string}} from the run's athinput.runtime."""
+    blocks = {}
+    block = None
+    with open(osp.join(rundir, "athinput.runtime")) as f:
+        for line in f:
+            line = line.split("#")[0].strip()
+            if line.startswith("<"):
+                block = blocks.setdefault(line.strip("<>"), {})
+            elif block is not None and "=" in line:
+                key, val = (s.strip() for s in line.split("=", 1))
+                block[key] = val
+    return blocks
+
+
 def code_constants(rundir):
     """Msun and Myr in code units, and the box area in pc^2."""
     consts = {}
@@ -53,20 +70,71 @@ def code_constants(rundir):
                     consts[m.group(1)] = float(m.group(2))
         if len(consts) == 2:
             break
-    mesh = {}
-    block = None
-    with open(osp.join(rundir, "athinput.runtime")) as f:
-        for line in f:
-            line = line.split("#")[0].strip()
-            if line.startswith("<"):
-                block = line.strip("<>")
-            elif block == "mesh" and "=" in line:
-                key, val = (s.strip() for s in line.split("=", 1))
-                mesh[key] = val
+    mesh = read_runtime(rundir)["mesh"]
     area = (float(mesh["x1max"]) - float(mesh["x1min"])) * (
         float(mesh["x2max"]) - float(mesh["x2min"]))
     res = (float(mesh["x1max"]) - float(mesh["x1min"])) / float(mesh["nx1"])
     return consts["Msun"], consts["Myr"], area, res
+
+
+def cell_updates_per_interval(rundir, dt, interval):
+    """Cell-stage updates in one history interval: N_cells x stages x cycles."""
+    rt = read_runtime(rundir)
+    ncells = np.prod([float(rt["mesh"][f"nx{d}"]) for d in (1, 2, 3)])
+    nstage = {"rk1": 1, "vl2": 2, "rk2": 2, "rk3": 3, "rk4": 4}.get(rt["time"]["integrator"], 2)
+    return ncells * nstage * interval / dt
+
+
+def smooth(x, n):
+    """Running mean over n history rows."""
+    if n <= 1 or len(x) < n:
+        return x
+    return np.convolve(x, np.ones(n) / n, mode="same")
+
+
+def plot_bad_cells(rundirs, labels, basename, out, window=0.25):
+    """Floor and first-order-flux-correction counts, and the mass and energy the floors and
+    the velocity ceiling add, both normalized so that runs at different resolution compare.
+
+    nbad_d, nbad_p and nfofc are cell-stage counts since the previous history output
+    (density floor, pressure floor, first-order flux correction); they are divided by the
+    cell-stage updates in that interval and shown as running means over `window` in code
+    time. dm_floor, de_floor, de_ceil and mass_added are the mass and total energy added in
+    the interval; they come in bursts, so they are shown cumulatively since the first history
+    row, each interval as a fraction of the box total at that time.
+    """
+    fig, ax = plt.subplots(1, 2, figsize=(11, 4.2), sharex=True, constrained_layout=True)
+    for i, (rundir, label) in enumerate(zip(rundirs, labels)):
+        _, myr, _, _ = code_constants(rundir)
+        names, h = read_hst(osp.join(rundir, f"{basename}.hst"))
+        col = {n: h[:, k] for k, n in enumerate(names)}
+        t = col["time"]
+        interval = np.median(np.diff(t))
+        n = max(1, int(round(window / interval)))
+        upd = cell_updates_per_interval(rundir, col["dt"], interval)
+        ls = ["-", "--", ":", "-."][i % 4]
+        for key, c, what in (("nbad_p", "C3", "pressure floor"), ("nfofc", "C0", "first-order flux"),
+                             ("nbad_d", "C2", "density floor")):
+            if key in col:
+                frac = smooth(col[key] / upd, n)
+                ax[0].semilogy(t / myr, np.where(frac > 0, frac, np.nan), ls=ls, c=c,
+                               label=f"{label} {what}")
+        for key, ref, sign, c, what in (("de_floor", "tot-E", 1, "C1", "energy, floors"),
+                                        ("de_ceil", "tot-E", -1, "C4", "energy removed, ceiling"),
+                                        ("mass_added", "mass", 1, "C5", "mass, ceiling"),
+                                        ("dm_floor", "mass", 1, "C2", "mass, floors")):
+            if key in col:
+                cum = np.cumsum(sign * col[key] / col[ref])
+                ax[1].semilogy(t / myr, np.where(cum > 0, cum, np.nan), ls=ls, c=c,
+                               label=f"{label} {what}")
+    ax[0].set_ylabel("fraction of cell updates")
+    ax[1].set_ylabel("cumulative change / box total")
+    for a in ax:
+        a.set_xlabel("time [Myr]")
+        a.legend(fontsize=7, ncol=2)
+        a.grid(alpha=0.3)
+    fig.savefig(out, dpi=150)
+    print(f"wrote {out}")
 
 
 def phase_fractions(rundir, basename):
@@ -97,6 +165,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("rundirs", nargs="+")
     p.add_argument("--out", default="history.png")
+    p.add_argument("--bad-out", help="bad-cell figure [default: bad_cells.png beside --out]")
     p.add_argument("--labels", nargs="*")
     p.add_argument("--basename", default="TIGRESS_NCR")
     args = p.parse_args()
@@ -150,6 +219,8 @@ def main():
         a.set_xlabel("time [Myr]")
     fig.savefig(args.out, dpi=150)
     print(f"wrote {args.out}")
+    plot_bad_cells(args.rundirs, labels, args.basename,
+                   args.bad_out or osp.join(osp.dirname(osp.abspath(args.out)), "bad_cells.png"))
 
 
 if __name__ == "__main__":
