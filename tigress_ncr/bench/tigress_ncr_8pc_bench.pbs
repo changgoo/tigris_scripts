@@ -31,6 +31,9 @@
 #   KEEP_RST=1   : keep the 3-4 GB TIGRESS_NCR.final.rst
 # tasks.txt lines: <rst|fresh> <physics> <toolchain> <variant|default> <ncyc> [overrides...]
 #   an override ENV:NAME=VALUE exports NAME=VALUE for that task only
+#   an override INPUT:<file> (relative to bench/ or absolute) is read with -i after the
+#   restart; it can add parameters the checkpoint lacks, which a command-line override
+#   cannot (rst only; recorded in opts as input=<name>)
 # env SRCDIR     : source tree for the data tables [default: $HOME/tigris/.worktrees/production-diagnostics]
 
 type module > /dev/null 2>&1 || source /opt/cray/pe/modules/3.2.11.7/init/bash
@@ -70,10 +73,14 @@ run_task() {   # run_task <index> <lane> <hosts>
     [ "$VARIANT" == "default" ] && VARIANT=""
     # ENV:NAME=VALUE tokens set an environment variable for this task only (MPI tuning
     # probes); they are recorded in opts. run_task runs in its own subshell.
-    local tok TASKENV="" rest=""
+    local tok TASKENV="" INFILE="" rest=""
     for tok in $EXTRA; do
-        if [[ $tok == ENV:* ]]; then export "${tok#ENV:}"; TASKENV+=" ${tok#ENV:}"; else rest+=" $tok"; fi
+        if [[ $tok == ENV:* ]]; then export "${tok#ENV:}"; TASKENV+=" ${tok#ENV:}"
+        elif [[ $tok == INPUT:* ]]; then INFILE=${tok#INPUT:}; [[ $INFILE == /* ]] || INFILE=$BENCHDIR/$INFILE
+        else rest+=" $tok"; fi
     done
+    [ -n "$INFILE" ] && [ "$WORKLOAD" != "rst" ] && { echo "task $k: INPUT: needs the rst workload"; return; }
+    [ -z "$INFILE" ] || [ -f "$INFILE" ] || { echo "task $k: missing $INFILE"; return; }
     EXTRA=$rest
     load_toolchain "$TC" > /dev/null 2>&1 || { echo "task $k: bad toolchain $TC"; return; }
     local EXE=tigris_ncr_${PHYSICS}-fft-${TC}${VARIANT:+-$VARIANT}.exe
@@ -107,6 +114,7 @@ run_task() {   # run_task <index> <lane> <hosts>
     cp "$MACHDIR/$EXE" .
     [ -f "$MACHDIR/${EXE%.exe}.buildinfo" ] && cp "$MACHDIR/${EXE%.exe}.buildinfo" .
     cp "$TBLDIR/tigress_coolftn_ncr.txt" "$TBLDIR/Z014_GenevaV00.txt" .
+    [ -n "$INFILE" ] && cp "$INFILE" athinput.override && START+=" -i athinput.override"
     local launch="$MPI_LAUNCH --hosts $hosts -n $NR --ppn $PPN --cpu-bind $(cpu_bind "$PPN") ${LAUNCH_OPTS:-}"
     {
         echo "task $k lane $lane workload $WORKLOAD"
@@ -123,7 +131,7 @@ run_task() {   # run_task <index> <lane> <hosts>
     python3 "$BENCHDIR/parse_loop_time.py" TIGRESS_NCR.loop_time.txt \
         machine="$MACHINE" workload="$WORKLOAD" physics="$PHYSICS" tc="$TC" variant="${VARIANT:-default}" \
         job="$JOBID.$k" nranks="$NR" nodes="$NPR" rc="$EXITCODE" job_wall="$((T1 - T0))" \
-        opts="${LAUNCH_OPTS:-default} ${BENCH_MPIENV:-}${TASKENV}${NODETAG}$([[ "$params" == *solve_grav_hyperbolic_dt=true* ]] && echo " grav=hyp")$([[ "$params" == *profile_gravity=true* ]] && echo " gprof")$([[ "$params" =~ fft_collective=([0-9]) ]] && echo " coll=${BASH_REMATCH[1]}")" > bench-summary.txt
+        opts="${LAUNCH_OPTS:-default} ${BENCH_MPIENV:-}${TASKENV}${INFILE:+ input=$(basename "$INFILE")}${NODETAG}$([[ "$params" == *solve_grav_hyperbolic_dt=true* ]] && echo " grav=hyp")$([[ "$params" == *profile_gravity=true* ]] && echo " gprof")$([[ "$params" =~ fft_collective=([0-9]) ]] && echo " coll=${BASH_REMATCH[1]}")" > bench-summary.txt
     cat bench-summary.txt >> "$RESULTS"
     echo "$(date +%T) lane $lane task $k: $WORKLOAD $PHYSICS $TC${VARIANT:+-$VARIANT} rc=$EXITCODE wall=$((T1 - T0))s $(grep -o 's_cycle=[^ ]*' bench-summary.txt)"
     # keep only what the analysis needs: logs, timing, history

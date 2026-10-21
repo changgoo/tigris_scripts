@@ -1,0 +1,3 @@
+# fftmpi-collective branch: fftMPI collective mode for the disk-BC gravity remaps
+<gravity>
+fft_collective = 0
