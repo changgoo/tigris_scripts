@@ -41,7 +41,8 @@ node-h per 10^4 cycles, against 3.07 and 2.07 on stellarai-amd. That needs
 Athena's NICs at ~230K medium messages/s and made the FFT-gravity remaps 4x slower
 ([athena/README.md](athena/README.md)).
 
-All three machines side by side: https://claude.ai/artifact/28UKFCgYPf9bFjSzwRyksr
+All four machines side by side: https://claude.ai/artifact/28UKFCgYPf9bFjSzwRyksr
+(source: `bench/reports/toolchains-all-machines.html`)
 
 ### Floating-point model: no finite-math flags in production
 
