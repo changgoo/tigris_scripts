@@ -15,6 +15,8 @@
 # Runs the production input (athinput.tigress_ncr) with the mesh overridden to 8 pc:
 #   128x128x768 over the full 1024x1024x6144 pc box, 32^3 blocks
 #   -> 4*4*24 = 384 blocks -> 384 ranks (1 block/rank) on 2 nodes, 192 ranks per node
+#   (production layout: fully packed nodes when the rank count fills them, otherwise
+#   the fewest nodes with the ranks spread evenly; 384 ranks would need 1.5 full nodes)
 #   spread evenly over the 16 CCDs of each node (env.sh cpu_bind).
 #
 # Toolchain: built by build_tigress.sh --machine=athena --cc=<toolchain>; the matching
@@ -28,9 +30,9 @@
 # Long production run: chains itself via restart when it stops on the walltime soft
 # limit (athena exit code 3).
 #
-# RES=4 runs the 4 pc mesh instead (256x256x1536, 3072 ranks on 16 nodes x 192); submit it
+# RES=4 runs the 4 pc mesh instead (256x256x1536, 3072 ranks on 12 fully packed nodes x 256); submit it
 # with the matching node count, e.g.
-#   qsub -N mhd-ncr-4pc -l select=16:ncpus=256:mpiprocs=192:model=tur_ath -v RES=4,... \
+#   qsub -N mhd-ncr-4pc -l select=12:ncpus=256:mpiprocs=256:model=tur_ath -v RES=4,... \
 #        tigress_ncr_mhd_8pc.pbs
 # (resubmissions request the right nodes themselves).
 #
@@ -87,7 +89,7 @@ INPUT=${SCRIPTDIR}/athinput.${prob}
 # --- resolution override: refine the 16 pc input over the SAME box -------------
 case "$RES" in
     8) HIRES="mesh/nx1=128 mesh/nx2=128 mesh/nx3=768";  NPROCS=384;  NODES_REQ=2;  PLOT_NP=32 ;;
-    4) HIRES="mesh/nx1=256 mesh/nx2=256 mesh/nx3=1536"; NPROCS=3072; NODES_REQ=16; PLOT_NP=4 ;;
+    4) HIRES="mesh/nx1=256 mesh/nx2=256 mesh/nx3=1536"; NPROCS=3072; NODES_REQ=12; PLOT_NP=4 ;;
     *) echo "ERROR: RES must be 8 or 4, not '$RES'"; exit 1 ;;
 esac
 NODES=$(sort -u "$PBS_NODEFILE" | wc -l)
