@@ -34,13 +34,14 @@
 #   MPI_LAUNCH is the PALS mpiexec by absolute path.
 # - Environment Modules 3.2: change a version with "module swap", and never run module
 #   commands inside $(...) or a pipe (they would run in a subshell).
-# - Self-gravity (FFT, grav_bc=disk) is 3.5x slower than on stellarai-amd even at the
-#   same layout (4 nodes x 96 ranks: grav 0.069 vs 0.020 s/cycle). It is not the FFT
-#   library (MKL's FFTW3 interface instead of cray-fftw: same time, 2026-10-20) and none
-#   of MPICH_ALLTOALLV_THROTTLE=32, MPICH_SMP_SINGLE_COPY_MODE=CMA, MPICH_OFI_NIC_POLICY=NUMA,
-#   FI_CXI_RX_MATCH_MODE=hybrid, MPICH_SHARED_MEM_COLL_OPT=0 changes it: the fftMPI
-#   remaps (point-to-point + Alltoallv) are slow on this network. Open; needs a profile.
-#   For CRMHD, gravity/solve_grav_hyperbolic_dt=true removes most of it (22-36% faster).
+# - FI_MR_CACHE_MONITOR=memhooks (set by load_toolchain; a value in the calling shell wins).
+#   libfabric's default memory-registration cache monitor, userfaultfd, caps each Cassini NIC
+#   at ~230K messages/s for 4-64 KB messages (OSU osu_mbw_mr, 2026-10-21), which made the
+#   FFT-gravity remaps 3.5-5x slower than on stellarai-amd. With memhooks, grav drops from
+#   0.073 to 0.019 s/cycle (4 nodes x 96, CRMHD restart), the same as stellarai-amd.
+#   FI_MR_CACHE_MONITOR=disabled, FI_CXI_RDZV_THRESHOLD and FI_CXI_RDZV_PROTO do not help;
+#   HPE's libfabric 2.3.1 (module hpe-libfabric) is as fast as memhooks. Not the FFT
+#   library, the MPICH collectives or fftMPI's collective mode (see README.md).
 # - Non-default cray-* versions are found at run time only through CRAY_LD_LIBRARY_PATH,
 #   which load_toolchain prepends to LD_LIBRARY_PATH.
 
@@ -118,6 +119,7 @@ load_toolchain() {
     MPI_CXX=CC
     HDF5DIR=$HDF5_DIR
     [ -n "$CRAY_LD_LIBRARY_PATH" ] && export LD_LIBRARY_PATH=$CRAY_LD_LIBRARY_PATH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+    export FI_MR_CACHE_MONITOR=${FI_MR_CACHE_MONITOR:-memhooks}   # see the header notes
     if [ -n "$VIRTUAL_ENV" ]; then
         PATH=$(echo "$PATH" | tr ':' '\n' | grep -vxF "$VIRTUAL_ENV/bin" | paste -sd:)
         export PATH

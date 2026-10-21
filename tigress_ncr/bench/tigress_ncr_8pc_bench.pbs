@@ -131,7 +131,7 @@ run_task() {   # run_task <index> <lane> <hosts>
     python3 "$BENCHDIR/parse_loop_time.py" TIGRESS_NCR.loop_time.txt \
         machine="$MACHINE" workload="$WORKLOAD" physics="$PHYSICS" tc="$TC" variant="${VARIANT:-default}" \
         job="$JOBID.$k" nranks="$NR" nodes="$NPR" rc="$EXITCODE" job_wall="$((T1 - T0))" \
-        opts="${LAUNCH_OPTS:-default} ${BENCH_MPIENV:-}${TASKENV}${INFILE:+ input=$(basename "$INFILE")}${NODETAG}$([[ "$params" == *solve_grav_hyperbolic_dt=true* ]] && echo " grav=hyp")$([[ "$params" == *profile_gravity=true* ]] && echo " gprof")$([[ "$params" =~ fft_collective=([0-9]) ]] && echo " coll=${BASH_REMATCH[1]}")" > bench-summary.txt
+        opts="${LAUNCH_OPTS:-default} ${BENCH_MPIENV:-}${TASKENV}${INFILE:+ input=$(basename "$INFILE")}${FI_MR_CACHE_MONITOR:+ mr=$FI_MR_CACHE_MONITOR}${NODETAG}$([[ "$params" == *solve_grav_hyperbolic_dt=true* ]] && echo " grav=hyp")$([[ "$params" == *profile_gravity=true* ]] && echo " gprof")$([[ "$params" =~ fft_collective=([0-9]) ]] && echo " coll=${BASH_REMATCH[1]}")" > bench-summary.txt
     cat bench-summary.txt >> "$RESULTS"
     echo "$(date +%T) lane $lane task $k: $WORKLOAD $PHYSICS $TC${VARIANT:+-$VARIANT} rc=$EXITCODE wall=$((T1 - T0))s $(grep -o 's_cycle=[^ ]*' bench-summary.txt)"
     # keep only what the analysis needs: logs, timing, history
