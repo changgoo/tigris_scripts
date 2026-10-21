@@ -191,8 +191,6 @@ index 26d6e32..ef68657 100644
 +    job_wall="$((T1 - T0))" opts="${SRUN_OPTS:-default} ${BENCH_MPIENV:-}${INPUT_OVERRIDE:+ input=$(basename "$INPUT_OVERRIDE")}$([[ "$params" == *profile_gravity=true* ]] && echo " gprof")" | tee bench-summary.txt
  mkdir -p "$BENCHDIR/results"
  cat bench-summary.txt >> "$BENCHDIR/results/$MACHINE.txt"
- 
--- 
-2.52.0
+
 
 ```
