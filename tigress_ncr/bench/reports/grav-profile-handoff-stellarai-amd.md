@@ -1,5 +1,9 @@
 # Handoff: FFT self-gravity phase profile on stellarai-amd
 
+**Status (2026-10-21):** Part 1 (the gravity profile, Steps 1-5 below) is done: commit
+`137439a` has the results. **Do Part 2 (OSU network benchmarks) only**, near the end of this
+file. Part 1 is kept for reference.
+
 ## Why
 On NASA Athena (2x EPYC 9745, Slingshot, cray-mpich) the self-gravity solve (`grav` in
 `loop_time.txt`) is about 3.5x slower than on stellarai-amd at the same layout (384 ranks,
@@ -16,7 +20,7 @@ stellarai-amd reference, so the two can be compared phase by phase.
 
 ## Steps
 
-1. **Get the tooling on a branch.** In `~/tigris_scripts`, check out the branch
+1. **(Part 1, done) Get the tooling on a branch.** In `~/tigris_scripts`, check out the branch
    `grav-profile`. This prompt is on it, as
    `tigress_ncr/bench/reports/grav-profile-handoff-stellarai-amd.md`. If you received this
    prompt without the branch, create `grav-profile` from `main` and apply the patch at the
@@ -86,6 +90,66 @@ stellarai-amd reference, so the two can be compared phase by phase.
 
 Runs are not bitwise reproducible (ray tracing depends on MPI message order). Differences
 under ~2% are ties.
+
+## Part 2: OSU network micro-benchmarks
+
+### Why
+The gravity profiles showed that Athena's extra ~50 ms/cycle is almost all in the fftMPI
+remaps (Forward + Backward), which are 4-5x slower than here. OSU on Athena
+(`bench/logs/osu-252363`, summarized in `bench/results/osu-athena.md`) found that:
+- Large messages run at line rate: one pair 24 GB/s, 96 pairs 49 GB/s (both 200 Gb/s NICs).
+- For 4-64 KB messages, each Cassini NIC handles only about 230K messages/s, about 460K
+  per node. That is the same with 96 or 192 pairs per node and halves with one NIC. At
+  16 KB a node moves only 7.5 GB/s.
+- `osu_alltoall` over 192 ranks takes 41.6 ms at 4-16 KB, which is that message rate.
+
+The remaps send 16-128 KB messages from every rank at once, so this message rate is the
+suspect. We need the same numbers on stellarai-amd to know whether it is Athena-specific.
+
+### Steps
+1. **Update the branch.** `git pull` (or fetch) `grav-profile` in `~/tigris_scripts`.
+   It adds `bench/osu_net.slurm` and `bench/osu_summary.py`. Don't modify `env.sh`.
+2. **Build OSU 7.5 once per toolchain** (`gcc` = Open MPI, `gcc-impi` = Intel MPI), on a
+   login node, each into its own prefix. Put the download in its own directory:
+   ```bash
+   source ~/tigris_scripts/tigress_ncr/stellarai-amd/env.sh
+   mkdir -p $SCRATCH_BASE/osu/dl && cd $SCRATCH_BASE/osu/dl
+   curl -sSfLO https://mvapich.cse.ohio-state.edu/download/mvapich/osu-micro-benchmarks-7.5.tar.gz
+   tar xzf osu-micro-benchmarks-7.5.tar.gz
+   for tc in gcc gcc-impi; do
+     ( load_toolchain $tc && mkdir -p $SCRATCH_BASE/osu/build-$tc && cd $SCRATCH_BASE/osu/build-$tc &&
+       $SCRATCH_BASE/osu/dl/osu-micro-benchmarks-7.5/configure CC=mpicc CXX=mpicxx \
+           --prefix=$SCRATCH_BASE/osu/$tc > configure.log 2>&1 &&
+       make -j16 > make.log 2>&1 && make install > install.log 2>&1 ) || echo "build $tc failed"
+   done
+   ```
+   Check that `mpicc` is the MPI of that toolchain (`mpicc -show`).
+3. **Submit one 2-node job per toolchain** (about 5 minutes each):
+   ```bash
+   cd ~/tigris_scripts/tigress_ncr/bench
+   for tc in gcc gcc-impi; do
+     sbatch --partition=$SLURM_PARTITION --account=$SLURM_ACCOUNT --ntasks-per-node=$CORES_PER_NODE \
+         --export=ALL,MACHINE=stellarai-amd,TC=$tc,OSU_DIR=$SCRATCH_BASE/osu/$tc osu_net.slurm
+   done
+   ```
+   The job runs: one pair between nodes (`osu_bw`, `osu_bibw`), one pair within a node,
+   many pairs (`osu_mbw_mr`) at 96 and 48 pairs per node, and `osu_alltoall` over 192 ranks.
+   If a test fails (rc != 0), for example because of srun binding options, fix the srun
+   line in `osu_net.slurm` minimally and say what you changed.
+4. **Summarize and commit.** For each job:
+   ```bash
+   python3 osu_summary.py logs/osu-<jobid> stellarai-amd-<tc> >> results/osu-stellarai-amd.md
+   ```
+   Also note the NIC/HCA count and model (from `logs/osu-<jobid>/env.txt`, or `ibv_devinfo`,
+   `lspci | grep -i -E 'infiniband|mellanox|ethernet'`). Commit `results/osu-stellarai-amd.md`
+   (and any `osu_net.slurm` fix) on `grav-profile` with the prefix `stellarai-amd:`. Push if
+   GitHub is reachable.
+
+### Report back
+- The two summary tables. The key numbers are `mbw_mr_96` messages/s at 16-64 KB and
+  `alltoall_96` latency at 4-16 KB, next to Athena's 460K msg/s and 41.6 ms.
+- The NIC/HCA count and model, and the job IDs.
+- Anything unexpected.
 
 ## Patch (apply with `git am`)
 ```

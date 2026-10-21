@@ -1,0 +1,60 @@
+#!/bin/bash
+#PBS -N osu-net
+#PBS -j oe
+#
+# Network bandwidth probe for the slow FFT-gravity remaps (athena/README.md, "Open: slow
+# self-gravity"): OSU micro-benchmarks between 2 nodes with the production toolchain.
+#
+#   qsub -q devel -W group_list=<grp> -l select=2:ncpus=<cores>:mpiprocs=<cores>:model=<m> \
+#        -l place=scatter:excl -l walltime=00:20:00 -o bench/logs/ \
+#        -v MACHINE=athena,OSU_DIR=<osu install prefix> bench/osu_net.pbs
+#
+# The remaps send 16-128 KB messages from every rank of a node at once, so the tests that
+# matter are osu_mbw_mr (many pairs across the two nodes) at 96 and 192 pairs per node,
+# with osu_bw/osu_bibw (one pair) and osu_alltoall for reference. MPICH_OFI_NIC_VERBOSE=2
+# shows the rank-to-NIC assignment; MPICH_OFI_CXI_COUNTER_REPORT=2 prints Slingshot
+# counters (timeouts, retries) at the end of the 192-pair run. Output: bench/logs/osu-<job>/
+
+type module > /dev/null 2>&1 || source /opt/cray/pe/modules/3.2.11.7/init/bash
+NCR_DIR=${NCR_DIR:-$HOME/tigris_scripts/tigress_ncr}
+source "$NCR_DIR/${MACHINE:?set MACHINE}/env.sh" || exit 1
+load_toolchain "${TC:-$DEFAULT_TOOLCHAIN}" > /dev/null 2>&1 || exit 1
+export OMP_NUM_THREADS=1 FI_PROVIDER=cxi
+P2P=${OSU_DIR:?set OSU_DIR}/libexec/osu-micro-benchmarks/mpi/pt2pt
+COLL=$OSU_DIR/libexec/osu-micro-benchmarks/mpi/collective
+JOBID=${PBS_JOBID%%.*}
+OUT=$NCR_DIR/bench/logs/osu-$JOBID
+mkdir -p "$OUT"
+mapfile -t NODES < <(sort -u "$PBS_NODEFILE")
+H2=$(IFS=,; echo "${NODES[*]:0:2}")
+
+{
+    date; echo "nodes: ${NODES[*]}"; module -t list 2>&1 | tr '\n' ' '; echo
+    echo "THP: $(cat /sys/kernel/mm/transparent_hugepage/enabled)"
+    fi_info --version | head -2
+    fi_info -p cxi 2>/dev/null | grep -E 'domain' | sort -u
+} > "$OUT/env.txt" 2>&1
+
+run() {   # run <name> <ppn> <cpu-bind> <exe> [args...]: one test on both nodes
+    local name=$1 ppn=$2 bind=$3; shift 3
+    echo "$(date +%T) $name"
+    $MPI_LAUNCH --hosts "$H2" -n $((2 * ppn)) --ppn "$ppn" --cpu-bind "$bind" "$@" \
+        > "$OUT/$name.txt" 2>&1
+    echo "rc=$?" >> "$OUT/$name.txt"
+}
+
+M=-m1024:4194304   # one pair
+MM=-m1024:1048576  # many pairs: the remaps send <= 128 KB
+# one pair, inter-node and intra-node (two CCDs of socket 0)
+run bw_inter      1 list:0 "$P2P/osu_bw" $M
+run bibw_inter    1 list:0 "$P2P/osu_bibw" $M
+echo "$(date +%T) bw_intra"
+$MPI_LAUNCH --hosts "${NODES[0]}" -n 2 --ppn 2 --cpu-bind list:0:16 "$P2P/osu_bw" $M \
+    > "$OUT/bw_intra.txt" 2>&1
+# many pairs: rank i on node 0 talks to rank i+ppn on node 1
+MPICH_OFI_NIC_VERBOSE=2 run mbw_mr_96 96 "$(cpu_bind 96)" "$P2P/osu_mbw_mr" $MM
+MPICH_OFI_CXI_COUNTER_REPORT=2 run mbw_mr_192 192 "$(cpu_bind 192)" "$P2P/osu_mbw_mr" $MM
+MPICH_OFI_NUM_NICS=1 run mbw_mr_96_1nic 96 "$(cpu_bind 96)" "$P2P/osu_mbw_mr" $MM
+# all-to-all over 192 ranks at the remap message sizes
+run alltoall_96 96 "$(cpu_bind 96)" "$COLL/osu_alltoall" -m4096:131072 -i20 -x5
+echo "$(date +%T) done; output in $OUT"
