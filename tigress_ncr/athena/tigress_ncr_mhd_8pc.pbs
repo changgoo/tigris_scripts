@@ -3,7 +3,7 @@
 #PBS -q normal
 #PBS -W group_list=s2800
 #PBS -l select=2:ncpus=256:mpiprocs=192:model=tur_ath
-#PBS -l place=scatter:excl
+#PBS -l place=scatter:excl:group=cabinet
 #PBS -l walltime=08:00:00
 #PBS -j oe
 #PBS -m abe
@@ -26,6 +26,11 @@
 # Gravity: SPARSE_GRAV=1 solves self-gravity once per dt_hyperbolic instead of every
 # cycle (gravity/solve_grav_hyperbolic_dt=true). Without CRs dt is the hyperbolic dt, so
 # it changes nothing here; it matters for CRMHD (see tigress_ncr_crmhd_8pc.pbs).
+#
+# Placement: all nodes in one cabinet (group=cabinet). Two 8 pc segments whose node pair
+# spanned two cabinets crawled at ~50-115 s/cycle (normal ~0.3) with up to 79,721
+# Slingshot network timeouts (2026-10-21/22); every single-cabinet job ran normally.
+# Resubmissions use this header too (their -l select overrides only the node count).
 #
 # Long production run: chains itself via restart when it stops on the walltime soft
 # limit (athena exit code 3).
