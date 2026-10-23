@@ -19,7 +19,7 @@
 #   - CR energy density  -> per-cell NCR cosmic-ray ionization rate (xi_cr)
 #   - NCR ion/neutral abundances -> CR scattering coefficient (CROpacity)
 # It requires <cr>/self_consistent_flag=1 and <photchem>/mode=ncr (both set in
-# athinput.tigress_ncr) and the 10-column cooling table of the ncr-cr-coupling branch.
+# athinput.tigress_ncr) and the 10-column cooling table (tigris-master since PR #315).
 #
 # Runs the production input (athinput.tigress_ncr) but overrides the mesh to 8 pc:
 #   128x128x768 over the full 1024x1024x6144 pc box, 32^3 blocks
@@ -50,7 +50,6 @@ physics=crmhd
 grav=fft
 prob=tigress_ncr
 PID=TIGRESS_NCR
-SRCDIR=$HOME/tigris/.worktrees/ncr-cr-coupling  # worktree the exe was built from (10-column cooling table)
 SCRIPTDIR=$HOME/tigris_scripts/$prob         # holds athinput.$prob
 SLURMDIR=$SCRIPTDIR/stellarai-amd            # holds the exe, env.sh and this script
 SCRIPT=${prob}_${physics}_8pc.slurm
@@ -61,6 +60,11 @@ load_toolchain "$CC" || exit 1
 # Executable (under $SLURMDIR) and input file
 EXE=tigris_ncr_${physics}-${grav}-${CC}.exe  # e.g. tigris_ncr_crmhd-fft-gcc.exe
 EXEPATH=${SLURMDIR}/$EXE
+# Source tree for the data tables (10-column cooling table): the one the exe was built from
+# (its .buildinfo), else the main checkout, which has had the same tables since
+# ncr-cr-coupling was merged into tigris-master (PR #315).
+SRCDIR=$(sed -n 's/^source: *//p' "${EXEPATH%.exe}.buildinfo" 2>/dev/null)
+[ -d "$SRCDIR/inputs/tables" ] || SRCDIR=$HOME/tigris
 INPUT=${SCRIPTDIR}/athinput.${prob}
 
 # --- 8 pc override: refine the 16 pc input to 8 pc over the SAME box -----------
@@ -95,7 +99,7 @@ echo "INPUT  = $INPUT"
 
 if [ ! -x "$EXEPATH" ]; then
     echo "ERROR: executable not found: $EXEPATH"
-    echo "       build it with: build_tigress.sh --machine=stellarai-amd --cc=$CC --physics=$physics --worktree=ncr-cr-coupling"
+    echo "       build it with: build_tigress.sh --machine=stellarai-amd --cc=$CC --physics=$physics"
     exit 1
 fi
 
@@ -121,8 +125,8 @@ set -o pipefail
 # Stage the executable and tables on every segment so a toolchain change takes effect.
 cp "${SLURMDIR}/$SCRIPT" .
 cp "$EXEPATH" .
-cp "$TBLDIR/$COOL_TBL" .
-cp "$TBLDIR/$POPSYNTH_TBL" .
+cp "$TBLDIR/$COOL_TBL" "$TBLDIR/$POPSYNTH_TBL" . ||
+    { echo "ERROR: data tables not found in $TBLDIR"; exit 1; }
 
 RSTINPUT=$PID.final.rst
 if [[ $STARTFLAG == "-r" && ! -f "$RSTINPUT" ]]; then

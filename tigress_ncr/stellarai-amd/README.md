@@ -135,12 +135,14 @@ are. Medians of 3 runs for the GCC stacks and 1 for the others. The reference is
 
 ```bash
 cd $HOME/tigris_scripts/tigress_ncr
-bash ./build_tigress.sh --machine=stellarai-amd --physics=mhd   --worktree=ncr-cr-coupling   # gcc
-bash ./build_tigress.sh --machine=stellarai-amd --physics=crmhd --worktree=ncr-cr-coupling
-bash ./build_tigress.sh --machine=stellarai-amd --cc=all --physics=mhd --worktree=ncr-cr-coupling  # every toolchain
+bash ./build_tigress.sh --machine=stellarai-amd --physics=mhd     # gcc
+bash ./build_tigress.sh --machine=stellarai-amd --physics=crmhd
+bash ./build_tigress.sh --machine=stellarai-amd --cc=all --physics=mhd  # every toolchain
 ```
 
-Each build takes about 1 minute (`make -j16`) and the result goes to `stellarai-amd/`.
+Each build takes about 1 minute (`make -j16`) and the result goes to `stellarai-amd/`. These build
+the main checkout (`$HOME/tigris`, tigris-master, which has contained `ncr-cr-coupling` since
+PR #315); add `--worktree=<branch>` to build a branch.
 
 ## Run
 

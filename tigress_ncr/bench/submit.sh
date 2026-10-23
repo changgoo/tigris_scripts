@@ -27,7 +27,7 @@ source "$NCR_DIR/$MACHINE/env.sh"
 EXE=tigris_ncr_${PHYSICS}-fft-${TC}${VARIANT:+-$VARIANT}.exe
 [ -x "$NCR_DIR/$MACHINE/$EXE" ] || {
     echo "missing $MACHINE/$EXE; build it with:"
-    echo "  bash $NCR_DIR/build_tigress.sh --machine=$MACHINE --cc=$TC --physics=$PHYSICS --worktree=ncr-cr-coupling"
+    echo "  bash $NCR_DIR/build_tigress.sh --machine=$MACHINE --cc=$TC --physics=$PHYSICS [--worktree=<branch>]"
     exit 1; }
 
 RSTVAR=BENCH_RST_$PHYSICS
