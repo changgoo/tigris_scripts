@@ -1,0 +1,3 @@
+# pgen-shared-tigress-v2 and later: split-face shear-periodic fluxes (inputs/tigris/athinput.tigress_*)
+<orbital_advection>
+shear_scheme = split

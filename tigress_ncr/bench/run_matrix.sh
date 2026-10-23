@@ -7,7 +7,8 @@
 #
 # Defaults: NCYC=200, REPEATS=1, PHYSICS="mhd crmhd". Toolchains whose executable is
 # missing are skipped with a warning. SLURM_QUEUE_FILTER (env.sh, e.g. "--qos=stellar-debug")
-# limits which of your jobs count against SLURM_MAX_JOBS. TOOLCHAINS="a b" in the environment restricts the set.
+# limits which of your jobs count against SLURM_MAX_JOBS. TOOLCHAINS="a b" in the environment restricts the set;
+# VARIANT=<name> runs the tigris_ncr_<physics>-fft-<tc>-<name>.exe builds (passed on to submit.sh).
 # Waits for the submitted jobs to finish, then prints the summary table.
 MACHINE=${1:?usage: $0 MACHINE [NCYC] [REPEATS] [PHYSICS...]}
 NCYC=${2:-200}
@@ -27,7 +28,7 @@ JOBS=()
 for rep in $(seq "$REPEATS"); do
     for phys in $PHYSICS_LIST; do
         for tc in $TCS; do
-            if [ ! -x "$NCR_DIR/$MACHINE/tigris_ncr_${phys}-fft-${tc}.exe" ]; then
+            if [ ! -x "$NCR_DIR/$MACHINE/tigris_ncr_${phys}-fft-${tc}${VARIANT:+-$VARIANT}.exe" ]; then
                 echo "skip $phys $tc: executable missing"; continue
             fi
             until [ "$(njobs)" -lt "$MAXJ" ]; do sleep 30; done

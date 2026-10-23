@@ -27,7 +27,8 @@
 #                  the checkpoint lacks, which a command-line override cannot add
 # env KEEP_RST   : 1 keeps the ~3-4 GB TIGRESS_NCR.final.rst written at exit
 # env NCR_DIR    : tigress_ncr scripts directory [default: $HOME/tigris_scripts/tigress_ncr]
-# env SRCDIR     : source worktree for the data tables [default: $HOME/tigris/.worktrees/ncr-cr-coupling]
+# env SRCDIR     : source tree for the data tables [default: the exe's source in its .buildinfo,
+#                  else $HOME/tigris/.worktrees/ncr-cr-coupling]
 #
 # Result: one line appended to $NCR_DIR/bench/results/<MACHINE>.txt and bench-summary.txt
 # in the run directory ($SCRATCH_BASE/tigress_ncr/bench/<physics>-<tc>-<jobid>).
@@ -46,11 +47,14 @@ source "$MACHDIR/env.sh" || exit 1
 load_toolchain "$TC" || exit 1
 module list 2>&1
 
-SRCDIR=${SRCDIR:-$HOME/tigris/.worktrees/ncr-cr-coupling}
-TBLDIR=$SRCDIR/inputs/tables
 RSTVAR=BENCH_RST_$PHYSICS
 RSTFILE=${RSTFILE:-$BENCH_CACHE/${!RSTVAR}}
 EXE=tigris_ncr_${PHYSICS}-fft-${TC}${VARIANT:+-$VARIANT}.exe
+if [ -z "$SRCDIR" ]; then
+    SRCDIR=$(sed -n 's/^source: *//p' "$MACHDIR/${EXE%.exe}.buildinfo" 2>/dev/null)
+    [ -d "$SRCDIR/inputs/tables" ] || SRCDIR=$HOME/tigris/.worktrees/ncr-cr-coupling
+fi
+TBLDIR=$SRCDIR/inputs/tables
 RUNDIR=$SCRATCH_BASE/tigress_ncr/bench/${PHYSICS}-${TC}${VARIANT:+-$VARIANT}-${SLURM_JOB_ID}
 
 [ -x "$MACHDIR/$EXE" ] || { echo "ERROR: executable not found: $MACHDIR/$EXE"; exit 1; }
@@ -67,7 +71,8 @@ NLIM=$((NCYC0 + NCYC))
 mkdir -p "$RUNDIR"; cd "$RUNDIR"
 cp "$MACHDIR/$EXE" .
 [ -f "$MACHDIR/${EXE%.exe}.buildinfo" ] && cp "$MACHDIR/${EXE%.exe}.buildinfo" .
-cp "$TBLDIR/tigress_coolftn_ncr.txt" "$TBLDIR/Z014_GenevaV00.txt" .
+cp "$TBLDIR/tigress_coolftn_ncr.txt" "$TBLDIR/Z014_GenevaV00.txt" . ||
+    { echo "ERROR: data tables not found in $TBLDIR (set SRCDIR)"; exit 1; }
 ln -sf "$RSTFILE" start.rst
 # A partial input file read after the restart (-r ... -i ...) adds parameters the
 # checkpoint lacks; a command-line override of a parameter the restart lacks is an error.

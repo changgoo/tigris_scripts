@@ -96,6 +96,41 @@ MHD and 9% faster on CRMHD. `CC=gcc-impi` remains a good fallback. The snapshot 
 of the production jobs loads the gcc-impi stack, because pyathena's mpi4py is linked against
 Intel MPI 2021.18 and aborts in `MPI_Init` under the Open MPI modules (tested 2026-10-05).
 
+### Re-benchmark 2026-10-22: `pgen-v2-uct-fofc` (no flag sweep)
+
+Source: tigris branch `pgen-v2-uct-fofc` bb7ee6e46, which is `pgen-shared-tigress-v2` (dd15cc1ad:
+the shared TIGRESS problem generator, the numerical-addition history and the split shear face)
+merged with `fix-uct-fofc-flag` (9529f4f59: the UCT corner EMFs see the FOFC-corrected cells, and
+the corner-EMF loops are vectorized). Every toolchain was built with the production `FLAGS_*` as
+variant `v2uct` (`--exe_suffix=v2uct`), so the production executables at 4eea9f80c stay as they
+are. Medians of 3 runs for the GCC stacks and 1 for the others. The reference is the production
+`gcc` executable (4eea9f80c) run the same day, n=2; it matches the 2026-10-04 numbers
+(0.273-0.274 / 0.184-0.185 s/cycle), so the machine has not changed.
+
+| toolchain       | MHD s/cycle | MHD integrator | MHD ray tracing | CRMHD s/cycle | CRMHD integrator | CRMHD photochem |
+|-----------------|-------------|----------------|-----------------|---------------|------------------|-----------------|
+| **gcc**         | **0.266**   | 0.067          | 0.138           | 0.186         | 0.106            | 0.029           |
+| gcc-impi        | 0.271       | 0.069          | 0.143           | **0.183**     | 0.108            | 0.029           |
+| aocc            | 0.287       | 0.072          | 0.139           | 0.205         | 0.111            | 0.040           |
+| aocc-impi       | 0.287       | 0.073          | 0.142           | 0.203         | 0.113            | 0.040           |
+| icpx-impi       | 0.290       | 0.066          | 0.138           | 0.253         | 0.137            | 0.061           |
+| icpx            | 0.297       | 0.064          | 0.135           | 0.269         | 0.136            | 0.069           |
+| gcc, 4eea9f80c  | 0.274       | 0.068          | 0.144           | 0.185         | 0.106            | 0.029           |
+| gcc, split face | 0.286       | 0.069          | 0.155           | 0.187         | 0.108            | 0.029           |
+
+- The new code is 3% faster on MHD (0.266 vs 0.274 s/cycle; the three runs agree to 0.3%) and
+  the same speed on CRMHD. The ranking of the stacks has not changed. gcc and gcc-impi tie
+  within 2% on both workloads, so **gcc stays the default**.
+- The split shear face (`bench/overrides/shear_split.in`: `<orbital_advection>/shear_scheme =
+  split`, as in the branch's TIGRESS inputs) costs 7% on MHD, all of it in ray tracing
+  (0.138 -> 0.155 s/cycle, same nodes as the remap runs), and nothing measurable on CRMHD,
+  where rays are traced sparsely. The checkpoints do not set `shear_scheme`, so every other row
+  uses the remap.
+- `compare_hst.py`: no build is SUSPECT. MHD repeats differ in one column (#100, ~1e-20). The
+  CRMHD history has 149 columns instead of 118, and 9 are NaN instead of 3. The 6 new NaN columns
+  (97-99, 112-114) are the numerically-added amounts of the same 3 scalars whose totals
+  (15-17) were already NaN.
+
 ## Build
 
 ```bash
@@ -131,6 +166,12 @@ cd $HOME/tigris_scripts/tigress_ncr
 bench/submit.sh stellarai-amd mhd gcc 200
 OMPI_MCA_osc=ucx bench/submit.sh stellarai-amd mhd aocc 200      # MPI env vars are recorded
 nohup bench/run_matrix.sh stellarai-amd 200 2 > bench/logs/matrix.log 2>&1 &   # everything
+# another branch, without replacing the production executables
+bash ./build_tigress.sh --machine=stellarai-amd --cc=all --physics=mhd --worktree=<branch> --exe_suffix=<tag>
+VARIANT=<tag> nohup bench/run_matrix.sh stellarai-amd 200 1 > bench/logs/matrix-<tag>.log 2>&1 &
 ```
+
+The bench job copies the data tables from the source tree in the executable's `.buildinfo`;
+set `SRCDIR` when that tree is gone.
 
 The QOS allows at most 5 queued jobs per user; `run_matrix.sh` stays under that limit.
